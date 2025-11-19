@@ -33,7 +33,7 @@ app.get('/healthcheck', (_req, res) => {
   })
 })
 
-// Auth routes
+// Auth routes - Better Auth handles all auth endpoints
 app.use("/api/auth", toNodeHandler(auth))
 
 // Setup routes and start server

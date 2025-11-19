@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Zap, Mail, Lock, User, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { apiClient } from '@/lib/api-client'
+import { signUp } from '@/lib/auth-client'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -37,16 +37,16 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      await apiClient.post('/api/v1/auth/register', {
-        name: formData.name,
+      await signUp.email({
         email: formData.email,
         password: formData.password,
+        name: formData.name,
       })
+      
       toast.success('Account created successfully!')
-      router.push('/login')
+      router.push('/')
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed')
-    } finally {
+      toast.error(error.message || 'Registration failed. Email may already be in use.')
       setIsLoading(false)
     }
   }

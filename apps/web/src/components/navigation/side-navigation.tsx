@@ -48,8 +48,8 @@ export function SideNavigation() {
           })}
         </nav>
 
-        {/* Theme Toggle */}
-        <div className="absolute bottom-4 left-3 right-3">
+        {/* User Menu & Theme Toggle */}
+        <div className="absolute bottom-4 left-3 right-3 space-y-2">
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-sm text-muted-foreground">Theme</span>
             <ModeToggle />

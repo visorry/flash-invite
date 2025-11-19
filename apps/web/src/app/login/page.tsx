@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Zap, Mail, Lock, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { apiClient } from '@/lib/api-client'
+import { signIn } from '@/lib/auth-client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,12 +24,15 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await apiClient.post('/api/v1/auth/login', formData)
+      await signIn.email({
+        email: formData.email,
+        password: formData.password,
+      })
+      
       toast.success('Login successful!')
       router.push('/')
     } catch (error: any) {
-      toast.error(error.message || 'Login failed')
-    } finally {
+      toast.error(error.message || 'Invalid email or password')
       setIsLoading(false)
     }
   }

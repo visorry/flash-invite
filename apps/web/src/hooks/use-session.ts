@@ -1,49 +1,33 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { apiClient } from "@/lib/api-client"
+import { useSession as useBetterSession, signOut } from '@/lib/auth-client'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
-interface User {
-  id: string
-  email: string
-  name: string
-  [key: string]: any
-}
-
-interface UseSessionReturn {
-  user: User | null
-  isLoading: boolean
-  error: string | null
-  refetch: () => Promise<void>
-}
-
-export function useSession(): UseSessionReturn {
-  const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchUser = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const response = await apiClient.get<User>('/api/v1/auth/me')
-      setUser(response)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error")
-      setUser(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+export function useSession() {
+  const { data: session, isPending, error } = useBetterSession()
+  const router = useRouter()
 
   useEffect(() => {
-    fetchUser()
-  }, [])
+    // Redirect to login if not authenticated
+    if (!isPending && !session && typeof window !== 'undefined') {
+      const path = window.location.pathname
+      if (!path.includes('/login') && !path.includes('/register')) {
+        router.push('/login')
+      }
+    }
+  }, [session, isPending, router])
+
+  const logout = async () => {
+    await signOut()
+    router.push('/login')
+  }
 
   return {
-    user,
-    isLoading,
-    error,
-    refetch: fetchUser,
+    user: session?.user || null,
+    isLoading: isPending,
+    error: error?.message || null,
+    refetch: () => Promise.resolve(),
+    logout,
   }
 }

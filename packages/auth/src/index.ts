@@ -2,7 +2,7 @@ import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "@super-invite/db";
 
-export const auth = betterAuth<BetterAuthOptions>({
+export const auth = betterAuth({
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
 	}),
@@ -11,12 +11,5 @@ export const auth = betterAuth<BetterAuthOptions>({
 		: ["http://localhost:3001", "http://localhost:3000"],
 	emailAndPassword: {
 		enabled: true,
-	},
-	advanced: {
-		defaultCookieAttributes: {
-			sameSite: "none",
-			secure: true,
-			httpOnly: true,
-		},
 	},
 });
