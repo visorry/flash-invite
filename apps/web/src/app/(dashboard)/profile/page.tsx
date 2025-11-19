@@ -121,7 +121,7 @@ export default function ProfilePage() {
             <Button
               variant="outline"
               className="w-full justify-start h-auto py-4"
-              onClick={() => router.push('/admin/dashboard')}
+              onClick={() => router.push('/admin/dashboard' as any)}
             >
               <div className="flex items-center gap-3 w-full">
                 <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">

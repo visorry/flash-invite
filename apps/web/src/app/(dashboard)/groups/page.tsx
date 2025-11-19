@@ -57,7 +57,7 @@ export default function GroupsPage() {
             Manage your Telegram groups and channels
           </p>
         </div>
-        <Button onClick={() => router.push('/groups/add')} size="sm" className="shrink-0">
+        <Button onClick={() => router.push('/groups/add' as any)} size="sm" className="shrink-0">
           <Plus className="w-4 h-4 sm:mr-2" />
           <span className="hidden sm:inline">Add Group</span>
         </Button>
@@ -125,7 +125,7 @@ export default function GroupsPage() {
                     size="sm"
                     variant="outline"
                     className="flex-1 text-xs"
-                    onClick={() => router.push(`/invites/create?groupId=${group.id}`)}
+                    onClick={() => router.push(`/invites/create?groupId=${group.id}` as any)}
                   >
                     Create Invite
                   </Button>
@@ -133,7 +133,7 @@ export default function GroupsPage() {
                     size="sm"
                     variant="outline"
                     className="text-xs"
-                    onClick={() => router.push(`/groups/${group.id}`)}
+                    onClick={() => router.push(`/groups/${group.id}` as any)}
                   >
                     Details
                   </Button>
@@ -147,7 +147,7 @@ export default function GroupsPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Bot className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
             <p className="text-sm text-muted-foreground mb-4">No groups added yet</p>
-            <Button onClick={() => router.push('/groups/add')}>
+            <Button onClick={() => router.push('/groups/add' as any)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Your First Group
             </Button>

@@ -10,7 +10,7 @@ export function UserMenu() {
 
   if (!user) {
     return (
-      <Link href="/login">
+      <Link href={"/login" as any}>
         <Button variant="ghost" size="sm">
           <User className="h-4 w-4 mr-2" />
           Login
@@ -29,14 +29,14 @@ export function UserMenu() {
   return (
     <div className="flex items-center gap-2">
       {isAdmin && (
-        <Link href="/admin/dashboard">
+        <Link href={"/admin/dashboard" as any}>
           <Button variant="ghost" size="sm">
             <Shield className="h-4 w-4 mr-2" />
             Admin
           </Button>
         </Link>
       )}
-      <Link href="/profile">
+      <Link href={"/profile" as any}>
         <Button variant="ghost" size="sm">
           <User className="h-4 w-4 mr-2" />
           {user.name}

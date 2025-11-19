@@ -13,14 +13,14 @@ export function useSession() {
     if (!isPending && !session && typeof window !== 'undefined') {
       const path = window.location.pathname
       if (!path.includes('/login') && !path.includes('/register')) {
-        router.push('/login')
+        router.push('/login' as any)
       }
     }
   }, [session, isPending, router])
 
   const logout = async () => {
     await signOut()
-    router.push('/login')
+    router.push('/login' as any)
   }
 
   return {

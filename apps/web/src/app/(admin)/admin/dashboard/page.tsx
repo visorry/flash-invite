@@ -159,9 +159,9 @@ export default function AdminDashboardPage() {
 
       {/* Quick Links */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card 
+        <Card
           className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => router.push('/admin/users')}
+          onClick={() => router.push('/admin/users' as any)}
         >
           <CardContent className="flex flex-col items-center justify-center py-6">
             <Users className="h-8 w-8 text-primary mb-2" />
@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
 
         <Card 
           className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => router.push('/admin/subscriptions')}
+          onClick={() => router.push('/admin/subscriptions' as any)}
         >
           <CardContent className="flex flex-col items-center justify-center py-6">
             <DollarSign className="h-8 w-8 text-primary mb-2" />
@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
 
         <Card 
           className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => router.push('/admin/groups')}
+          onClick={() => router.push('/admin/groups' as any)}
         >
           <CardContent className="flex flex-col items-center justify-center py-6">
             <Bot className="h-8 w-8 text-primary mb-2" />
@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
 
         <Card 
           className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => router.push('/admin/invites')}
+          onClick={() => router.push('/admin/invites' as any)}
         >
           <CardContent className="flex flex-col items-center justify-center py-6">
             <Link className="h-8 w-8 text-primary mb-2" />

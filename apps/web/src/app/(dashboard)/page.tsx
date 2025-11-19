@@ -143,7 +143,7 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               className="w-full h-auto flex-col gap-2 py-4"
-              onClick={() => router.push('/groups/add')}
+              onClick={() => router.push('/groups/add' as any)}
             >
               <Bot className="h-5 w-5" />
               <span className="text-sm">Add Group</span>
@@ -152,7 +152,7 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               className="w-full h-auto flex-col gap-2 py-4"
-              onClick={() => router.push('/invites/create')}
+              onClick={() => router.push('/invites/create' as any)}
             >
               <Link className="h-5 w-5" />
               <span className="text-sm">Create Invite</span>
@@ -161,7 +161,7 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               className="w-full h-auto flex-col gap-2 py-4"
-              onClick={() => router.push('/tokens')}
+              onClick={() => router.push('/tokens' as any)}
             >
               <Coins className="h-5 w-5" />
               <span className="text-sm">Buy Tokens</span>

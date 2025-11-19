@@ -130,7 +130,7 @@ export default function CreateInvitePage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/invites')}
+            onClick={() => router.push('/invites' as any)}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Invites
@@ -205,7 +205,7 @@ export default function CreateInvitePage() {
                 Create Another
               </Button>
               <Button
-                onClick={() => router.push('/invites')}
+                onClick={() => router.push('/invites' as any)}
                 className="w-full sm:flex-1"
               >
                 View All Invites
@@ -224,7 +224,7 @@ export default function CreateInvitePage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push('/invites')}
+          onClick={() => router.push('/invites' as any)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
@@ -349,7 +349,7 @@ export default function CreateInvitePage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push('/invites')}
+                onClick={() => router.push('/invites' as any)}
                 disabled={isSubmitting}
                 className="w-full sm:flex-1"
               >

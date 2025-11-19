@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { Settings, Coins, DollarSign, Bot, Plus, Edit, Trash2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -36,15 +36,16 @@ export default function AdminSettingsPage() {
     queryFn: async () => {
       return api.admin.getConfig()
     },
-    onSuccess: (data: any) => {
-      if (data) {
-        setBotConfig({
-          botToken: data.botToken || '',
-          botUsername: data.botUsername || '',
-        })
-      }
-    },
   })
+
+  useEffect(() => {
+    if (config) {
+      setBotConfig({
+        botToken: (config as any).botToken || '',
+        botUsername: (config as any).botUsername || '',
+      })
+    }
+  }, [config])
 
   const handleCreatePlan = async (data: any) => {
     try {

@@ -36,7 +36,7 @@ export default function AddGroupPage() {
     try {
       await api.telegramEntities.create(formData)
       toast.success('Group added successfully')
-      router.push('/groups')
+      router.push('/groups' as any)
     } catch (error: any) {
       console.error('Failed to add group:', error)
       toast.error(error.message || 'Failed to add group')
@@ -64,7 +64,7 @@ export default function AddGroupPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push('/groups')}
+          onClick={() => router.push('/groups' as any)}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
@@ -228,7 +228,7 @@ export default function AddGroupPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push('/groups')}
+                onClick={() => router.push('/groups' as any)}
                 disabled={isSubmitting}
                 className="flex-1"
               >

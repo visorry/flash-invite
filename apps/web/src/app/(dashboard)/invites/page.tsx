@@ -90,7 +90,7 @@ export default function InvitesPage() {
             Manage your time-limited invite links
           </p>
         </div>
-        <Button onClick={() => router.push('/invites/create')}>
+        <Button onClick={() => router.push('/invites/create' as any)}>
           <Plus className="w-4 h-4 mr-2" />
           Create
         </Button>
@@ -186,7 +186,7 @@ export default function InvitesPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <LinkIcon className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
             <p className="text-sm text-muted-foreground mb-4">No invite links yet</p>
-            <Button onClick={() => router.push('/invites/create')}>
+            <Button onClick={() => router.push('/invites/create' as any)}>
               <Plus className="w-4 h-4 mr-2" />
               Create Your First Invite
             </Button>
