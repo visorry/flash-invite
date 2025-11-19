@@ -203,7 +203,8 @@ model TelegramEntity {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  inviteLinks InviteLink[]
+  inviteLinks  InviteLink[]
+  groupMembers GroupMember[]
 
   @@index([userId])
   @@index([telegramId])
@@ -249,4 +250,27 @@ model Config {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("config")
+}
+
+// Group Members (users who joined via invites)
+model GroupMember {
+  id                String         @id @default(uuid())
+  telegramUserId    String         @map("telegram_user_id")
+  telegramEntityId  String         @map("telegram_entity_id")
+  telegramEntity    TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
+  username          String?
+  fullName          String?        @map("full_name")
+  inviteLink        String         @map("invite_link")
+  joinedAt          DateTime       @default(now()) @map("joined_at") @db.Timestamptz(3)
+  expiresAt         DateTime       @map("expires_at") @db.Timestamptz(3)
+  kickedAt          DateTime?      @map("kicked_at") @db.Timestamptz(3)
+  isActive          Boolean        @default(true) @map("is_active")
+  metadata          Json?
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([telegramUserId, telegramEntityId], name: "telegramUserId_telegramEntityId")
+  @@index([telegramEntityId])
+  @@index([expiresAt])
+  @@map("group_member")
 }

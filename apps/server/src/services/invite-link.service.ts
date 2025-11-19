@@ -58,9 +58,9 @@ const getById = async (ctx: RequestContext, id: string) => {
 
 const create = async (ctx: RequestContext, data: {
   telegramEntityId: string
-  durationType: TokenAction
-  memberLimit?: number
-  name?: string
+  durationSeconds: number
+  memberLimit?: number | null
+  name?: string | null
 }) => {
   if (!ctx.user) {
     throw new BadRequestError('User not authenticated')
@@ -84,79 +84,67 @@ const create = async (ctx: RequestContext, data: {
       throw new BadRequestError('Telegram entity is not active')
     }
 
-    // Get token cost
-    const costConfig = await tx.tokenCostConfig.findUnique({
-      where: { action: data.durationType },
-    })
-
-    if (!costConfig || !costConfig.isActive) {
-      throw new BadRequestError('Invalid duration type')
-    }
-
-    // Check user balance
-    const balance = await tx.tokenBalance.findUnique({
-      where: { userId: ctx.user!.id },
-    })
-
-    if (!balance || balance.balance < costConfig.cost) {
-      throw new BadRequestError('Insufficient token balance')
-    }
-
     // Calculate expiry
-    const durationSeconds = getDurationSeconds(data.durationType)
-    const expiresAt = new Date(Date.now() + durationSeconds * 1000)
+    const expiresAt = new Date(Date.now() + data.durationSeconds * 1000)
 
-    // Create Telegram invite link
+    // Generate unique token
+    const token = generateToken()
+
+    // Get bot username from config
+    let botUsername = process.env.TELEGRAM_BOT_USERNAME || ''
     try {
-      const telegramInvite = await telegramBot.createChatInviteLink(entity.telegramId, {
-        name: data.name,
-        expire_date: Math.floor(expiresAt.getTime() / 1000),
-        member_limit: data.memberLimit,
+      const botConfig = await tx.config.findUnique({
+        where: { key: 'botUsername' },
       })
-
-      // Create invite link record
-      const invite = await tx.inviteLink.create({
-        data: {
-          telegramEntityId: data.telegramEntityId,
-          userId: ctx.user!.id,
-          inviteLink: telegramInvite.invite_link,
-          durationType: data.durationType,
-          durationSeconds,
-          memberLimit: data.memberLimit,
-          currentUses: 0,
-          status: InviteLinkStatus.ACTIVE,
-          expiresAt,
-          tokensCost: costConfig.cost,
-        },
-      })
-
-      // Deduct tokens
-      await tx.tokenBalance.update({
-        where: { userId: ctx.user!.id },
-        data: {
-          balance: { decrement: costConfig.cost },
-          totalSpent: { increment: costConfig.cost },
-        },
-      })
-
-      // Create transaction record
-      await tx.tokenTransaction.create({
-        data: {
-          userId: ctx.user!.id,
-          type: 3, // INVITE_COST
-          status: 1, // COMPLETED
-          amount: -costConfig.cost,
-          balanceAfter: balance.balance - costConfig.cost,
-          description: `Created invite link for ${entity.title}`,
-          reference: invite.id,
-        },
-      })
-
-      return invite
-    } catch (error: any) {
-      throw new BadRequestError(`Failed to create Telegram invite link: ${error.message}`)
+      if (botConfig) {
+        botUsername = botConfig.value
+      }
+    } catch (error) {
+      // Fallback to env
     }
+
+    // Remove @ if present
+    botUsername = botUsername.replace('@', '')
+
+    if (!botUsername) {
+      throw new BadRequestError('Bot username not configured. Please configure in Admin Settings.')
+    }
+
+    // Create bot start link
+    const inviteLink = `https://t.me/${botUsername}?start=${token}`
+
+    // Create invite link record
+    const invite = await tx.inviteLink.create({
+      data: {
+        telegramEntityId: data.telegramEntityId,
+        userId: ctx.user!.id,
+        inviteLink,
+        durationType: 0, // Custom duration
+        durationSeconds: data.durationSeconds,
+        memberLimit: data.memberLimit,
+        currentUses: 0,
+        status: InviteLinkStatus.ACTIVE,
+        expiresAt,
+        tokensCost: 0, // Free for now, can add pricing later
+        metadata: {
+          token,
+          name: data.name,
+        },
+      },
+    })
+
+    return invite
   })
+}
+
+// Generate random token
+function generateToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+  let token = ''
+  for (let i = 0; i < 32; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return token
 }
 
 const revoke = async (ctx: RequestContext, id: string) => {

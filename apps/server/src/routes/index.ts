@@ -9,6 +9,7 @@ import * as dashboardRoute from './dashboard.route'
 import * as telegramEntitiesRoute from './telegram-entities.route'
 import * as tokensRoute from './tokens.route'
 import * as adminRoute from './admin.route'
+import * as botRoute from './bot.route'
 
 const v1APIs = Promise.resolve({
   bots: botsRoute,
@@ -17,6 +18,7 @@ const v1APIs = Promise.resolve({
   dashboard: dashboardRoute,
   'telegram-entities': telegramEntitiesRoute,
   tokens: tokensRoute,
+  bot: botRoute,
 })
 
 const adminAPIs = Promise.resolve({

@@ -6,6 +6,7 @@ import { toNodeHandler } from "better-auth/node"
 import { config } from './config/configuration'
 import { setupRoutes } from './routes'
 import { errorHandler } from './middleware/error.middleware'
+import { initializeScheduler } from './jobs/scheduler'
 
 const app = express()
 
@@ -65,6 +66,9 @@ async function startServer() {
   app.listen(config.PORT, () => {
     console.log(`🚀 Super Invite API is running on port ${config.PORT}`)
     console.log(`🔗 Health check: http://localhost:${config.PORT}/healthcheck`)
+    
+    // Initialize background jobs
+    initializeScheduler()
   })
 }
 
