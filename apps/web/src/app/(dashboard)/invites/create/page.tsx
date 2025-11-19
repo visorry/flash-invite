@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,7 @@ const TIME_UNITS = [
   { value: 'years', label: 'Years', multiplier: 31536000 }, // 365 days
 ]
 
-export default function CreateInvitePage() {
+function CreateInvitePageContent() {
   const { user, isLoading } = useSession()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -367,5 +367,17 @@ export default function CreateInvitePage() {
         </Card>
       </form>
     </div>
+  )
+}
+
+export default function CreateInvitePage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <CreateInvitePageContent />
+    </Suspense>
   )
 }
