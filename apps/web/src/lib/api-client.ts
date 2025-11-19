@@ -110,5 +110,10 @@ export const api = {
       apiClient.post(`/api/v1/admin/users/${userId}/tokens`, { amount, description }),
     addSubscription: (userId: string, planId: string) => 
       apiClient.post(`/api/v1/admin/users/${userId}/subscription`, { planId }),
+    createPlan: (data: any) => apiClient.post('/api/v1/admin/plans', data),
+    updatePlan: (id: string, data: any) => apiClient.put(`/api/v1/admin/plans/${id}`, data),
+    deletePlan: (id: string) => apiClient.delete(`/api/v1/admin/plans/${id}`),
+    getConfig: () => apiClient.get('/api/v1/admin/config'),
+    updateConfig: (data: any) => apiClient.put('/api/v1/admin/config', data),
   },
 }

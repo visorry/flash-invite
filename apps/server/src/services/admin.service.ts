@@ -324,6 +324,78 @@ const addSubscriptionToUser = async (_ctx: RequestContext, userId: string, planI
   }
 }
 
+const createPlan = async (_ctx: RequestContext, data: any) => {
+  const plan = await db.plan.create({
+    data: {
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      interval: data.interval,
+      price: data.price,
+      tokensIncluded: data.tokensIncluded,
+      maxGroups: data.maxGroups,
+      maxInvitesPerDay: data.maxInvitesPerDay,
+      isActive: data.isActive ?? true,
+    },
+  })
+
+  return plan
+}
+
+const updatePlan = async (_ctx: RequestContext, id: string, data: any) => {
+  const plan = await db.plan.update({
+    where: { id },
+    data: {
+      name: data.name,
+      description: data.description,
+      type: data.type,
+      interval: data.interval,
+      price: data.price,
+      tokensIncluded: data.tokensIncluded,
+      maxGroups: data.maxGroups,
+      maxInvitesPerDay: data.maxInvitesPerDay,
+      isActive: data.isActive,
+    },
+  })
+
+  return plan
+}
+
+const deletePlan = async (_ctx: RequestContext, id: string) => {
+  // Soft delete
+  await db.plan.update({
+    where: { id },
+    data: {
+      deletedAt: new Date(),
+      isActive: false,
+    },
+  })
+
+  return { success: true, message: 'Plan deleted successfully' }
+}
+
+// Simple config storage (you can enhance this with a proper Config model)
+let configStore: any = {
+  botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+  botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
+}
+
+const getConfig = async (_ctx: RequestContext) => {
+  return configStore
+}
+
+const updateConfig = async (_ctx: RequestContext, data: any) => {
+  configStore = {
+    ...configStore,
+    ...data,
+  }
+  
+  // TODO: Persist to database or file
+  // For now, this is in-memory only
+  
+  return configStore
+}
+
 export default {
   listUsers,
   getUserById,
@@ -335,4 +407,9 @@ export default {
   listAllInviteLinks,
   addTokensToUser,
   addSubscriptionToUser,
+  createPlan,
+  updatePlan,
+  deletePlan,
+  getConfig,
+  updateConfig,
 }

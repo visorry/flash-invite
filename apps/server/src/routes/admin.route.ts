@@ -134,4 +134,87 @@ router.post(
   }
 )
 
+// Create plan
+const CreatePlanSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  type: z.number().int(),
+  interval: z.number().int(),
+  price: z.number(),
+  tokensIncluded: z.number().int().positive(),
+  maxGroups: z.number().int().positive().nullable().optional(),
+  maxInvitesPerDay: z.number().int().positive().nullable().optional(),
+  isActive: z.boolean().optional(),
+})
+
+router.post(
+  '/plans',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const data = req.validatedBody
+    return adminService.createPlan(ctx, data)
+  },
+  {
+    validation: CreatePlanSchema,
+  }
+)
+
+// Update plan
+const PlanParamsSchema = z.object({
+  id: z.string().uuid(),
+})
+
+router.put(
+  '/plans/:id',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const { id } = req.validatedParams
+    const data = req.validatedBody
+    return adminService.updatePlan(ctx, id, data)
+  },
+  {
+    validation: [PlanParamsSchema, CreatePlanSchema],
+  }
+)
+
+// Delete plan
+router.delete(
+  '/plans/:id',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const { id } = req.validatedParams
+    return adminService.deletePlan(ctx, id)
+  },
+  {
+    validation: PlanParamsSchema,
+  }
+)
+
+// Get config
+router.get(
+  '/config',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return adminService.getConfig(ctx)
+  }
+)
+
+// Update config
+const UpdateConfigSchema = z.object({
+  botToken: z.string().optional(),
+  botUsername: z.string().optional(),
+})
+
+router.put(
+  '/config',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const data = req.validatedBody
+    return adminService.updateConfig(ctx, data)
+  },
+  {
+    validation: UpdateConfigSchema,
+  }
+)
+
 export { router }
