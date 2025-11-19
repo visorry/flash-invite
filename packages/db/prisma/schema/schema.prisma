@@ -239,3 +239,14 @@ model InviteLink {
   @@index([durationType])
   @@map("invite_link")
 }
+
+// System Configuration
+model Config {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("config")
+}

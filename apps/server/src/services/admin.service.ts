@@ -374,26 +374,46 @@ const deletePlan = async (_ctx: RequestContext, id: string) => {
   return { success: true, message: 'Plan deleted successfully' }
 }
 
-// Simple config storage (you can enhance this with a proper Config model)
-let configStore: any = {
-  botToken: process.env.TELEGRAM_BOT_TOKEN || '',
-  botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
-}
-
 const getConfig = async (_ctx: RequestContext) => {
-  return configStore
+  const configs = await db.config.findMany({
+    where: {
+      key: {
+        in: ['botToken', 'botUsername'],
+      },
+    },
+  })
+
+  const configMap: any = {
+    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
+  }
+
+  configs.forEach((config) => {
+    configMap[config.key] = config.value
+  })
+
+  return configMap
 }
 
 const updateConfig = async (_ctx: RequestContext, data: any) => {
-  configStore = {
-    ...configStore,
-    ...data,
+  // Update or create config entries
+  if (data.botToken) {
+    await db.config.upsert({
+      where: { key: 'botToken' },
+      update: { value: data.botToken },
+      create: { key: 'botToken', value: data.botToken },
+    })
   }
-  
-  // TODO: Persist to database or file
-  // For now, this is in-memory only
-  
-  return configStore
+
+  if (data.botUsername) {
+    await db.config.upsert({
+      where: { key: 'botUsername' },
+      update: { value: data.botUsername },
+      create: { key: 'botUsername', value: data.botUsername },
+    })
+  }
+
+  return getConfig(_ctx)
 }
 
 export default {

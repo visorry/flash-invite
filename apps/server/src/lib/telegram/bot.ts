@@ -1,4 +1,5 @@
 import { config } from '../../config/configuration'
+import db from '@super-invite/db'
 
 interface TelegramUser {
   id: number
@@ -38,6 +39,7 @@ interface CreateInviteLinkOptions {
 class TelegramBotClient {
   private botToken: string
   private baseUrl: string
+  private tokenPromise: Promise<string> | null = null
 
   constructor(botToken?: string) {
     this.botToken = botToken || config.TELEGRAM_BOT_TOKEN
@@ -45,10 +47,39 @@ class TelegramBotClient {
   }
 
   /**
+   * Get bot token from database or fallback to env
+   */
+  private async getBotToken(): Promise<string> {
+    // If token was provided in constructor, use it
+    if (this.botToken && this.botToken !== config.TELEGRAM_BOT_TOKEN) {
+      return this.botToken
+    }
+
+    // Try to get from database
+    try {
+      const configEntry = await db.config.findUnique({
+        where: { key: 'botToken' },
+      })
+
+      if (configEntry && configEntry.value) {
+        return configEntry.value
+      }
+    } catch (error) {
+      // Database might not be ready, fallback to env
+      console.warn('Failed to get bot token from database, using env:', error)
+    }
+
+    // Fallback to env
+    return config.TELEGRAM_BOT_TOKEN
+  }
+
+  /**
    * Make API request to Telegram
    */
   private async request<T>(method: string, params?: Record<string, any>): Promise<T> {
-    const url = `${this.baseUrl}/${method}`
+    // Get the latest bot token
+    const token = await this.getBotToken()
+    const url = `https://api.telegram.org/bot${token}/${method}`
     
     const response = await fetch(url, {
       method: 'POST',
