@@ -20,12 +20,18 @@ const RegisterSchema = z.object({
 router.post(
   '/login',
   async (req: Request) => {
-    const { email } = req.validatedBody
+    const { email, password } = req.validatedBody
     
-    // TODO: Implement login logic
+    // TODO: Implement Better Auth login
+    // For now, return mock success
     return {
-      message: 'Login endpoint - to be implemented',
-      email,
+      success: true,
+      message: 'Login successful',
+      user: {
+        id: '1',
+        email,
+        name: 'Test User',
+      },
     }
   },
   {
@@ -36,13 +42,18 @@ router.post(
 router.post(
   '/register',
   async (req: Request) => {
-    const { email, name } = req.validatedBody
+    const { email, name, password } = req.validatedBody
     
-    // TODO: Implement registration logic
+    // TODO: Implement Better Auth registration
+    // For now, return mock success
     return {
-      message: 'Registration endpoint - to be implemented',
-      email,
-      name,
+      success: true,
+      message: 'Registration successful',
+      user: {
+        id: '1',
+        email,
+        name,
+      },
     }
   },
   {

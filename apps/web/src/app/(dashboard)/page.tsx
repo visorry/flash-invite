@@ -1,45 +1,170 @@
-import { StatsCard } from '@/components/dashboard/stats-card'
-import { RecentActivity } from '@/components/dashboard/recent-activity'
-import { Bot, Link, Users, Activity } from 'lucide-react'
+"use client"
+
+import { useSession } from '@/hooks/use-session'
+import { Bot, Link, Users, Coins } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api-client'
+import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function DashboardPage() {
+  const { user, isLoading } = useSession()
+  const router = useRouter()
+
+  // Fetch dashboard stats
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: async () => {
+      return api.dashboard.getStats()
+    },
+    refetchInterval: 30000,
+  })
+
+  // Fetch token balance
+  const { data: balance } = useQuery({
+    queryKey: ['tokens', 'balance'],
+    queryFn: async () => {
+      return api.tokens.getBalance()
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold">Access Denied</h2>
+          <p className="text-muted-foreground">You need to be logged in.</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-6 p-4">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          Welcome to Super Invite - Manage your Telegram invites
+        <h1 className="text-lg font-semibold">Dashboard</h1>
+        <p className="text-xs text-muted-foreground">
+          Welcome back, {user.name}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Bots"
-          value="0"
-          icon={Bot}
-          description="Active bots"
-        />
-        <StatsCard
-          title="Active Invites"
-          value="0"
-          icon={Link}
-          description="Currently active"
-        />
-        <StatsCard
-          title="Total Members"
-          value="0"
-          icon={Users}
-          description="Joined via invites"
-        />
-        <StatsCard
-          title="Activity"
-          value="0"
-          icon={Activity}
-          description="Last 24 hours"
-        />
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 gap-2">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total<br />Groups
+            </CardTitle>
+            <Bot className="h-4 w-4 text-white/70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {statsLoading ? (
+                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+              ) : (
+                ((stats as any)?.totalBots || 0).toLocaleString()
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-500 to-green-700 text-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Active<br />Invites
+            </CardTitle>
+            <Link className="h-4 w-4 text-white/70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {statsLoading ? (
+                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+              ) : (
+                ((stats as any)?.activeInvites || 0).toLocaleString()
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-500 to-purple-700 text-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total<br />Members
+            </CardTitle>
+            <Users className="h-4 w-4 text-white/70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {statsLoading ? (
+                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+              ) : (
+                ((stats as any)?.totalMembers || 0).toLocaleString()
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-yellow-500 to-yellow-700 text-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Token<br />Balance
+            </CardTitle>
+            <Coins className="h-4 w-4 text-white/70" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {((balance as any)?.balance || 0).toLocaleString()}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <RecentActivity />
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <Button
+              variant="outline"
+              className="w-full h-auto flex-col gap-2 py-4"
+              onClick={() => router.push('/groups/add')}
+            >
+              <Bot className="h-5 w-5" />
+              <span className="text-sm">Add Group</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full h-auto flex-col gap-2 py-4"
+              onClick={() => router.push('/invites/create')}
+            >
+              <Link className="h-5 w-5" />
+              <span className="text-sm">Create Invite</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full h-auto flex-col gap-2 py-4"
+              onClick={() => router.push('/tokens')}
+            >
+              <Coins className="h-5 w-5" />
+              <span className="text-sm">Buy Tokens</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

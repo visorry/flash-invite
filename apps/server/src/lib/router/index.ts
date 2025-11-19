@@ -13,19 +13,11 @@ export type HttpMethodType = keyof typeof HttpMethod
 
 export interface ApiOption {
   version?: string
-  dto?: string | {
-    type: string
-    paginate?: boolean
-  }
   validation?: any
 }
 
 export interface RouterOption {
   middleware?: Array<(req: Request, res: Response, next: NextFunction) => void>
-  dto?: string | {
-    type: string
-    paginate?: boolean
-  }
   validation?: any
   api?: ApiOption
 }
@@ -66,7 +58,6 @@ function Router(): RouterType {
     
     const apiOption: ApiOption = {
       ...options?.api,
-      dto: options?.dto || options?.api?.dto,
       validation: options?.validation || options?.api?.validation,
     }
     
@@ -133,23 +124,27 @@ export function convertToExpressRouter(customRouter: RouterType): ExpressRouter 
     
     try {
       router[method](path, ...middlewares, async (req: Request, res: Response, next: NextFunction) => {
-        const result = await call.fn(req, res, next)
+        try {
+          const result = await call.fn(req, res, next)
 
-        if (result !== undefined && !res.headersSent) {
-          let statusCode = 200
-          if (call.method === HttpMethod.POST) {
-            statusCode = 201
-          } else if (call.method === HttpMethod.DELETE && result === null) {
-            statusCode = 204
+          if (result !== undefined && !res.headersSent) {
+            let statusCode = 200
+            if (call.method === HttpMethod.POST) {
+              statusCode = 201
+            } else if (call.method === HttpMethod.DELETE && result === null) {
+              statusCode = 204
+            }
+
+            const response = {
+              success: true,
+              data: result,
+              error: null,
+            }
+
+            res.status(statusCode).json(response)
           }
-
-          const response = {
-            success: true,
-            data: result,
-            error: null,
-          }
-
-          res.status(statusCode).json(response)
+        } catch (error) {
+          next(error)
         }
       })
     } catch (error) {

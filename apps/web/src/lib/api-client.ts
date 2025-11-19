@@ -25,6 +25,7 @@ class ApiClient {
     
     const response = await fetch(url, {
       ...options,
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -66,3 +67,34 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(API_URL)
+
+// Typed API routes
+export const api = {
+  auth: {
+    me: () => apiClient.get('/api/v1/auth/me'),
+  },
+  telegramEntities: {
+    list: (params?: any) => apiClient.get('/api/v1/telegram-entities', { ...params }),
+    getById: (id: string) => apiClient.get(`/api/v1/telegram-entities/${id}`),
+    create: (data: any) => apiClient.post('/api/v1/telegram-entities', data),
+    update: (id: string, data: any) => apiClient.put(`/api/v1/telegram-entities/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/api/v1/telegram-entities/${id}`),
+    syncMembers: (id: string) => apiClient.post(`/api/v1/telegram-entities/${id}/sync-members`),
+  },
+  invites: {
+    list: (params?: any) => apiClient.get('/api/v1/invites', { ...params }),
+    getById: (id: string) => apiClient.get(`/api/v1/invites/${id}`),
+    create: (data: any) => apiClient.post('/api/v1/invites', data),
+    revoke: (id: string) => apiClient.delete(`/api/v1/invites/${id}`),
+    getStats: (id: string) => apiClient.get(`/api/v1/invites/${id}/stats`),
+  },
+  tokens: {
+    getBalance: () => apiClient.get('/api/v1/tokens/balance'),
+    getTransactions: (params?: any) => apiClient.get('/api/v1/tokens/transactions', { ...params }),
+    getCosts: () => apiClient.get('/api/v1/tokens/costs'),
+  },
+  dashboard: {
+    getStats: () => apiClient.get('/api/v1/dashboard/stats'),
+    getRecentActivity: () => apiClient.get('/api/v1/dashboard/recent-activity'),
+  },
+}
