@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Link as LinkIcon, ArrowLeft, Clock, Users, Copy, Check } from 'lucide-react'
+import { Link as LinkIcon, ArrowLeft, Clock, Users, Copy, Check, Share2 } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
@@ -19,14 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const DURATION_OPTIONS = [
-  { value: '3600', label: '1 Hour', seconds: 3600 },
-  { value: '21600', label: '6 Hours', seconds: 21600 },
-  { value: '43200', label: '12 Hours', seconds: 43200 },
-  { value: '86400', label: '1 Day', seconds: 86400 },
-  { value: '259200', label: '3 Days', seconds: 259200 },
-  { value: '604800', label: '7 Days', seconds: 604800 },
-  { value: '2592000', label: '30 Days', seconds: 2592000 },
+const TIME_UNITS = [
+  { value: 'minutes', label: 'Minutes', multiplier: 60 },
+  { value: 'hours', label: 'Hours', multiplier: 3600 },
+  { value: 'days', label: 'Days', multiplier: 86400 },
+  { value: 'months', label: 'Months', multiplier: 2592000 }, // 30 days
+  { value: 'years', label: 'Years', multiplier: 31536000 }, // 365 days
 ]
 
 export default function CreateInvitePage() {
@@ -37,8 +35,9 @@ export default function CreateInvitePage() {
 
   const [formData, setFormData] = useState({
     telegramEntityId: groupId || '',
-    durationSeconds: '86400', // 1 day default
-    memberLimit: '',
+    durationValue: '1',
+    durationUnit: 'days',
+    // memberLimit: '', // Commented out - defaults to 1 on server
     name: '',
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -56,17 +55,21 @@ export default function CreateInvitePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.telegramEntityId || !formData.durationSeconds) {
+    if (!formData.telegramEntityId || !formData.durationValue) {
       toast.error('Please select a group and duration')
       return
     }
 
     setIsSubmitting(true)
     try {
+      // Calculate duration in seconds
+      const unit = TIME_UNITS.find(u => u.value === formData.durationUnit)
+      const durationSeconds = parseInt(formData.durationValue) * (unit?.multiplier || 86400)
+
       const result = await api.invites.create({
         telegramEntityId: formData.telegramEntityId,
-        durationSeconds: parseInt(formData.durationSeconds),
-        memberLimit: formData.memberLimit ? parseInt(formData.memberLimit) : null,
+        durationSeconds,
+        // memberLimit: formData.memberLimit ? parseInt(formData.memberLimit) : null, // Defaults to 1 on server
         name: formData.name || null,
       })
       
@@ -86,6 +89,24 @@ export default function CreateInvitePage() {
       setCopied(true)
       toast.success('Link copied to clipboard')
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const shareInvite = () => {
+    if (createdInvite?.inviteLink) {
+      if (navigator.share) {
+        navigator.share({
+          title: 'Join Group Invite',
+          text: 'Click this link to join the group',
+          url: createdInvite.inviteLink,
+        }).catch(() => {
+          // Fallback to copy if share fails
+          copyToClipboard()
+        })
+      } else {
+        // Fallback to copy if Web Share API not supported
+        copyToClipboard()
+      }
     }
   }
 
@@ -134,8 +155,11 @@ export default function CreateInvitePage() {
                   readOnly
                   className="font-mono text-sm"
                 />
-                <Button onClick={copyToClipboard} variant="outline">
+                <Button onClick={copyToClipboard} variant="outline" size="icon">
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+                <Button onClick={shareInvite} variant="outline" size="icon">
+                  <Share2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -144,15 +168,13 @@ export default function CreateInvitePage() {
               <div>
                 <p className="text-muted-foreground">Duration</p>
                 <p className="font-medium">
-                  {DURATION_OPTIONS.find(d => d.value === formData.durationSeconds)?.label}
+                  {formData.durationValue} {TIME_UNITS.find(u => u.value === formData.durationUnit)?.label}
                 </p>
               </div>
-              {formData.memberLimit && (
-                <div>
-                  <p className="text-muted-foreground">Member Limit</p>
-                  <p className="font-medium">{formData.memberLimit} users</p>
-                </div>
-              )}
+              <div>
+                <p className="text-muted-foreground">Usage</p>
+                <p className="font-medium">One-time use</p>
+              </div>
               <div>
                 <p className="text-muted-foreground">Expires At</p>
                 <p className="font-medium">
@@ -171,8 +193,9 @@ export default function CreateInvitePage() {
                   setCreatedInvite(null)
                   setFormData({
                     telegramEntityId: groupId || '',
-                    durationSeconds: '86400',
-                    memberLimit: '',
+                    durationValue: '1',
+                    durationUnit: 'days',
+                    // memberLimit: '', // Commented out
                     name: '',
                   })
                 }}
@@ -255,28 +278,39 @@ export default function CreateInvitePage() {
                 <Clock className="h-4 w-4 inline mr-2" />
                 Invite Duration <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={formData.durationSeconds}
-                onValueChange={(value) => setFormData({ ...formData, durationSeconds: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DURATION_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Input
+                  id="durationValue"
+                  type="number"
+                  placeholder="1"
+                  value={formData.durationValue}
+                  onChange={(e) => setFormData({ ...formData, durationValue: e.target.value })}
+                  min="1"
+                  className="flex-1"
+                />
+                <Select
+                  value={formData.durationUnit}
+                  onValueChange={(value) => setFormData({ ...formData, durationUnit: value })}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_UNITS.map((unit) => (
+                      <SelectItem key={unit.value} value={unit.value}>
+                        {unit.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="text-xs text-muted-foreground">
                 How long the user can stay in the group after joining
               </p>
             </div>
 
-            {/* Member Limit */}
-            <div className="space-y-2">
+            {/* Member Limit - Commented out, defaults to 1 (one-time use) */}
+            {/* <div className="space-y-2">
               <Label htmlFor="memberLimit">
                 <Users className="h-4 w-4 inline mr-2" />
                 Member Limit (Optional)
@@ -292,7 +326,7 @@ export default function CreateInvitePage() {
               <p className="text-xs text-muted-foreground">
                 Maximum number of users who can use this invite link
               </p>
-            </div>
+            </div> */}
 
             {/* Name/Label */}
             <div className="space-y-2">

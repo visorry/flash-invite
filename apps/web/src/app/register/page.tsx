@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Zap, Mail, Lock, User, Loader2 } from 'lucide-react'
+import { Bot, Mail, Lock, User, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { signUp } from '@/lib/auth-client'
 
@@ -52,12 +52,12 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Zap className="h-6 w-6 text-primary" />
+              <Bot className="h-6 w-6 text-primary" />
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Create an account</CardTitle>

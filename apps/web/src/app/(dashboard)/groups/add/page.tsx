@@ -90,12 +90,12 @@ export default function AddGroupPage() {
             <li>
               Add{' '}
               <a
-                href="https://t.me/userinfobot"
+                href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'userinfobot'}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline font-medium"
               >
-                @userinfobot
+                @{process.env.NEXT_PUBLIC_BOT_USERNAME || 'userinfobot'}
               </a>{' '}
               to your group/channel
             </li>
@@ -192,33 +192,33 @@ export default function AddGroupPage() {
             {/* Type Selection */}
             <div className="space-y-2">
               <Label>Group Type</Label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
                   variant={formData.type === 0 ? "default" : "outline"}
                   onClick={() => setFormData({ ...formData, type: 0 })}
-                  className="w-full"
+                  className="w-full h-auto py-3 px-2 flex-col gap-1 text-xs"
                 >
-                  <Bot className="h-4 w-4 mr-2" />
-                  Group
+                  <Bot className="h-4 w-4" />
+                  <span>Group</span>
                 </Button>
                 <Button
                   type="button"
                   variant={formData.type === 1 ? "default" : "outline"}
                   onClick={() => setFormData({ ...formData, type: 1 })}
-                  className="w-full"
+                  className="w-full h-auto py-3 px-2 flex-col gap-1 text-xs"
                 >
-                  <Bot className="h-4 w-4 mr-2" />
-                  Supergroup
+                  <Bot className="h-4 w-4" />
+                  <span>Supergroup</span>
                 </Button>
                 <Button
                   type="button"
                   variant={formData.type === 2 ? "default" : "outline"}
                   onClick={() => setFormData({ ...formData, type: 2 })}
-                  className="w-full"
+                  className="w-full h-auto py-3 px-2 flex-col gap-1 text-xs"
                 >
-                  <Bot className="h-4 w-4 mr-2" />
-                  Channel
+                  <Bot className="h-4 w-4" />
+                  <span>Channel</span>
                 </Button>
               </div>
             </div>

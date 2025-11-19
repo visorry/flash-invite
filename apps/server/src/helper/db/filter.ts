@@ -108,13 +108,19 @@ function generateFilter(
 /**
  * Generate pagination
  */
-export function generatePrismaPagination(req: Request, _entity: DBEntityType) {
+export function generatePrismaPagination(req: Request, entity: DBEntityType) {
   const { page, size = '10', sort, order = 'asc' } = req.query
   
   let skip: number | undefined
   let take: number | undefined
   let current: number | undefined
   let sortKey = (sort ?? 'createdAt') as string
+
+  // Map sort field names for specific entities
+  if (entity === 'Member') {
+    if (sortKey === 'joined') sortKey = 'joinedAt'
+    if (sortKey === 'expires') sortKey = 'expiresAt'
+  }
 
   if (page && size && typeof page === 'string' && typeof size === 'string') {
     skip = (parseInt(page, 10) - 1) * parseInt(size, 10)

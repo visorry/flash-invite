@@ -60,12 +60,14 @@ export default function DashboardPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-2 gap-2">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+        <Card className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white hover:shadow-xl hover:scale-[1.02] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-white">
               Total<br />Groups
             </CardTitle>
-            <Bot className="h-4 w-4 text-white/70" />
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+              <Bot className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -78,12 +80,14 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500 to-green-700 text-white">
+        <Card className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 text-white hover:shadow-xl hover:scale-[1.02] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-white">
               Active<br />Invites
             </CardTitle>
-            <Link className="h-4 w-4 text-white/70" />
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+              <Link className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -96,17 +100,17 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-700 text-white">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total<br />Members
             </CardTitle>
-            <Users className="h-4 w-4 text-white/70" />
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-muted rounded animate-pulse" />
               ) : (
                 ((stats as any)?.totalMembers || 0).toLocaleString()
               )}
@@ -114,15 +118,15 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-500 to-yellow-700 text-white">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Token<br />Balance
             </CardTitle>
-            <Coins className="h-4 w-4 text-white/70" />
+            <Coins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {((balance as any)?.balance || 0).toLocaleString()}
             </div>
           </CardContent>

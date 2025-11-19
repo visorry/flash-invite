@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut } from "lucide-react"
+import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users } from "lucide-react"
 import { ModeToggle } from "../mode-toggle"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ export function SideNavigation() {
     { to: "/", label: "Dashboard", icon: Home },
     { to: "/groups", label: "Groups", icon: Bot },
     { to: "/invites", label: "Invites", icon: LinkIcon },
+    { to: "/members", label: "Members", icon: Users },
     { to: "/tokens", label: "Tokens", icon: Coins },
     { to: "/profile", label: "Profile", icon: User },
   ] as const
@@ -31,7 +32,7 @@ export function SideNavigation() {
       <div className="h-full px-3 py-4 overflow-y-auto bg-background border-r flex flex-col">
         {/* Logo */}
         <div className="flex items-center gap-2 mb-6 px-3">
-          <Zap className="h-6 w-6 text-primary" />
+          <Bot className="h-6 w-6 text-primary" />
           <span className="font-semibold text-lg">Super Invite</span>
         </div>
 

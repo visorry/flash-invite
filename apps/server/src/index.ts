@@ -7,6 +7,7 @@ import { config } from './config/configuration'
 import { setupRoutes } from './routes'
 import { errorHandler } from './middleware/error.middleware'
 import { initializeScheduler } from './jobs/scheduler'
+import { initializeBots, botManager } from './bot'
 
 const app = express()
 
@@ -63,13 +64,26 @@ async function startServer() {
   console.log(`📍 Environment: ${config.NODE_ENV}`)
   console.log(`🌐 Port: ${config.PORT}`)
 
-  app.listen(config.PORT, () => {
+  app.listen(config.PORT, async () => {
     console.log(`🚀 Super Invite API is running on port ${config.PORT}`)
     console.log(`🔗 Health check: http://localhost:${config.PORT}/healthcheck`)
+    
+    // Initialize Telegram bots
+    await initializeBots()
     
     // Initialize background jobs
     initializeScheduler()
   })
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    console.log(`\n${signal} received. Shutting down gracefully...`)
+    await botManager.stop()
+    process.exit(0)
+  }
+
+  process.once('SIGINT', () => shutdown('SIGINT'))
+  process.once('SIGTERM', () => shutdown('SIGTERM'))
 }
 
 startServer().catch(console.error)

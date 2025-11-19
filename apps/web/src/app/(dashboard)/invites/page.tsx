@@ -2,7 +2,7 @@
 
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Plus, Link as LinkIcon, Clock, Users, Ban } from 'lucide-react'
+import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
@@ -34,6 +34,24 @@ export default function InvitesPage() {
       toast.error(error.message || 'Failed to revoke invite')
     },
   })
+
+  const shareInvite = (inviteLink: string) => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join Group Invite',
+        text: 'Click this link to join the group',
+        url: inviteLink,
+      }).catch(() => {
+        // Fallback to copy if share fails
+        navigator.clipboard.writeText(inviteLink)
+        toast.success('Copied to clipboard')
+      })
+    } else {
+      // Fallback to copy if Web Share API not supported
+      navigator.clipboard.writeText(inviteLink)
+      toast.success('Copied to clipboard')
+    }
+  }
 
   if (isLoading) {
     return (
@@ -124,13 +142,25 @@ export default function InvitesPage() {
                   >
                     Copy
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => shareInvite(invite.inviteLink)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
                 </div>
 
                 {/* Stats */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Users className="h-3 w-3" />
-                    <span>{invite.currentUses || 0} / {invite.memberLimit || '∞'} uses</span>
+                    <span>
+                      {invite.memberLimit === 1 
+                        ? `${invite.currentUses || 0} / 1 use (One-time)`
+                        : `${invite.currentUses || 0} / ${invite.memberLimit || '∞'} uses`
+                      }
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Clock className="h-3 w-3" />

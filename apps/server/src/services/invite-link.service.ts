@@ -1,7 +1,7 @@
 import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
-import { InviteLinkStatus, TokenAction, getDurationSeconds } from '@super-invite/db'
+import { InviteLinkStatus } from '@super-invite/db'
 import { telegramBot } from '../lib/telegram'
 import { generatePrismaInclude } from '../helper/db/include'
 import { DBEntity } from '../constant/db'
@@ -91,23 +91,28 @@ const create = async (ctx: RequestContext, data: {
     const token = generateToken()
 
     // Get bot username from config
-    let botUsername = process.env.TELEGRAM_BOT_USERNAME || ''
+    let botUsername = ''
     try {
       const botConfig = await tx.config.findUnique({
         where: { key: 'botUsername' },
       })
-      if (botConfig) {
+      if (botConfig?.value) {
         botUsername = botConfig.value
       }
     } catch (error) {
-      // Fallback to env
+      console.warn('Failed to get bot username from config:', error)
+    }
+
+    // Fallback to env if not in config
+    if (!botUsername) {
+      botUsername = process.env.TELEGRAM_BOT_USERNAME || ''
     }
 
     // Remove @ if present
     botUsername = botUsername.replace('@', '')
 
     if (!botUsername) {
-      throw new BadRequestError('Bot username not configured. Please configure in Admin Settings.')
+      throw new BadRequestError('Bot username not configured. Please set TELEGRAM_BOT_USERNAME in environment or configure in Admin Settings.')
     }
 
     // Create bot start link
@@ -121,7 +126,7 @@ const create = async (ctx: RequestContext, data: {
         inviteLink,
         durationType: 0, // Custom duration
         durationSeconds: data.durationSeconds,
-        memberLimit: data.memberLimit,
+        memberLimit: data.memberLimit ?? 1, // Default to 1 (one-time use)
         currentUses: 0,
         status: InviteLinkStatus.ACTIVE,
         expiresAt,

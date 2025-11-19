@@ -3,12 +3,14 @@
 import { useSession } from '@/hooks/use-session'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { User, Mail, Shield, LogOut } from 'lucide-react'
+import { User, Mail, Shield, LogOut, Palette } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 
 export default function ProfilePage() {
   const { user, isLoading, logout } = useSession()
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
 
   if (isLoading) {
     return (
@@ -65,6 +67,50 @@ export default function ProfilePage() {
                 <p className="text-xs text-muted-foreground">User ID</p>
                 <p className="text-sm font-mono text-xs">{user.id}</p>
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preferences Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Preferences</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Theme Toggle */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Palette className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-medium">Theme</p>
+                <p className="text-xs text-muted-foreground">Choose your preferred theme</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={theme === 'light' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTheme('light')}
+              >
+                Light
+              </Button>
+              <Button
+                variant={theme === 'dark' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTheme('dark')}
+              >
+                Dark
+              </Button>
+              <Button
+                variant={theme === 'system' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTheme('system')}
+              >
+                System
+              </Button>
             </div>
           </div>
         </CardContent>

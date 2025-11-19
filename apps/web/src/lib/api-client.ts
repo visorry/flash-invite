@@ -88,6 +88,18 @@ export const api = {
     revoke: (id: string) => apiClient.delete(`/api/v1/invites/${id}`),
     getStats: (id: string) => apiClient.get(`/api/v1/invites/${id}/stats`),
   },
+  members: {
+    list: (params?: any) => {
+      const queryParams = new URLSearchParams()
+      if (params?.telegramEntityId) queryParams.append('telegramEntityId', params.telegramEntityId)
+      if (params?.isActive) queryParams.append('isActive', params.isActive)
+      if (params?.sort) queryParams.append('sort', params.sort)
+      if (params?.order) queryParams.append('order', params.order)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/members${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/members/${id}`),
+  },
   tokens: {
     getBalance: () => apiClient.get('/api/v1/tokens/balance'),
     getTransactions: (params?: any) => apiClient.get('/api/v1/tokens/transactions', { ...params }),

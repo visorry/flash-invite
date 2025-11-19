@@ -50,16 +50,16 @@ export default function GroupsPage() {
   return (
     <div className="flex-1 space-y-6 p-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
           <h1 className="text-lg font-semibold">Telegram Groups</h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground hidden sm:block">
             Manage your Telegram groups and channels
           </p>
         </div>
-        <Button onClick={() => router.push('/groups/add')}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Group
+        <Button onClick={() => router.push('/groups/add')} size="sm" className="shrink-0">
+          <Plus className="w-4 h-4 sm:mr-2" />
+          <span className="hidden sm:inline">Add Group</span>
         </Button>
       </div>
 
@@ -124,7 +124,7 @@ export default function GroupsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 text-xs"
                     onClick={() => router.push(`/invites/create?groupId=${group.id}`)}
                   >
                     Create Invite
@@ -132,9 +132,10 @@ export default function GroupsPage() {
                   <Button
                     size="sm"
                     variant="outline"
+                    className="text-xs"
                     onClick={() => router.push(`/groups/${group.id}`)}
                   >
-                    View Details
+                    Details
                   </Button>
                 </div>
               </CardContent>

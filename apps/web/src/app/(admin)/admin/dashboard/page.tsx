@@ -44,12 +44,14 @@ export default function AdminDashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-700 text-white">
+        <Card className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white hover:shadow-xl hover:scale-[1.02] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-white">
               Total<br />Users
             </CardTitle>
-            <Users className="h-4 w-4 text-white/70" />
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+              <Users className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -62,12 +64,14 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-500 to-green-700 text-white">
+        <Card className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 text-white hover:shadow-xl hover:scale-[1.02] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-white">
               Total<br />Groups
             </CardTitle>
-            <Bot className="h-4 w-4 text-white/70" />
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+              <Bot className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -80,17 +84,17 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-700 text-white">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total<br />Invites
             </CardTitle>
-            <Link className="h-4 w-4 text-white/70" />
+            <Link className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-muted rounded animate-pulse" />
               ) : (
                 ((stats as any)?.totalInviteLinks || 0).toLocaleString()
               )}
@@ -98,17 +102,17 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-yellow-500 to-yellow-700 text-white">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Active<br />Invites
             </CardTitle>
-            <Activity className="h-4 w-4 text-white/70" />
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-muted rounded animate-pulse" />
               ) : (
                 ((stats as any)?.activeInviteLinks || 0).toLocaleString()
               )}
@@ -116,17 +120,17 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-pink-500 to-pink-700 text-white">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total<br />Subscriptions
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-white/70" />
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-muted rounded animate-pulse" />
               ) : (
                 ((stats as any)?.totalSubscriptions || 0).toLocaleString()
               )}
@@ -134,17 +138,17 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-indigo-500 to-indigo-700 text-white">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Active<br />Subscriptions
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-white/70" />
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-muted rounded animate-pulse" />
               ) : (
                 ((stats as any)?.activeSubscriptions || 0).toLocaleString()
               )}

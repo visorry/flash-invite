@@ -1,11 +1,10 @@
 import { z } from 'zod'
 
 export const CreateInviteSchema = z.object({
-  botId: z.string().uuid('Invalid bot ID'),
-  expiresInHours: z.number().min(1).max(168).optional(), // Max 7 days
-  maxUses: z.number().min(1).optional(),
-  autoKickAfterHours: z.number().min(1).optional(),
-  description: z.string().optional(),
+  telegramEntityId: z.string().uuid('Invalid telegram entity ID'),
+  durationSeconds: z.number().min(1),
+  memberLimit: z.number().min(1).optional().nullable().default(1), // Defaults to 1 (one-time use)
+  name: z.string().optional().nullable(),
 })
 
 export const InviteParamsSchema = z.object({

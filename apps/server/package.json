@@ -10,14 +10,15 @@
     "start": "bun run dist/index.js"
   },
   "dependencies": {
-    "express": "^5.1.0",
-    "cors": "^2.8.5",
-    "better-auth": "catalog:",
-    "dotenv": "catalog:",
-    "zod": "catalog:",
+    "@prisma/client": "catalog:",
     "@super-invite/auth": "workspace:*",
     "@super-invite/db": "workspace:*",
-    "@prisma/client": "catalog:"
+    "better-auth": "catalog:",
+    "cors": "^2.8.5",
+    "dotenv": "catalog:",
+    "express": "^5.1.0",
+    "telegraf": "^4.16.3",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "typescript": "catalog:",

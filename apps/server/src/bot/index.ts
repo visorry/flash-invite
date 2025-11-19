@@ -1,146 +1,73 @@
-import { config } from '../config/configuration'
-import db from '@super-invite/db'
-import { telegramBot } from '../lib/telegram'
+import { botManager } from './bot-manager'
 
-interface StartCommandContext {
-  userId: number
-  username?: string
-  firstName?: string
-  lastName?: string
-  token?: string
-}
-
-/**
- * Handle /start command with token
- */
-export async function handleStartCommand(ctx: StartCommandContext) {
-  const { userId, username, firstName, lastName, token } = ctx
-
-  if (!token) {
-    return {
-      success: false,
-      message: '🚫 Missing Token!\n\nPlease use a valid invite link to join the group.',
-    }
-  }
-
+async function initializeBots() {
   try {
-    // Find invite link by token
-    const invite = await db.inviteLink.findFirst({
-      where: {
-        metadata: {
-          path: ['token'],
-          equals: token,
+    // Initialize default bot first
+    await botManager.initializeDefaultBot()
+
+    // Initialize custom bots from database
+    await botManager.initializeCustomBots()
+
+    const defaultBot = botManager.getDefaultBot()
+
+    if (defaultBot) {
+      // Set up periodic health checks
+      setInterval(
+        async () => {
+          await botManager.healthCheck()
         },
-        status: 0, // ACTIVE
-      },
-      include: {
-        telegramEntity: true,
-        user: true,
-      },
-    })
+        5 * 60 * 1000
+      ) // 5 minutes
 
-    if (!invite) {
-      return {
-        success: false,
-        message: '❌ Invalid or expired invite link.\n\nPlease request a new invite link.',
-      }
+      console.log('Bot system initialized successfully')
+      console.log('Bot stats:', botManager.getStats())
+    } else {
+      console.warn('No default bot initialized - bot features will be unavailable')
     }
-
-    // Check if expired
-    if (invite.expiresAt && new Date() > invite.expiresAt) {
-      await db.inviteLink.update({
-        where: { id: invite.id },
-        data: { status: 1 }, // EXPIRED
-      })
-
-      return {
-        success: false,
-        message: '⏰ This invite link has expired.\n\nPlease request a new invite link.',
-      }
-    }
-
-    // Check member limit
-    if (invite.memberLimit && invite.currentUses >= invite.memberLimit) {
-      await db.inviteLink.update({
-        where: { id: invite.id },
-        data: { status: 2 }, // REVOKED
-      })
-
-      return {
-        success: false,
-        message: '👥 This invite link has reached its member limit.\n\nPlease request a new invite link.',
-      }
-    }
-
-    // Create one-time Telegram invite link
-    const telegramInvite = await telegramBot.createChatInviteLink(
-      invite.telegramEntity.telegramId,
-      {
-        member_limit: 1, // One-time use
-        expire_date: Math.floor((Date.now() + 3600000) / 1000), // 1 hour expiry
-      }
-    )
-
-    // Calculate member expiry
-    const memberExpiresAt = new Date(Date.now() + invite.durationSeconds * 1000)
-
-    // Create member join record
-    await db.$transaction(async (tx) => {
-      // Create or update group member
-      await tx.groupMember.upsert({
-        where: {
-          telegramUserId_telegramEntityId: {
-            telegramUserId: userId.toString(),
-            telegramEntityId: invite.telegramEntityId,
-          },
-        },
-        update: {
-          username: username || null,
-          fullName: `${firstName || ''} ${lastName || ''}`.trim(),
-          inviteLink: telegramInvite.invite_link,
-          expiresAt: memberExpiresAt,
-          joinedAt: new Date(),
-        },
-        create: {
-          telegramUserId: userId.toString(),
-          telegramEntityId: invite.telegramEntityId,
-          username: username || null,
-          fullName: `${firstName || ''} ${lastName || ''}`.trim(),
-          inviteLink: telegramInvite.invite_link,
-          expiresAt: memberExpiresAt,
-          joinedAt: new Date(),
-        },
-      })
-
-      // Increment invite usage
-      await tx.inviteLink.update({
-        where: { id: invite.id },
-        data: {
-          currentUses: { increment: 1 },
-        },
-      })
-    })
-
-    return {
-      success: true,
-      inviteLink: telegramInvite.invite_link,
-      expiresAt: memberExpiresAt,
-      groupTitle: invite.telegramEntity.title,
-      message: `✅ Welcome!\n\nClick the link below to join **${invite.telegramEntity.title}**\n\n🔗 ${telegramInvite.invite_link}\n\n⏰ Your access expires: ${memberExpiresAt.toLocaleString()}\n\n⚠️ This link is for one-time use only.`,
-    }
-  } catch (error: any) {
-    console.error('Error processing start command:', error)
-    return {
-      success: false,
-      message: '❌ An error occurred while processing your request.\n\nPlease try again later or contact support.',
-    }
+  } catch (error) {
+    console.error('Failed to initialize bot system:', error)
+    // Don't exit - allow server to run without bots
   }
 }
 
-/**
- * Initialize bot webhook/polling
- */
+// Export initialization function and manager
+export { initializeBots, botManager }
+
+// Legacy export for backward compatibility with existing code
+export const telegramBot: any = {
+  sendMessage: async (chatId: string | number, text: string, options?: any) => {
+    const bot = botManager.getDefaultBot()
+    if (!bot) throw new Error('No bot available')
+    return bot.telegram.sendMessage(chatId, text, options)
+  },
+  createChatInviteLink: async (chatId: string | number, options?: any) => {
+    const bot = botManager.getDefaultBot()
+    if (!bot) throw new Error('No bot available')
+    return bot.telegram.createChatInviteLink(chatId, options)
+  },
+  revokeChatInviteLink: async (chatId: string | number, inviteLink: string) => {
+    const bot = botManager.getDefaultBot()
+    if (!bot) throw new Error('No bot available')
+    return bot.telegram.revokeChatInviteLink(chatId, inviteLink)
+  },
+  getChatMember: async (chatId: string | number, userId: number) => {
+    const bot = botManager.getDefaultBot()
+    if (!bot) throw new Error('No bot available')
+    return bot.telegram.getChatMember(chatId, userId)
+  },
+  banChatMember: async (chatId: string | number, userId: number) => {
+    const bot = botManager.getDefaultBot()
+    if (!bot) throw new Error('No bot available')
+    return bot.telegram.banChatMember(chatId, userId)
+  },
+  unbanChatMember: async (chatId: string | number, userId: number) => {
+    const bot = botManager.getDefaultBot()
+    if (!bot) throw new Error('No bot available')
+    return bot.telegram.unbanChatMember(chatId, userId)
+  },
+}
+
+// Legacy function for backward compatibility
 export async function initializeBot() {
-  console.log('Bot handlers initialized')
-  // TODO: Set up webhook or polling based on your deployment
+  return initializeBots()
 }
