@@ -106,5 +106,9 @@ export const api = {
     listPlans: () => apiClient.get('/api/v1/admin/plans'),
     listAllGroups: (params?: any) => apiClient.get('/api/v1/admin/telegram-entities', { ...params }),
     listAllInvites: (params?: any) => apiClient.get('/api/v1/admin/invite-links', { ...params }),
+    addTokens: (userId: string, amount: number, description?: string) => 
+      apiClient.post(`/api/v1/admin/users/${userId}/tokens`, { amount, description }),
+    addSubscription: (userId: string, planId: string) => 
+      apiClient.post(`/api/v1/admin/users/${userId}/subscription`, { planId }),
   },
 }

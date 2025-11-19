@@ -1,22 +1,60 @@
 "use client"
 
+import { useState } from 'react'
 import { useSession } from '@/hooks/use-session'
-import { Users, Calendar } from 'lucide-react'
+import { Users, Calendar, Coins, DollarSign } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { AddTokensDialog } from '@/components/admin/add-tokens-dialog'
+import { AddSubscriptionDialog } from '@/components/admin/add-subscription-dialog'
+import { toast } from 'sonner'
 
 export default function AdminUsersPage() {
   const { user, isLoading } = useSession()
+  const [selectedUser, setSelectedUser] = useState<any>(null)
+  const [isTokensDialogOpen, setIsTokensDialogOpen] = useState(false)
+  const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false)
 
   // Fetch users
-  const { data: users, isLoading: usersLoading } = useQuery({
+  const { data: users, isLoading: usersLoading, refetch: refetchUsers } = useQuery({
     queryKey: ['admin', 'users'],
     queryFn: async () => {
       return api.admin.listUsers()
     },
   })
+
+  // Fetch plans for subscription dialog
+  const { data: plans } = useQuery({
+    queryKey: ['admin', 'plans'],
+    queryFn: async () => {
+      return api.admin.listPlans()
+    },
+  })
+
+  const handleAddTokens = async (userId: string, amount: number, description: string) => {
+    try {
+      await api.admin.addTokens(userId, amount, description)
+      toast.success(`Added ${amount} tokens successfully`)
+      refetchUsers()
+    } catch (error) {
+      toast.error('Failed to add tokens')
+      throw error
+    }
+  }
+
+  const handleAddSubscription = async (userId: string, planId: string) => {
+    try {
+      await api.admin.addSubscription(userId, planId)
+      toast.success('Subscription added successfully')
+      refetchUsers()
+    } catch (error) {
+      toast.error('Failed to add subscription')
+      throw error
+    }
+  }
 
   if (isLoading) {
     return (
@@ -94,6 +132,34 @@ export default function AdminUsersPage() {
                   <Calendar className="h-3 w-3" />
                   <span>Joined {new Date(u.createdAt).toLocaleDateString()}</span>
                 </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-3 border-t">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setSelectedUser(u)
+                      setIsTokensDialogOpen(true)
+                    }}
+                  >
+                    <Coins className="h-4 w-4 mr-1" />
+                    Add Tokens
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setSelectedUser(u)
+                      setIsSubscriptionDialogOpen(true)
+                    }}
+                  >
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    Add Sub
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -105,6 +171,25 @@ export default function AdminUsersPage() {
             <p className="text-sm text-muted-foreground">No users found</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Dialogs */}
+      {selectedUser && (
+        <>
+          <AddTokensDialog
+            open={isTokensDialogOpen}
+            onOpenChange={setIsTokensDialogOpen}
+            user={selectedUser}
+            onSubmit={handleAddTokens}
+          />
+          <AddSubscriptionDialog
+            open={isSubscriptionDialogOpen}
+            onOpenChange={setIsSubscriptionDialogOpen}
+            user={selectedUser}
+            plans={(plans as any) || []}
+            onSubmit={handleAddSubscription}
+          />
+        </>
       )}
     </div>
   )

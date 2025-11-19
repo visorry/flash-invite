@@ -9,7 +9,7 @@ const router = Router()
 export const name = 'admin'
 
 const UserParamsSchema = z.object({
-  id: z.string().uuid('Invalid user ID'),
+  id: z.string().min(1, 'Invalid user ID'),
 })
 
 const UpdateUserRoleSchema = z.object({
