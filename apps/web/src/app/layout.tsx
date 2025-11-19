@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../index.css";
 import Providers from "@/components/providers";
-import Header from "@/components/header";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -15,8 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "super-invite",
-	description: "super-invite",
+	title: "Super Invite",
+	description: "Telegram Invite Management Platform",
+};
+
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
+	maximumScale: 1,
+	userScalable: false,
+	themeColor: "#3b82f6",
 };
 
 export default function RootLayout({
@@ -30,10 +37,7 @@ export default function RootLayout({
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
 				<Providers>
-					<div className="grid grid-rows-[auto_1fr] h-svh">
-						<Header />
-						{children}
-					</div>
+					{children}
 				</Providers>
 			</body>
 		</html>

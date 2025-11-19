@@ -16,7 +16,8 @@
     "dotenv": "catalog:",
     "zod": "catalog:",
     "@super-invite/auth": "workspace:*",
-    "@super-invite/db": "workspace:*"
+    "@super-invite/db": "workspace:*",
+    "@prisma/client": "catalog:"
   },
   "devDependencies": {
     "typescript": "catalog:",

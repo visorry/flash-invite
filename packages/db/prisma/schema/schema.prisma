@@ -9,3 +9,232 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ============ AUTH MODELS ============
+
+model User {
+  id            String    @id @map("_id")
+  name          String
+  email         String
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+
+  // Auth relations
+  sessions      Session[]
+  accounts      Account[]
+
+  // App relations
+  subscriptions     Subscription[]
+  tokenBalance      TokenBalance?
+  tokenTransactions TokenTransaction[]
+  telegramEntities  TelegramEntity[]
+  inviteLinks       InviteLink[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @map("_id")
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @map("_id")
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @map("_id")
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+// ============ APP MODELS ============
+
+// Plans
+model Plan {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  type              Int      // PlanType enum
+  interval          Int      // PlanInterval enum
+  price             Float
+  tokensIncluded    Int      @map("tokens_included")
+  features          Json?
+  isActive          Boolean  @default(true) @map("is_active")
+  maxGroups         Int?     @map("max_groups") // null means unlimited
+  maxInvitesPerDay  Int?     @map("max_invites_per_day")
+  metadata          Json?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  subscriptions Subscription[]
+
+  @@map("plan")
+}
+
+// User Subscriptions
+model Subscription {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId      String    @map("plan_id")
+  plan        Plan      @relation(fields: [planId], references: [id])
+  status      Int       @default(0) // SubscriptionStatus enum
+  startDate   DateTime  @default(now()) @map("start_date") @db.Timestamptz(3)
+  endDate     DateTime? @map("end_date") @db.Timestamptz(3)
+  autoRenew   Boolean   @default(true) @map("auto_renew")
+  cancelledAt DateTime? @map("cancelled_at") @db.Timestamptz(3)
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@map("subscription")
+}
+
+// Token Balance
+model TokenBalance {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Int      @default(0)
+  totalEarned Int      @default(0) @map("total_earned")
+  totalSpent  Int      @default(0) @map("total_spent")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("token_balance")
+}
+
+// Token Transactions
+model TokenTransaction {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         Int       // TransactionType enum
+  status       Int       @default(0) // TransactionStatus enum
+  amount       Int       // Positive for credit, negative for debit
+  balanceAfter Int       @map("balance_after")
+  description  String?
+  reference    String?   // External reference like payment ID, invite link ID, etc.
+  metadata     Json?     // Store additional info
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@index([reference])
+  @@map("token_transaction")
+}
+
+// Token Cost Configuration
+model TokenCostConfig {
+  id          String    @id @default(uuid())
+  action      Int       @unique // TokenAction enum
+  cost        Int
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("token_cost_config")
+}
+
+// Telegram Groups/Channels
+model TelegramEntity {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramId   String    @unique @map("telegram_id") // Telegram's chat ID
+  type         Int       // TelegramEntityType enum
+  title        String
+  username     String?   // @username if available
+  description  String?
+  memberCount  Int?      @map("member_count")
+  isActive     Boolean   @default(true) @map("is_active")
+  botAdded     Boolean   @default(false) @map("bot_added")
+  botAddedAt   DateTime? @map("bot_added_at") @db.Timestamptz(3)
+  metadata     Json?     // Store additional telegram data
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  inviteLinks InviteLink[]
+
+  @@index([userId])
+  @@index([telegramId])
+  @@index([type])
+  @@map("telegram_entity")
+}
+
+// Invite Links
+model InviteLink {
+  id               String    @id @default(uuid())
+  telegramEntityId String    @map("telegram_entity_id")
+  telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
+  userId           String    @map("user_id")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inviteLink       String    @unique @map("invite_link") // The actual Telegram invite link
+  durationType     Int       @map("duration_type") // TokenAction enum
+  durationSeconds  Int       @map("duration_seconds") // Duration in seconds
+  memberLimit      Int?      @map("member_limit") // Max uses for this link
+  currentUses      Int       @default(0) @map("current_uses")
+  status           Int       @default(0) // InviteLinkStatus enum
+  expiresAt        DateTime? @map("expires_at") @db.Timestamptz(3)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  tokensCost       Int       @map("tokens_cost")
+  metadata         Json?     // Store additional info
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([telegramEntityId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([durationType])
+  @@map("invite_link")
+}

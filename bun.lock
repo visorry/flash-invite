@@ -15,6 +15,7 @@
     "apps/server": {
       "name": "server",
       "dependencies": {
+        "@prisma/client": "catalog:",
         "@super-invite/auth": "workspace:*",
         "@super-invite/db": "workspace:*",
         "better-auth": "catalog:",
