@@ -14,7 +14,7 @@ const handler = async (
   apiGroup: Promise<APIGroup>,
   prefix: string,
   app: Express,
-  globalMiddleware?: any
+  globalMiddleware?: any | any[]
 ): Promise<void> => {
   const apis = await apiGroup
 
@@ -27,9 +27,16 @@ const handler = async (
     const expressRouter = convertToExpressRouter(api.router)
 
     const middlewares = []
+    
+    // Handle array or single middleware
     if (globalMiddleware) {
-      middlewares.push(globalMiddleware)
+      if (Array.isArray(globalMiddleware)) {
+        middlewares.push(...globalMiddleware)
+      } else {
+        middlewares.push(globalMiddleware)
+      }
     }
+    
     if (api.middleware && api.middleware.length > 0) {
       middlewares.push(...api.middleware)
     }

@@ -1,12 +1,14 @@
 import type { Express } from 'express'
 import restHandler from './handlers/rest.handler'
 import { requireAuth } from '../middleware/auth.middleware'
+import { requireAdmin } from '../middleware/admin.middleware'
 import * as botsRoute from './bots.route'
 import * as invitesRoute from './invites.route'
 import * as membersRoute from './members.route'
 import * as dashboardRoute from './dashboard.route'
 import * as telegramEntitiesRoute from './telegram-entities.route'
 import * as tokensRoute from './tokens.route'
+import * as adminRoute from './admin.route'
 
 const v1APIs = Promise.resolve({
   bots: botsRoute,
@@ -17,7 +19,14 @@ const v1APIs = Promise.resolve({
   tokens: tokensRoute,
 })
 
+const adminAPIs = Promise.resolve({
+  admin: adminRoute,
+})
+
 export const setupRoutes = (app: Express) => {
   // Protected routes (auth required)
   restHandler(v1APIs, '/api/v1', app, requireAuth)
+  
+  // Admin routes (auth + admin required)
+  restHandler(adminAPIs, '/api/v1', app, [requireAuth, requireAdmin])
 }
