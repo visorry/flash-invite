@@ -41,7 +41,7 @@ RUN echo "NEXT_PUBLIC_API_URL during build: $NEXT_PUBLIC_API_URL"
 RUN cd apps/web && bun run build
 
 # Expose port
-EXPOSE 3001
+EXPOSE 30011
 
 # Start the web app
 CMD ["bun", "run", "--cwd", "apps/web", "start"]
