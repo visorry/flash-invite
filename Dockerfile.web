@@ -26,7 +26,6 @@ RUN bun install
 # Copy source code
 COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
-COPY tsconfig.base.json ./
 
 # Remove any local .env files that might override build args
 RUN rm -f apps/web/.env apps/web/.env.local
