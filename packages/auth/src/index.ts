@@ -12,4 +12,13 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 	},
+	user: {
+		additionalFields: {
+			isAdmin: {
+				type: "boolean",
+				defaultValue: false,
+				input: false, // Don't allow setting via registration
+			},
+		},
+	},
 });

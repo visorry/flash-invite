@@ -16,9 +16,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
           "disabled:pointer-events-none disabled:opacity-50",
           {
-            'bg-blue-600 text-white hover:bg-blue-700': variant === 'default',
-            'hover:bg-gray-100 dark:hover:bg-gray-800': variant === 'ghost',
-            'border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800': variant === 'outline',
+            'bg-primary text-primary-foreground hover:bg-primary/90': variant === 'default',
+            'hover:bg-accent hover:text-accent-foreground': variant === 'ghost',
+            'border border-input bg-background hover:bg-accent hover:text-accent-foreground': variant === 'outline',
           },
           {
             'h-10 px-4 py-2': size === 'default',

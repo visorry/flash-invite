@@ -13,8 +13,7 @@ const UserParamsSchema = z.object({
 })
 
 const UpdateUserRoleSchema = z.object({
-  isAdmin: z.boolean().optional(),
-  role: z.string().optional(),
+  isAdmin: z.boolean(),
 })
 
 // Get all users
@@ -95,6 +94,43 @@ router.get(
   async (req: Request) => {
     const ctx = getRequestContext(req)
     return adminService.listAllInviteLinks(ctx)
+  }
+)
+
+// Add tokens to user
+const AddTokensSchema = z.object({
+  amount: z.number().int().positive(),
+  description: z.string().optional(),
+})
+
+router.post(
+  '/users/:id/tokens',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const { id } = req.validatedParams
+    const data = req.validatedBody
+    return adminService.addTokensToUser(ctx, id, data.amount, data.description)
+  },
+  {
+    validation: [UserParamsSchema, AddTokensSchema],
+  }
+)
+
+// Add subscription to user
+const AddSubscriptionSchema = z.object({
+  planId: z.string().uuid(),
+})
+
+router.post(
+  '/users/:id/subscription',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const { id } = req.validatedParams
+    const data = req.validatedBody
+    return adminService.addSubscriptionToUser(ctx, id, data.planId)
+  },
+  {
+    validation: [UserParamsSchema, AddSubscriptionSchema],
   }
 )
 

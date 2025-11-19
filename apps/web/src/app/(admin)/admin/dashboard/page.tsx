@@ -33,11 +33,11 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="flex-1 space-y-6 p-4">
+    <div className="flex-1 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-lg font-semibold">Admin Dashboard</h1>
-        <p className="text-xs text-muted-foreground">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <p className="text-muted-foreground">
           Platform overview and management
         </p>
       </div>

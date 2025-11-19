@@ -11,9 +11,8 @@ export const requireAdmin = async (req: Request, _res: Response, next: NextFunct
       return
     }
 
-    // Check if user is admin (you can add a role field to User model)
-    // For now, we'll check if user has an isAdmin field or role
-    if (!(user as any).isAdmin && (user as any).role !== 'admin') {
+    // Check if user is admin
+    if (!(user as any).isAdmin) {
       next(new ForbiddenError('Admin access required', AppErrorCode.FORBIDDEN))
       return
     }

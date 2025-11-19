@@ -97,4 +97,14 @@ export const api = {
     getStats: () => apiClient.get('/api/v1/dashboard/stats'),
     getRecentActivity: () => apiClient.get('/api/v1/dashboard/recent-activity'),
   },
+  admin: {
+    getStats: () => apiClient.get('/api/v1/admin/stats'),
+    listUsers: (params?: any) => apiClient.get('/api/v1/admin/users', { ...params }),
+    getUserById: (id: string) => apiClient.get(`/api/v1/admin/users/${id}`),
+    updateUserRole: (id: string, data: any) => apiClient.put(`/api/v1/admin/users/${id}/role`, data),
+    listSubscriptions: (params?: any) => apiClient.get('/api/v1/admin/subscriptions', { ...params }),
+    listPlans: () => apiClient.get('/api/v1/admin/plans'),
+    listAllGroups: (params?: any) => apiClient.get('/api/v1/admin/telegram-entities', { ...params }),
+    listAllInvites: (params?: any) => apiClient.get('/api/v1/admin/invite-links', { ...params }),
+  },
 }

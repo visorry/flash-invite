@@ -15,6 +15,7 @@ const listUsers = async (ctx: RequestContext) => {
         name: true,
         email: true,
         emailVerified: true,
+        isAdmin: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -76,9 +77,15 @@ const updateUserRole = async (_ctx: RequestContext, id: string, data: any) => {
   const user = await db.user.update({
     where: { id },
     data: {
-      // Add role/admin fields to your User model
-      // For now, just update what exists
+      isAdmin: data.isAdmin,
       updatedAt: new Date(),
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      isAdmin: true,
+      updatedAt: true,
     },
   })
 
@@ -230,6 +237,93 @@ const listAllInviteLinks = async (ctx: RequestContext) => {
   }
 }
 
+const addTokensToUser = async (_ctx: RequestContext, userId: string, amount: number, description?: string) => {
+  // Get or create token balance
+  let tokenBalance = await db.tokenBalance.findUnique({
+    where: { userId },
+  })
+
+  if (!tokenBalance) {
+    tokenBalance = await db.tokenBalance.create({
+      data: {
+        userId,
+        balance: 0,
+        totalEarned: 0,
+        totalSpent: 0,
+      },
+    })
+  }
+
+  const newBalance = tokenBalance.balance + amount
+
+  // Update balance
+  await db.tokenBalance.update({
+    where: { userId },
+    data: {
+      balance: newBalance,
+      totalEarned: tokenBalance.totalEarned + amount,
+    },
+  })
+
+  // Create transaction record
+  await db.tokenTransaction.create({
+    data: {
+      userId,
+      type: 0, // CREDIT
+      status: 1, // COMPLETED
+      amount,
+      balanceAfter: newBalance,
+      description: description || 'Admin credit',
+      reference: 'admin-add',
+    },
+  })
+
+  return {
+    success: true,
+    newBalance,
+    amountAdded: amount,
+  }
+}
+
+const addSubscriptionToUser = async (_ctx: RequestContext, userId: string, planId: string) => {
+  // Get plan details
+  const plan = await db.plan.findUnique({
+    where: { id: planId },
+  })
+
+  if (!plan) {
+    throw new NotFoundError('Plan not found')
+  }
+
+  // Calculate end date (30 days from now for monthly, 365 for yearly)
+  const startDate = new Date()
+  const endDate = new Date()
+  endDate.setDate(endDate.getDate() + (plan.interval === 0 ? 30 : 365))
+
+  // Create subscription
+  const subscription = await db.subscription.create({
+    data: {
+      userId,
+      planId,
+      status: 0, // ACTIVE
+      startDate,
+      endDate,
+      autoRenew: false, // Admin-added subscriptions don't auto-renew
+    },
+    include: {
+      plan: true,
+    },
+  })
+
+  // Add tokens from plan
+  await addTokensToUser(_ctx, userId, plan.tokensIncluded, `Subscription: ${plan.name}`)
+
+  return {
+    success: true,
+    subscription,
+  }
+}
+
 export default {
   listUsers,
   getUserById,
@@ -239,4 +333,6 @@ export default {
   getPlatformStats,
   listAllTelegramEntities,
   listAllInviteLinks,
+  addTokensToUser,
+  addSubscriptionToUser,
 }
