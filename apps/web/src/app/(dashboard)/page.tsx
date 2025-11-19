@@ -60,19 +60,19 @@ export default function DashboardPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-2 gap-2">
-        <Card className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white hover:shadow-xl hover:scale-[1.02] transition-all">
+        <Card className="bg-primary text-primary-foreground hover:shadow-xl hover:scale-[1.02] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white">
+            <CardTitle className="text-sm font-medium">
               Total<br />Groups
             </CardTitle>
-            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-              <Bot className="h-4 w-4 text-white" />
+            <div className="p-2 bg-primary-foreground/20 backdrop-blur-sm rounded-lg">
+              <Bot className="h-4 w-4" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-primary-foreground/20 rounded animate-pulse" />
               ) : (
                 ((stats as any)?.totalBots || 0).toLocaleString()
               )}
@@ -80,19 +80,19 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 text-white hover:shadow-xl hover:scale-[1.02] transition-all">
+        <Card className="bg-primary text-primary-foreground hover:shadow-xl hover:scale-[1.02] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white">
+            <CardTitle className="text-sm font-medium">
               Active<br />Invites
             </CardTitle>
-            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
-              <Link className="h-4 w-4 text-white" />
+            <div className="p-2 bg-primary-foreground/20 backdrop-blur-sm rounded-lg">
+              <Link className="h-4 w-4" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-white/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-primary-foreground/20 rounded animate-pulse" />
               ) : (
                 ((stats as any)?.activeInvites || 0).toLocaleString()
               )}

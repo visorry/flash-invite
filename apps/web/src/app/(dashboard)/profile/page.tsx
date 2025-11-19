@@ -36,52 +36,46 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      {/* Profile Card */}
+      {/* Profile Card - Compact */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Account Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="pt-6 pb-6 space-y-4">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
               <User className="h-6 w-6 text-primary" />
             </div>
-            <div>
-              <p className="text-sm font-medium">{user.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium truncate">{user.name}</p>
               <p className="text-xs text-muted-foreground">User</p>
             </div>
           </div>
 
-          <div className="space-y-3 pt-4 border-t">
+          <div className="space-y-3 pt-2 border-t">
             <div className="flex items-center gap-3">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <div>
+              <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm">{user.email}</p>
+                <p className="text-sm truncate">{user.email}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <div>
+              <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted-foreground">User ID</p>
-                <p className="text-sm font-mono text-xs">{user.id}</p>
+                <p className="text-xs font-mono truncate">{user.id}</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Preferences Card */}
+      {/* Preferences Card - Compact */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Preferences</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Theme Toggle */}
-          <div className="flex items-center justify-between p-4 border rounded-lg">
+        <CardContent className="pt-6 pb-6 space-y-3">
+          {/* Theme Toggle - Mobile Optimized */}
+          <div className="p-4 border rounded-lg space-y-3">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <Palette className="h-5 w-5 text-primary" />
               </div>
               <div className="text-left">
@@ -89,11 +83,12 @@ export default function ProfilePage() {
                 <p className="text-xs text-muted-foreground">Choose your preferred theme</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 variant={theme === 'light' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setTheme('light')}
+                className="w-full"
               >
                 Light
               </Button>
@@ -101,6 +96,7 @@ export default function ProfilePage() {
                 variant={theme === 'dark' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setTheme('dark')}
+                className="w-full"
               >
                 Dark
               </Button>
@@ -108,6 +104,7 @@ export default function ProfilePage() {
                 variant={theme === 'system' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setTheme('system')}
+                className="w-full"
               >
                 System
               </Button>
@@ -116,12 +113,9 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Actions Card */}
+      {/* Actions Card - Compact */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="pt-6 pb-6 space-y-3">
           {/* Admin Panel Button - Only for admins */}
           {isAdmin && (
             <Button

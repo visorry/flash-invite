@@ -2,7 +2,7 @@
 
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2 } from 'lucide-react'
+import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2, Copy } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
@@ -105,14 +105,13 @@ export default function InvitesPage() {
         <div className="space-y-3">
           {(invites as any).items.map((invite: any) => (
             <Card key={invite.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <LinkIcon className="h-4 w-4" />
-                      Invite Link
-                      {getStatusBadge(invite.status)}
-                    </CardTitle>
+              <CardContent className="pt-4 pb-4 space-y-3">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+                    <LinkIcon className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm font-medium">Invite Link</span>
+                    {getStatusBadge(invite.status)}
                   </div>
                   {invite.status === 0 && (
                     <Button
@@ -120,16 +119,15 @@ export default function InvitesPage() {
                       variant="ghost"
                       onClick={() => revokeMutation.mutate(invite.id)}
                       disabled={revokeMutation.isPending}
+                      className="flex-shrink-0 h-8 w-8 p-0"
                     >
                       <Ban className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Invite Link */}
+                {/* Invite Link - Mobile Optimized */}
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 text-xs bg-muted px-2 py-1 rounded truncate">
+                  <code className="flex-1 text-xs bg-muted px-2 py-1 rounded truncate min-w-0">
                     {invite.inviteLink}
                   </code>
                   <Button
@@ -139,13 +137,16 @@ export default function InvitesPage() {
                       navigator.clipboard.writeText(invite.inviteLink)
                       toast.success('Copied to clipboard')
                     }}
+                    className="flex-shrink-0"
                   >
-                    Copy
+                    <span className="hidden sm:inline">Copy</span>
+                    <Copy className="h-4 w-4 sm:hidden" />
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => shareInvite(invite.inviteLink)}
+                    className="flex-shrink-0"
                   >
                     <Share2 className="h-4 w-4" />
                   </Button>
@@ -173,7 +174,7 @@ export default function InvitesPage() {
                 </div>
 
                 {/* Cost */}
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground pt-2 border-t">
                   Cost: {invite.tokensCost} tokens
                 </div>
               </CardContent>

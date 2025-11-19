@@ -124,87 +124,75 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - Compact Design */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filters & Sort
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Select value={filterGroup} onValueChange={setFilterGroup}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Groups" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Groups</SelectItem>
-                  {(groups as any)?.items?.map((group: any) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="joined-desc">Newest First</SelectItem>
-                  <SelectItem value="joined-asc">Oldest First</SelectItem>
-                  <SelectItem value="expires-asc">Expiring Soon</SelectItem>
-                  <SelectItem value="expires-desc">Expiring Later</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <CardContent className="pt-4 pb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Select value={filterGroup} onValueChange={setFilterGroup}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All Groups" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Groups</SelectItem>
+                {(groups as any)?.items?.map((group: any) => (
+                  <SelectItem key={group.id} value={group.id}>
+                    {group.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="joined-desc">Newest First</SelectItem>
+                <SelectItem value="joined-asc">Oldest First</SelectItem>
+                <SelectItem value="expires-asc">Expiring Soon</SelectItem>
+                <SelectItem value="expires-desc">Expiring Later</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Stats - Compact */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{(members as any)?.total || 0}</div>
-            <p className="text-xs text-muted-foreground">Total Members</p>
+          <CardContent className="pt-4 pb-4">
+            <div className="text-xl sm:text-2xl font-bold">{(members as any)?.total || 0}</div>
+            <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">
+          <CardContent className="pt-4 pb-4">
+            <div className="text-xl sm:text-2xl font-bold text-green-600">
               {(members as any)?.items?.filter((m: any) => m.isActive && new Date(m.expiresAt) > new Date()).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Active</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-orange-600">
+          <CardContent className="pt-4 pb-4">
+            <div className="text-xl sm:text-2xl font-bold text-orange-600">
               {(members as any)?.items?.filter((m: any) => new Date(m.expiresAt) < new Date() && !m.kickedAt).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Expired</p>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-red-600">
+          <CardContent className="pt-4 pb-4">
+            <div className="text-xl sm:text-2xl font-bold text-red-600">
               {(members as any)?.items?.filter((m: any) => m.kickedAt).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Kicked</p>
@@ -221,23 +209,24 @@ export default function MembersPage() {
         <div className="space-y-3">
           {(members as any).items.map((member: any) => (
             <Card key={member.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      {member.fullName || 'Unknown User'}
+              <CardContent className="pt-4 pb-4 space-y-3">
+                {/* Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium truncate">
+                        {member.fullName || 'Unknown User'}
+                      </p>
                       {getStatusBadge(member)}
-                    </CardTitle>
+                    </div>
                     {member.username && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground truncate">
                         @{member.username}
                       </p>
                     )}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
+
                 {/* Group Info */}
                 {member.telegramEntity && (
                   <div className="text-xs">
@@ -246,33 +235,39 @@ export default function MembersPage() {
                   </div>
                 )}
 
-                {/* Timeline */}
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="flex items-start gap-2">
-                    <UserCheck className="h-3 w-3 text-green-600 mt-0.5" />
-                    <div>
+                {/* Timeline - Mobile Optimized */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="h-3 w-3 text-green-600 flex-shrink-0" />
+                    <div className="min-w-0">
                       <p className="text-muted-foreground">Joined</p>
-                      <p className="font-medium">
-                        {new Date(member.joinedAt).toLocaleString()}
+                      <p className="font-medium truncate">
+                        {new Date(member.joinedAt).toLocaleString(undefined, { 
+                          dateStyle: 'short', 
+                          timeStyle: 'short' 
+                        })}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <Clock className="h-3 w-3 text-orange-600 mt-0.5" />
-                    <div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-3 w-3 text-orange-600 flex-shrink-0" />
+                    <div className="min-w-0">
                       <p className="text-muted-foreground">Expires</p>
-                      <p className="font-medium">
-                        {new Date(member.expiresAt).toLocaleString()}
+                      <p className="font-medium truncate">
+                        {new Date(member.expiresAt).toLocaleString(undefined, { 
+                          dateStyle: 'short', 
+                          timeStyle: 'short' 
+                        })}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Duration & Status */}
-                <div className="flex items-center justify-between text-xs pt-2 border-t">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs pt-2 border-t">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>Duration: {formatDuration(member.expiresAt, member.joinedAt)}</span>
+                    <Calendar className="h-3 w-3 flex-shrink-0" />
+                    <span>{formatDuration(member.expiresAt, member.joinedAt)}</span>
                   </div>
                   <div className="font-medium">
                     {member.kickedAt ? (
@@ -285,11 +280,6 @@ export default function MembersPage() {
                       </span>
                     )}
                   </div>
-                </div>
-
-                {/* Telegram User ID */}
-                <div className="text-xs text-muted-foreground">
-                  Telegram ID: <code className="bg-muted px-1 py-0.5 rounded">{member.telegramUserId}</code>
                 </div>
               </CardContent>
             </Card>

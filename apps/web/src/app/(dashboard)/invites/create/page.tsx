@@ -153,12 +153,12 @@ export default function CreateInvitePage() {
                 <Input
                   value={createdInvite.inviteLink}
                   readOnly
-                  className="font-mono text-sm"
+                  className="font-mono text-sm min-w-0"
                 />
-                <Button onClick={copyToClipboard} variant="outline" size="icon">
+                <Button onClick={copyToClipboard} variant="outline" size="icon" className="flex-shrink-0">
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
-                <Button onClick={shareInvite} variant="outline" size="icon">
+                <Button onClick={shareInvite} variant="outline" size="icon" className="flex-shrink-0">
                   <Share2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -187,7 +187,7 @@ export default function CreateInvitePage() {
               </div>
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 onClick={() => {
                   setCreatedInvite(null)
@@ -200,13 +200,13 @@ export default function CreateInvitePage() {
                   })
                 }}
                 variant="outline"
-                className="flex-1"
+                className="w-full sm:flex-1"
               >
                 Create Another
               </Button>
               <Button
                 onClick={() => router.push('/invites')}
-                className="flex-1"
+                className="w-full sm:flex-1"
               >
                 View All Invites
               </Button>
@@ -344,21 +344,21 @@ export default function CreateInvitePage() {
               </p>
             </div>
 
-            {/* Submit Buttons */}
-            <div className="flex gap-3 pt-4">
+            {/* Submit Buttons - Mobile Optimized */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => router.push('/invites')}
                 disabled={isSubmitting}
-                className="flex-1"
+                className="w-full sm:flex-1"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1"
+                className="w-full sm:flex-1"
               >
                 {isSubmitting ? 'Creating...' : 'Create Invite Link'}
               </Button>
