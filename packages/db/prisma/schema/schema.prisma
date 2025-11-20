@@ -205,6 +205,7 @@ model TelegramEntity {
 
   inviteLinks  InviteLink[]
   groupMembers GroupMember[]
+  joinLogs     JoinLog[]
 
   @@index([userId])
   @@index([telegramId])
@@ -273,4 +274,29 @@ model GroupMember {
   @@index([telegramEntityId])
   @@index([expiresAt])
   @@map("group_member")
+}
+
+// Join Log - Track every join/renewal for analytics
+model JoinLog {
+  id               String         @id @default(uuid())
+  telegramUserId   String         @map("telegram_user_id")
+  telegramEntityId String         @map("telegram_entity_id")
+  telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
+  inviteLinkId     String         @map("invite_link_id")
+  username         String?
+  fullName         String?        @map("full_name")
+  durationType     Int            @map("duration_type") // TokenAction enum
+  durationSeconds  Int            @map("duration_seconds")
+  tokensCost       Int            @map("tokens_cost")
+  isRenewal        Boolean        @default(false) @map("is_renewal")
+  previousExpiresAt DateTime?     @map("previous_expires_at") @db.Timestamptz(3)
+  newExpiresAt     DateTime       @map("new_expires_at") @db.Timestamptz(3)
+  metadata         Json?
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([telegramUserId])
+  @@index([telegramEntityId])
+  @@index([inviteLinkId])
+  @@index([createdAt])
+  @@map("join_log")
 }

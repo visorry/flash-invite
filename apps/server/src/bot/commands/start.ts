@@ -36,7 +36,7 @@ export function registerStartCommand(bot: Telegraf) {
           return ctx.reply('❌ Invalid or expired invite link.')
         }
 
-        const { inviteLink, expiresAt, groupTitle } = result
+        const { inviteLink, expiresAt, groupTitle, isRenewal } = result
         
         // Calculate duration for better clarity
         const durationMs = expiresAt.getTime() - Date.now()
@@ -53,8 +53,15 @@ export function registerStartCommand(bot: Telegraf) {
           durationText = `${minutes} minute${minutes !== 1 ? 's' : ''}`
         }
 
-        await ctx.reply(
-          `🎉 *Welcome!* You've successfully unlocked access to the group.
+        // Different messages for renewal vs first join
+        const message = isRenewal
+          ? `🔄 *Access Renewed!* Your membership has been extended.
+                
+� *Auccess valid for:* _${durationText}_
+🔒 You will be automatically removed after this time.
+
+� Cligck below to rejoin if needed:`
+          : `🎉 *Welcome!* You've successfully unlocked access to the group.
                 
 🕒 *Access valid for:* _${durationText}_
 🔒 You will be automatically removed after this time.
@@ -62,21 +69,21 @@ export function registerStartCommand(bot: Telegraf) {
 🚫 *Do not share this link!* It is uniquely generated for you.  
 Sharing may cause it to become invalid or unusable.
 
-👇 Click below to join:`,
-          {
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  {
-                    text: `🔗 Join ${groupTitle}`,
-                    url: inviteLink || '',
-                  },
-                ],
+👇 Click below to join:`
+
+        await ctx.reply(message, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: isRenewal ? `🔄 Rejoin ${groupTitle}` : `🔗 Join ${groupTitle}`,
+                  url: inviteLink || '',
+                },
               ],
-            },
-          }
-        )
+            ],
+          },
+        })
       } catch (error) {
         console.error('Error processing start token:', error)
         await ctx.reply('❌ Invalid or expired invite link.')
@@ -170,30 +177,68 @@ async function processStartToken(
 
     console.log('[INFO] Created one-time invite link:', chatInviteLink.invite_link)
 
-    // Create or update group member record
-    await db.groupMember.upsert({
+    // Check if member already exists
+    const existingMember = await db.groupMember.findUnique({
       where: {
         telegramUserId_telegramEntityId: {
           telegramUserId: userId,
           telegramEntityId: inviteRecord.telegramEntityId,
         },
       },
-      update: {
-        username,
-        fullName,
-        expiresAt,
-        inviteLink: chatInviteLink.invite_link,
-      },
-      create: {
-        telegramUserId: userId,
-        username,
-        fullName,
-        telegramEntityId: inviteRecord.telegramEntityId,
-        inviteLink: chatInviteLink.invite_link,
-        expiresAt,
-        joinedAt: new Date(),
-      },
     })
+
+    const isRenewal = !!existingMember
+    const previousExpiresAt = existingMember?.expiresAt
+
+    // Only extend expiry if new time is later than current
+    const finalExpiresAt = existingMember?.expiresAt && existingMember.expiresAt > expiresAt
+      ? existingMember.expiresAt
+      : expiresAt
+
+    // Create or update group member record and log the join
+    await db.$transaction([
+      db.groupMember.upsert({
+        where: {
+          telegramUserId_telegramEntityId: {
+            telegramUserId: userId,
+            telegramEntityId: inviteRecord.telegramEntityId,
+          },
+        },
+        update: {
+          username,
+          fullName,
+          expiresAt: finalExpiresAt,
+          inviteLink: chatInviteLink.invite_link,
+          isActive: true, // Reactivate if they were kicked
+          kickedAt: null, // Clear kick status
+        },
+        create: {
+          telegramUserId: userId,
+          username,
+          fullName,
+          telegramEntityId: inviteRecord.telegramEntityId,
+          inviteLink: chatInviteLink.invite_link,
+          expiresAt: finalExpiresAt,
+          joinedAt: new Date(),
+        },
+      }),
+      // Log this join for analytics
+      db.joinLog.create({
+        data: {
+          telegramUserId: userId,
+          telegramEntityId: inviteRecord.telegramEntityId,
+          inviteLinkId: inviteRecord.id,
+          username,
+          fullName,
+          durationType: inviteRecord.durationType,
+          durationSeconds: inviteRecord.durationSeconds,
+          tokensCost: inviteRecord.tokensCost,
+          isRenewal,
+          previousExpiresAt,
+          newExpiresAt: finalExpiresAt,
+        },
+      }),
+    ])
 
     // Increment usage count
     await db.inviteLink.update({
@@ -209,8 +254,9 @@ async function processStartToken(
 
     return {
       inviteLink: chatInviteLink.invite_link,
-      expiresAt,
+      expiresAt: finalExpiresAt,
       groupTitle: inviteRecord.telegramEntity.title,
+      isRenewal,
     }
   } catch (error) {
     console.error('[ERROR] processStartToken failed:', {
