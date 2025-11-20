@@ -27,8 +27,14 @@ const list = async (ctx: RequestContext) => {
     db.inviteLink.count({ where: filter }),
   ])
 
+  // Add inviteLink alias for backward compatibility
+  const itemsWithAlias = items.map(item => ({
+    ...item,
+    inviteLink: item.botStartLink, // Alias for web app
+  }))
+
   return {
-    items,
+    items: itemsWithAlias,
     total,
     page: pagination.current || 1,
     size: pagination.take || 20,
@@ -52,7 +58,11 @@ const getById = async (ctx: RequestContext, id: string) => {
     throw new NotFoundError('Invite link not found')
   }
 
-  return invite
+  // Add inviteLink alias for backward compatibility
+  return {
+    ...invite,
+    inviteLink: invite.botStartLink,
+  }
 }
 
 const create = async (ctx: RequestContext, data: {
@@ -139,7 +149,11 @@ const create = async (ctx: RequestContext, data: {
       },
     })
 
-    return invite
+    // Add inviteLink alias for backward compatibility
+    return {
+      ...invite,
+      inviteLink: invite.botStartLink,
+    }
   })
 }
 
@@ -181,7 +195,11 @@ const revoke = async (ctx: RequestContext, id: string) => {
       },
     })
 
-    return updated
+    // Add inviteLink alias for backward compatibility
+    return {
+      ...updated,
+      inviteLink: updated.botStartLink,
+    }
   })
 }
 
