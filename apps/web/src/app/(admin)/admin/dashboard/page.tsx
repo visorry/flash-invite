@@ -185,7 +185,7 @@ export default function AdminDashboardPage() {
         >
           <CardContent className="flex flex-col items-center justify-center py-6">
             <Bot className="h-8 w-8 text-primary mb-2" />
-            <p className="text-sm font-medium">All Groups</p>
+            <p className="text-sm font-medium">All Groups </p>
           </CardContent>
         </Card>
 

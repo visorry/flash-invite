@@ -16,7 +16,7 @@ export function registerStartCommand(bot: Telegraf) {
       if (!token) {
         console.log(`User ${userId} attempted to start without a token.`)
         return ctx.reply(
-          '🚫 *Missing Token!*\n\nTo continue, please use the invite link provided to you.\n\nExample:\n`https://t.me/yourbot?start=token`',
+          '🚫 *Missing Token!*\n\nTo continue, please use the invite link provided to you.`',
           {
             parse_mode: 'Markdown',
           }
