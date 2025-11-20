@@ -28,7 +28,7 @@ RUN cd packages/db && bunx prisma generate
 RUN cd apps/server && bun run build
 
 # Expose port
-EXPOSE 50101
+EXPOSE 5019
 
 # Start the server
 CMD ["bun", "run", "apps/server/dist/index.js"]

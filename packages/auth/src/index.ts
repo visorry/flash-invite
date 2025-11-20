@@ -1,8 +1,10 @@
-import { betterAuth, type BetterAuthOptions } from "better-auth";
+import { betterAuth, type Auth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "@super-invite/db";
 
-export const auth = betterAuth({
+export const auth: Auth = betterAuth({
+	secret: process.env.BETTER_AUTH_SECRET,
+	baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
 	}),
@@ -19,6 +21,21 @@ export const auth = betterAuth({
 				defaultValue: false,
 				input: false, // Don't allow setting via registration
 			},
+		},
+	},
+	session: {
+		cookieCache: {
+			enabled: true,
+			maxAge: 5 * 60, // 5 minutes
+		},
+	},
+	advanced: {
+		defaultCookieAttributes: {
+			sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+			secure: process.env.NODE_ENV === 'production',
+			httpOnly: false,
+			path: "/",
+			domain: process.env.COOKIE_DOMAIN,
 		},
 	},
 });
