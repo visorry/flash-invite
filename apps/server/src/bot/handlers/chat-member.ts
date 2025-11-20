@@ -33,10 +33,10 @@ export async function handleChatMember(ctx: Context) {
 
       console.log(`[CHAT_MEMBER] Invite link used: ${inviteLinkUsed}`)
 
-      // Find the group member record for this invite link
+      // Find the group member record for this Telegram invite link
       const dbUser = await db.groupMember.findFirst({
         where: {
-          inviteLink: inviteLinkUsed,
+          telegramInviteLink: inviteLinkUsed,
         },
       })
 

@@ -220,13 +220,14 @@ model InviteLink {
   telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
   userId           String    @map("user_id")
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  inviteLink       String    @unique @map("invite_link") // The actual Telegram invite link
+  botStartLink     String    @unique @map("bot_start_link") // Bot start link: https://t.me/bot?start=TOKEN
+  token            String    @unique // Unique token for this invite (extracted for fast queries)
   durationType     Int       @map("duration_type") // TokenAction enum
-  durationSeconds  Int       @map("duration_seconds") // Duration in seconds
+  durationSeconds  Int       @map("duration_seconds") // How long member can stay AFTER joining
   memberLimit      Int?      @map("member_limit") // Max uses for this link
   currentUses      Int       @default(0) @map("current_uses")
   status           Int       @default(0) // InviteLinkStatus enum
-  expiresAt        DateTime? @map("expires_at") @db.Timestamptz(3)
+  linkExpiresAt    DateTime? @map("link_expires_at") @db.Timestamptz(3) // When the bot link expires
   revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
   tokensCost       Int       @map("tokens_cost")
   metadata         Json?     // Store additional info
@@ -237,8 +238,9 @@ model InviteLink {
   @@index([userId])
   @@index([telegramEntityId])
   @@index([status])
-  @@index([expiresAt])
+  @@index([linkExpiresAt])
   @@index([durationType])
+  @@index([token])
   @@map("invite_link")
 }
 
@@ -261,9 +263,9 @@ model GroupMember {
   telegramEntity    TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
   username          String?
   fullName          String?        @map("full_name")
-  inviteLink        String         @map("invite_link")
+  telegramInviteLink String        @map("telegram_invite_link") // Actual Telegram group link: https://t.me/+ABC123
   joinedAt          DateTime       @default(now()) @map("joined_at") @db.Timestamptz(3)
-  expiresAt         DateTime       @map("expires_at") @db.Timestamptz(3)
+  memberExpiresAt   DateTime       @map("member_expires_at") @db.Timestamptz(3) // When member access expires and gets kicked
   kickedAt          DateTime?      @map("kicked_at") @db.Timestamptz(3)
   isActive          Boolean        @default(true) @map("is_active")
   metadata          Json?
@@ -272,7 +274,8 @@ model GroupMember {
 
   @@unique([telegramUserId, telegramEntityId], name: "telegramUserId_telegramEntityId")
   @@index([telegramEntityId])
-  @@index([expiresAt])
+  @@index([memberExpiresAt])
+  @@index([telegramInviteLink])
   @@map("group_member")
 }
 

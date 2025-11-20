@@ -13,8 +13,8 @@ export async function kickExpiredMembers() {
     // Find all members whose access has expired
     const expiredMembers = await db.groupMember.findMany({
       where: {
-        expiresAt: {
-          lte: new Date(), // Expired
+        memberExpiresAt: {
+          lte: new Date(), // Member access expired
         },
         isActive: true, // Still active (not kicked yet)
         kickedAt: null, // Not already kicked
@@ -225,7 +225,7 @@ export async function cleanupOldInvites() {
           {
             // Expired invites
             status: 1, // EXPIRED
-            expiresAt: {
+            linkExpiresAt: {
               lte: sixtyDaysAgo,
             },
           },
@@ -240,7 +240,7 @@ export async function cleanupOldInvites() {
             // Unused active invites that expired
             status: 0, // ACTIVE
             currentUses: 0,
-            expiresAt: {
+            linkExpiresAt: {
               lte: sixtyDaysAgo,
             },
           },
@@ -278,7 +278,7 @@ export async function sendExpiryWarnings() {
 
     const expiringMembers = await db.groupMember.findMany({
       where: {
-        expiresAt: {
+        memberExpiresAt: {
           gte: now,
           lte: oneHourFromNow,
         },

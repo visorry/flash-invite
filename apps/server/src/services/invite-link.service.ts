@@ -2,7 +2,6 @@ import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
 import { InviteLinkStatus } from '@super-invite/db'
-import { telegramBot } from '../lib/telegram'
 import { generatePrismaInclude } from '../helper/db/include'
 import { DBEntity } from '../constant/db'
 import { withTransaction } from '../helper/db/transaction'
@@ -118,23 +117,23 @@ const create = async (ctx: RequestContext, data: {
     }
 
     // Create bot start link
-    const inviteLink = `https://t.me/${botUsername}?start=${token}`
+    const botStartLink = `https://t.me/${botUsername}?start=${token}`
 
     // Create invite link record
     const invite = await tx.inviteLink.create({
       data: {
         telegramEntityId: data.telegramEntityId,
         userId: ctx.user!.id,
-        inviteLink,
+        botStartLink,
+        token, // Store token as root column for fast queries
         durationType: 0, // Custom duration
         durationSeconds: data.durationSeconds, // How long member can stay AFTER joining
         memberLimit: data.memberLimit ?? 1, // Default to 1 (one-time use)
         currentUses: 0,
         status: InviteLinkStatus.ACTIVE,
-        expiresAt: inviteLinkExpiresAt, // When the invite LINK expires (1 year)
+        linkExpiresAt: inviteLinkExpiresAt, // When the bot link expires (30 days)
         tokensCost: 0, // Free for now, can add pricing later
         metadata: {
-          token,
           name: data.name,
         },
       },
@@ -170,13 +169,8 @@ const revoke = async (ctx: RequestContext, id: string) => {
       throw new NotFoundError('Telegram entity not found')
     }
 
-    // Revoke on Telegram
-    try {
-      await telegramBot.revokeChatInviteLink(entity.telegramId, invite.inviteLink)
-    } catch (error: any) {
-      // Continue even if Telegram revoke fails
-      console.error('Failed to revoke on Telegram:', error)
-    }
+    // Note: Bot start links cannot be revoked on Telegram
+    // We just mark them as revoked in our database
 
     // Update status
     const updated = await tx.inviteLink.update({
@@ -196,11 +190,11 @@ const getStats = async (ctx: RequestContext, id: string) => {
 
   return {
     inviteId: invite.id,
-    inviteLink: invite.inviteLink,
+    botStartLink: invite.botStartLink,
     currentUses: invite.currentUses,
     memberLimit: invite.memberLimit,
     status: invite.status,
-    expiresAt: invite.expiresAt,
+    linkExpiresAt: invite.linkExpiresAt,
     createdAt: invite.createdAt,
     tokensCost: invite.tokensCost,
   }
@@ -211,7 +205,7 @@ const checkExpired = async () => {
   const expired = await db.inviteLink.findMany({
     where: {
       status: InviteLinkStatus.ACTIVE,
-      expiresAt: {
+      linkExpiresAt: {
         lte: new Date(),
       },
     },

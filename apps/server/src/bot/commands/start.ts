@@ -110,14 +110,11 @@ async function processStartToken(
   })
 
   try {
-    // Find invite link by token in metadata
+    // Find invite link by token (now a root column for fast queries)
     const inviteRecord = await db.inviteLink.findFirst({
       where: {
+        token,
         status: InviteLinkStatus.ACTIVE,
-        metadata: {
-          path: ['token'],
-          equals: token,
-        },
       },
       include: {
         telegramEntity: true,
@@ -132,9 +129,9 @@ async function processStartToken(
 
     console.log('[INFO] Invite link found:', inviteRecord.id)
 
-    // Check if expired
-    if (inviteRecord.expiresAt && inviteRecord.expiresAt < new Date()) {
-      console.log('[ERROR] Invite link expired')
+    // Check if bot link expired
+    if (inviteRecord.linkExpiresAt && inviteRecord.linkExpiresAt < new Date()) {
+      console.log('[ERROR] Bot link expired')
       await db.inviteLink.update({
         where: { id: inviteRecord.id },
         data: { status: InviteLinkStatus.EXPIRED },
@@ -161,21 +158,22 @@ async function processStartToken(
       return null
     }
 
-    const expiresAt = new Date(
+    // Calculate when member access expires
+    const memberExpiresAt = new Date(
       Date.now() + inviteRecord.durationSeconds * 1000
     )
 
-    // Create one-time invite link for the user (expires in 1 hour or when used)
-    const inviteLinkExpiry = Math.floor((Date.now() + 3600000) / 1000) // 1 hour from now
+    // Create one-time Telegram invite link for the user (expires in 1 hour or when used)
+    const telegramLinkExpiry = Math.floor((Date.now() + 3600000) / 1000) // 1 hour from now
     const chatInviteLink = await ctx.telegram.createChatInviteLink(
       inviteRecord.telegramEntity.telegramId,
       {
         member_limit: 1, // ONE-TIME USE ONLY
-        expire_date: inviteLinkExpiry,
+        expire_date: telegramLinkExpiry,
       }
     )
 
-    console.log('[INFO] Created one-time invite link:', chatInviteLink.invite_link)
+    console.log('[INFO] Created one-time Telegram invite link:', chatInviteLink.invite_link)
 
     // Check if member already exists
     const existingMember = await db.groupMember.findUnique({
@@ -188,12 +186,12 @@ async function processStartToken(
     })
 
     const isRenewal = !!existingMember
-    const previousExpiresAt = existingMember?.expiresAt
+    const previousExpiresAt = existingMember?.memberExpiresAt
 
     // Only extend expiry if new time is later than current
-    const finalExpiresAt = existingMember?.expiresAt && existingMember.expiresAt > expiresAt
-      ? existingMember.expiresAt
-      : expiresAt
+    const finalMemberExpiresAt = existingMember?.memberExpiresAt && existingMember.memberExpiresAt > memberExpiresAt
+      ? existingMember.memberExpiresAt
+      : memberExpiresAt
 
     // Create or update group member record and log the join
     await db.$transaction([
@@ -207,8 +205,8 @@ async function processStartToken(
         update: {
           username,
           fullName,
-          expiresAt: finalExpiresAt,
-          inviteLink: chatInviteLink.invite_link,
+          memberExpiresAt: finalMemberExpiresAt,
+          telegramInviteLink: chatInviteLink.invite_link,
           isActive: true, // Reactivate if they were kicked
           kickedAt: null, // Clear kick status
         },
@@ -217,8 +215,8 @@ async function processStartToken(
           username,
           fullName,
           telegramEntityId: inviteRecord.telegramEntityId,
-          inviteLink: chatInviteLink.invite_link,
-          expiresAt: finalExpiresAt,
+          telegramInviteLink: chatInviteLink.invite_link,
+          memberExpiresAt: finalMemberExpiresAt,
           joinedAt: new Date(),
         },
       }),
@@ -235,7 +233,7 @@ async function processStartToken(
           tokensCost: inviteRecord.tokensCost,
           isRenewal,
           previousExpiresAt,
-          newExpiresAt: finalExpiresAt,
+          newExpiresAt: finalMemberExpiresAt,
         },
       }),
     ])
@@ -254,7 +252,7 @@ async function processStartToken(
 
     return {
       inviteLink: chatInviteLink.invite_link,
-      expiresAt: finalExpiresAt,
+      expiresAt: finalMemberExpiresAt,
       groupTitle: inviteRecord.telegramEntity.title,
       isRenewal,
     }
