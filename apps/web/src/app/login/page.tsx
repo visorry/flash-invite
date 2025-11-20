@@ -24,13 +24,22 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      await signIn.email({
+      const result = await signIn.email({
         email: formData.email,
         password: formData.password,
       })
       
+      // Check if login was successful
+      if (result.error) {
+        toast.error(result.error.message || 'Invalid email or password')
+        setIsLoading(false)
+        return
+      }
+      
       toast.success('Login successful!')
-      router.push('/' as any)
+      
+      // Force a full page reload to ensure session is loaded
+      window.location.href = '/'
     } catch (error: any) {
       toast.error(error.message || 'Invalid email or password')
       setIsLoading(false)

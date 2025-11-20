@@ -37,14 +37,23 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      await signUp.email({
+      const result = await signUp.email({
         email: formData.email,
         password: formData.password,
         name: formData.name,
       })
       
+      // Check if registration was successful
+      if (result.error) {
+        toast.error(result.error.message || 'Registration failed. Email may already be in use.')
+        setIsLoading(false)
+        return
+      }
+      
       toast.success('Account created successfully!')
-      router.push('/' as any)
+      
+      // Force a full page reload to ensure session is loaded
+      window.location.href = '/'
     } catch (error: any) {
       toast.error(error.message || 'Registration failed. Email may already be in use.')
       setIsLoading(false)
