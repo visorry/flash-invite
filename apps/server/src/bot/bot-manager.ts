@@ -23,9 +23,14 @@ class BotManager {
         console.log('Initializing default bot...')
         this.defaultBot = initBot(botToken)
         
-        // Start bot with long polling
-        await this.defaultBot.launch()
-        console.log('Default bot initialized and launched successfully')
+        // Start bot with long polling (non-blocking)
+        this.defaultBot.launch().then(() => {
+          console.log('Default bot launched successfully')
+        }).catch((error) => {
+          console.error('Failed to launch default bot:', error)
+        })
+        
+        console.log('Default bot initialized')
       }
     } catch (error) {
       console.error('Failed to initialize default bot:', error)

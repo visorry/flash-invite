@@ -74,13 +74,14 @@ async function startServer() {
     console.log(`🔗 Health check: http://localhost:${config.PORT}/healthcheck`)
     
     // Initialize Telegram bots
+    console.log('Starting bot initialization...')
     await initializeBots()
+    console.log('Bot initialization completed')
     
     // Initialize background jobs
+    console.log('Starting scheduler initialization...')
     try {
-      console.log('Attempting to initialize scheduler...')
       initializeScheduler()
-      console.log('Scheduler initialization completed')
     } catch (error) {
       console.error('Failed to initialize scheduler:', error)
     }
