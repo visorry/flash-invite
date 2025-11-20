@@ -24,12 +24,17 @@ app.use(express.urlencoded({ extended: true }))
 
 // Health check
 app.get('/healthcheck', (_req, res) => {
+  const schedulerStatus = (global as any).schedulerIntervals ? 'running' : 'not initialized'
+  const botStats = botManager.getStats()
+  
   res.json({
     success: true,
     data: {
       message: 'Super Invite API - OK',
       version: config.API_VERSION,
       timestamp: new Date().toISOString(),
+      scheduler: schedulerStatus,
+      bots: botStats,
     },
     error: null,
   })
@@ -72,13 +77,31 @@ async function startServer() {
     await initializeBots()
     
     // Initialize background jobs
-    initializeScheduler()
+    try {
+      console.log('Attempting to initialize scheduler...')
+      initializeScheduler()
+      console.log('Scheduler initialization completed')
+    } catch (error) {
+      console.error('Failed to initialize scheduler:', error)
+    }
   })
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     console.log(`\n${signal} received. Shutting down gracefully...`)
+    
+    // Stop scheduler
+    const intervals = (global as any).schedulerIntervals
+    if (intervals) {
+      console.log('Stopping scheduler intervals...')
+      clearInterval(intervals.kick)
+      clearInterval(intervals.warning)
+      clearInterval(intervals.cleanup)
+    }
+    
+    // Stop bots
     await botManager.stop()
+    
     process.exit(0)
   }
 

@@ -84,8 +84,10 @@ const create = async (ctx: RequestContext, data: {
       throw new BadRequestError('Telegram entity is not active')
     }
 
-    // Calculate expiry
-    const expiresAt = new Date(Date.now() + data.durationSeconds * 1000)
+    // Invite link expiry - set to 30 days from now
+    // This is different from member duration (how long they can stay after joining)
+    // Link will expire after 30 days OR after first use (whichever comes first)
+    const inviteLinkExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
 
     // Generate unique token
     const token = generateToken()
@@ -125,11 +127,11 @@ const create = async (ctx: RequestContext, data: {
         userId: ctx.user!.id,
         inviteLink,
         durationType: 0, // Custom duration
-        durationSeconds: data.durationSeconds,
+        durationSeconds: data.durationSeconds, // How long member can stay AFTER joining
         memberLimit: data.memberLimit ?? 1, // Default to 1 (one-time use)
         currentUses: 0,
         status: InviteLinkStatus.ACTIVE,
-        expiresAt,
+        expiresAt: inviteLinkExpiresAt, // When the invite LINK expires (1 year)
         tokensCost: 0, // Free for now, can add pricing later
         metadata: {
           token,

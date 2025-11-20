@@ -37,15 +37,26 @@ export function registerStartCommand(bot: Telegraf) {
         }
 
         const { inviteLink, expiresAt, groupTitle } = result
-        const formattedExpiry = expiresAt.toLocaleString('en-US', {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        })
+        
+        // Calculate duration for better clarity
+        const durationMs = expiresAt.getTime() - Date.now()
+        const days = Math.floor(durationMs / (1000 * 60 * 60 * 24))
+        const hours = Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))
+        
+        let durationText = ''
+        if (days > 0) {
+          durationText = `${days} day${days > 1 ? 's' : ''} ${hours} hour${hours !== 1 ? 's' : ''}`
+        } else if (hours > 0) {
+          durationText = `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`
+        } else {
+          durationText = `${minutes} minute${minutes !== 1 ? 's' : ''}`
+        }
 
         await ctx.reply(
           `🎉 *Welcome!* You've successfully unlocked access to the group.
                 
-🕒 *Access valid until:* _${formattedExpiry}_
+🕒 *Access valid for:* _${durationText}_
 🔒 You will be automatically removed after this time.
 
 🚫 *Do not share this link!* It is uniquely generated for you.  

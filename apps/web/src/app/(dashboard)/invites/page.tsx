@@ -153,22 +153,33 @@ export default function InvitesPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-3 w-3" />
-                    <span>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-3 w-3" />
+                      <span>Usage:</span>
+                    </div>
+                    <span className="font-medium">
                       {invite.memberLimit === 1 
-                        ? `${invite.currentUses || 0} / 1 use (One-time)`
-                        : `${invite.currentUses || 0} / ${invite.memberLimit || '∞'} uses`
+                        ? `${invite.currentUses || 0} / 1 (One-time)`
+                        : `${invite.currentUses || 0} / ${invite.memberLimit || '∞'}`
                       }
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>
-                      {invite.expiresAt
-                        ? new Date(invite.expiresAt).toLocaleDateString()
-                        : 'No expiry'}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>Member Duration:</span>
+                    </div>
+                    <span className="font-medium">
+                      {(() => {
+                        const seconds = invite.durationSeconds || 0
+                        const days = Math.floor(seconds / 86400)
+                        const hours = Math.floor((seconds % 86400) / 3600)
+                        if (days > 0) return `${days}d ${hours}h`
+                        if (hours > 0) return `${hours}h`
+                        return `${Math.floor(seconds / 60)}m`
+                      })()}
                     </span>
                   </div>
                 </div>
