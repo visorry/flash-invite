@@ -157,5 +157,54 @@ export const api = {
     },
     getBotMemberStats: () => apiClient.get('/api/v1/admin/bot-members/stats'),
     getBotMemberById: (id: string) => apiClient.get(`/api/v1/admin/bot-members/${id}`),
+    // Broadcast templates
+    listBroadcastTemplates: (params?: { page?: number; size?: number }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/admin/broadcast/templates${queryString ? `?${queryString}` : ''}`)
+    },
+    getBroadcastTemplate: (id: string) => apiClient.get(`/api/v1/admin/broadcast/templates/${id}`),
+    createBroadcastTemplate: (data: { name: string; content: string; parseMode?: string; buttons?: any }) =>
+      apiClient.post('/api/v1/admin/broadcast/templates', data),
+    updateBroadcastTemplate: (id: string, data: { name?: string; content?: string; parseMode?: string; buttons?: any; isActive?: boolean }) =>
+      apiClient.put(`/api/v1/admin/broadcast/templates/${id}`, data),
+    deleteBroadcastTemplate: (id: string) => apiClient.delete(`/api/v1/admin/broadcast/templates/${id}`),
+    // Broadcasts
+    listBroadcasts: (params?: { page?: number; size?: number }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/admin/broadcast/list${queryString ? `?${queryString}` : ''}`)
+    },
+    getBroadcast: (id: string) => apiClient.get(`/api/v1/admin/broadcast/${id}`),
+    getBroadcastStats: () => apiClient.get('/api/v1/admin/broadcast/stats'),
+    getBroadcastRecipients: (params?: {
+      page?: number;
+      size?: number;
+      isPremium?: boolean;
+      languageCode?: string;
+      activeWithinDays?: number
+    }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString())
+      if (params?.languageCode) queryParams.append('languageCode', params.languageCode)
+      if (params?.activeWithinDays) queryParams.append('activeWithinDays', params.activeWithinDays.toString())
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/admin/broadcast/recipients${queryString ? `?${queryString}` : ''}`)
+    },
+    sendBroadcast: (data: {
+      templateId?: string;
+      content: string;
+      parseMode?: string;
+      buttons?: any;
+      recipientIds: string[];
+      filterCriteria?: { isPremium?: boolean; languageCode?: string; activeWithinDays?: number };
+    }) => apiClient.post('/api/v1/admin/broadcast/send', data),
+    cancelBroadcast: (id: string) => apiClient.post(`/api/v1/admin/broadcast/${id}/cancel`),
   },
 }

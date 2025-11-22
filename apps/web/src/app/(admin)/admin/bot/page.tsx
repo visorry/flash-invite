@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from '@/hooks/use-session'
-import { Bot, Users, Clock, Crown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Bot, Users, Clock, Crown, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -122,13 +122,23 @@ export default function AdminBotPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1">
                       {member.isPremium && (
                         <Badge variant="secondary" className="text-xs">
                           <Crown className="h-3 w-3 mr-1" />
                           Premium
                         </Badge>
                       )}
+                      <a
+                        href={member.username
+                          ? `https://t.me/${member.username}`
+                          : `tg://user?id=${member.telegramUserId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-md hover:bg-muted transition-colors"
+                      >
+                        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                      </a>
                     </div>
                   </div>
 

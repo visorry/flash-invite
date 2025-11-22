@@ -323,3 +323,48 @@ model JoinLog {
   @@index([createdAt])
   @@map("join_log")
 }
+
+// Broadcast Template - Saved message templates for broadcasting
+model BroadcastTemplate {
+  id          String    @id @default(uuid())
+  name        String
+  content     String    @db.Text // Message content with optional placeholders
+  parseMode   String?   @map("parse_mode") // HTML, Markdown, or null
+  buttons     Json?     // Inline keyboard buttons: [[{text, url}, {text, url}], [{text, url}]]
+  isActive    Boolean   @default(true) @map("is_active")
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  broadcasts  Broadcast[]
+
+  @@index([name])
+  @@index([isActive])
+  @@map("broadcast_template")
+}
+
+// Broadcast - Track broadcast sends
+model Broadcast {
+  id              String             @id @default(uuid())
+  templateId      String?            @map("template_id")
+  template        BroadcastTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  content         String             @db.Text // Actual message sent (in case template was modified)
+  parseMode       String?            @map("parse_mode")
+  buttons         Json?              // Inline keyboard buttons used
+  status          Int                @default(0) // BroadcastStatus enum: 0=pending, 1=in_progress, 2=completed, 3=failed, 4=cancelled
+  totalRecipients Int                @default(0) @map("total_recipients")
+  sentCount       Int                @default(0) @map("sent_count")
+  failedCount     Int                @default(0) @map("failed_count")
+  filterCriteria  Json?              @map("filter_criteria") // Store filter options used
+  recipientIds    String[]           @map("recipient_ids") // Array of bot member IDs
+  startedAt       DateTime?          @map("started_at") @db.Timestamptz(3)
+  completedAt     DateTime?          @map("completed_at") @db.Timestamptz(3)
+  metadata        Json?
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("broadcast")
+}

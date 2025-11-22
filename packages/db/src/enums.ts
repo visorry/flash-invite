@@ -62,6 +62,15 @@ export enum InviteLinkStatus {
   LIMIT_REACHED = 3,
 }
 
+// Broadcast Status
+export enum BroadcastStatus {
+  PENDING = 0,
+  IN_PROGRESS = 1,
+  COMPLETED = 2,
+  FAILED = 3,
+  CANCELLED = 4,
+}
+
 // Helper to get duration unit label
 export function getDurationUnitLabel(unit: DurationUnit): string {
   const labels: Record<DurationUnit, string> = {
