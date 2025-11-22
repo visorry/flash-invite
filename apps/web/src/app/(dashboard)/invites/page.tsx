@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2, Copy, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2, Copy, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
@@ -121,10 +121,20 @@ export default function InvitesPage() {
               <CardContent className="pt-4 pb-4 space-y-3">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-                    <LinkIcon className="h-4 w-4 flex-shrink-0" />
-                    <span className="text-sm font-medium">Invite Link</span>
-                    {getStatusBadge(invite.status)}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <LinkIcon className="h-4 w-4 flex-shrink-0" />
+                      <span className="text-sm font-medium truncate">
+                        {invite.metadata?.name || 'Invite Link'}
+                      </span>
+                      {getStatusBadge(invite.status)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Created {new Date(invite.createdAt).toLocaleString(undefined, {
+                        dateStyle: 'short',
+                        timeStyle: 'short'
+                      })}
+                    </p>
                   </div>
                   {invite.status === 0 && (
                     <Button
