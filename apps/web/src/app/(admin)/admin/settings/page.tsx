@@ -2,18 +2,30 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from '@/hooks/use-session'
-import { Settings, Coins, DollarSign, Bot, Plus, Edit, Trash2 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { Settings, Coins, DollarSign, Bot, Plus, Edit, Trash2, Clock } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { CreatePlanDialog } from '@/components/admin/create-plan-dialog'
 import { BotConfigDialog } from '@/components/admin/bot-config-dialog'
 import { toast } from 'sonner'
 
+// Duration unit enum values
+const DURATION_UNITS = [
+  { value: 0, label: 'Minute', description: 'Cost per minute' },
+  { value: 1, label: 'Hour', description: 'Cost per hour' },
+  { value: 2, label: 'Day', description: 'Cost per day' },
+  { value: 3, label: 'Month', description: 'Cost per month (30 days)' },
+  { value: 4, label: 'Year', description: 'Cost per year (365 days)' },
+]
+
 export default function AdminSettingsPage() {
   const { user, isLoading } = useSession()
+  const queryClient = useQueryClient()
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
   const [isBotConfigDialogOpen, setIsBotConfigDialogOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<any>(null)
@@ -21,6 +33,74 @@ export default function AdminSettingsPage() {
     botToken: '',
     botUsername: '',
   })
+  const [pricingInputs, setPricingInputs] = useState<Record<number, string>>({})
+
+  // Token pricing query
+  const { data: tokenPricing, isLoading: pricingLoading } = useQuery({
+    queryKey: ['admin', 'token-pricing'],
+    queryFn: async () => {
+      return api.admin.getTokenPricing()
+    },
+  })
+
+  // Initialize pricing inputs from fetched data
+  useEffect(() => {
+    if (tokenPricing) {
+      const inputs: Record<number, string> = {}
+      ;(tokenPricing as any[]).forEach((config: any) => {
+        inputs[config.durationUnit] = config.costPerUnit.toString()
+      })
+      setPricingInputs(inputs)
+    }
+  }, [tokenPricing])
+
+  // Upsert pricing mutation
+  const upsertPricingMutation = useMutation({
+    mutationFn: (data: { durationUnit: number; costPerUnit: number }) =>
+      api.admin.upsertTokenPricing(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'token-pricing'] })
+      toast.success('Token pricing updated')
+    },
+    onError: () => {
+      toast.error('Failed to update pricing')
+    },
+  })
+
+  // Delete pricing mutation
+  const deletePricingMutation = useMutation({
+    mutationFn: (durationUnit: number) => api.admin.deleteTokenPricing(durationUnit),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'token-pricing'] })
+      toast.success('Token pricing removed')
+    },
+    onError: () => {
+      toast.error('Failed to remove pricing')
+    },
+  })
+
+  const handleSavePricing = (durationUnit: number) => {
+    const costStr = pricingInputs[durationUnit]
+    const cost = parseInt(costStr || '0', 10)
+    if (isNaN(cost) || cost < 0) {
+      toast.error('Invalid cost value')
+      return
+    }
+    upsertPricingMutation.mutate({ durationUnit, costPerUnit: cost })
+  }
+
+  const handleDeletePricing = (durationUnit: number) => {
+    deletePricingMutation.mutate(durationUnit)
+    setPricingInputs(prev => {
+      const newInputs = { ...prev }
+      delete newInputs[durationUnit]
+      return newInputs
+    })
+  }
+
+  const getPricingForUnit = (durationUnit: number) => {
+    return (tokenPricing as any[])?.find((p: any) => p.durationUnit === durationUnit)
+  }
 
   // Fetch plans
   const { data: plans, isLoading: plansLoading, refetch: refetchPlans } = useQuery({
@@ -228,6 +308,81 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      {/* Token Pricing Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Coins className="h-5 w-5" />
+            Token Pricing
+          </h2>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Invite Link Token Costs</CardTitle>
+            <CardDescription>
+              Set the token cost for each duration unit. Users will be charged based on their invite duration.
+              Leave empty or set to 0 for free.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {pricingLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {DURATION_UNITS.map((unit) => {
+                  const existingPricing = getPricingForUnit(unit.value)
+                  const hasValue = pricingInputs[unit.value] !== undefined && pricingInputs[unit.value] !== ''
+
+                  return (
+                    <div key={unit.value} className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-sm font-medium">{unit.label}</Label>
+                        <p className="text-xs text-muted-foreground">{unit.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="0"
+                          className="w-24"
+                          value={pricingInputs[unit.value] || ''}
+                          onChange={(e) => setPricingInputs(prev => ({
+                            ...prev,
+                            [unit.value]: e.target.value
+                          }))}
+                        />
+                        <span className="text-sm text-muted-foreground">tokens</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSavePricing(unit.value)}
+                          disabled={upsertPricingMutation.isPending}
+                        >
+                          Save
+                        </Button>
+                        {existingPricing && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeletePricing(unit.value)}
+                            disabled={deletePricingMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Bot Configuration */}

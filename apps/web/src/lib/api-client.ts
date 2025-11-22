@@ -101,6 +101,8 @@ export const api = {
       const queryParams = new URLSearchParams()
       if (params?.telegramEntityId) queryParams.append('telegramEntityId', params.telegramEntityId)
       if (params?.isActive) queryParams.append('isActive', params.isActive)
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
       if (params?.sort) queryParams.append('sort', params.sort)
       if (params?.order) queryParams.append('order', params.order)
       const queryString = queryParams.toString()
@@ -112,6 +114,8 @@ export const api = {
     getBalance: () => apiClient.get('/api/v1/tokens/balance'),
     getTransactions: (params?: any) => apiClient.get('/api/v1/tokens/transactions', { ...params }),
     getCosts: () => apiClient.get('/api/v1/tokens/costs'),
+    calculateCost: (durationSeconds: number) =>
+      apiClient.get(`/api/v1/tokens/calculate-cost?durationSeconds=${durationSeconds}`),
   },
   dashboard: {
     getStats: () => apiClient.get('/api/v1/dashboard/stats'),
@@ -135,5 +139,11 @@ export const api = {
     deletePlan: (id: string) => apiClient.delete(`/api/v1/admin/plans/${id}`),
     getConfig: () => apiClient.get('/api/v1/admin/config'),
     updateConfig: (data: any) => apiClient.put('/api/v1/admin/config', data),
+    // Token pricing
+    getTokenPricing: () => apiClient.get('/api/v1/admin/token-pricing'),
+    upsertTokenPricing: (data: { durationUnit: number; costPerUnit: number; description?: string }) =>
+      apiClient.post('/api/v1/admin/token-pricing', data),
+    deleteTokenPricing: (durationUnit: number) =>
+      apiClient.delete(`/api/v1/admin/token-pricing/${durationUnit}`),
   },
 }

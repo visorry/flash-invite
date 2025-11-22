@@ -1,10 +1,13 @@
 import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
-import { InviteLinkStatus } from '@super-invite/db'
+import { InviteLinkStatus, TransactionType, TransactionStatus, getSecondsPerUnit } from '@super-invite/db'
 import { generatePrismaInclude } from '../helper/db/include'
 import { DBEntity } from '../constant/db'
 import { withTransaction } from '../helper/db/transaction'
+
+// Max duration: 2 years in seconds
+const MAX_DURATION_SECONDS = 2 * 365 * 24 * 60 * 60 // 63072000 seconds
 
 const list = async (ctx: RequestContext) => {
   const include = generatePrismaInclude(DBEntity.Invite, ctx)
@@ -75,6 +78,11 @@ const create = async (ctx: RequestContext, data: {
     throw new BadRequestError('User not authenticated')
   }
 
+  // Validate max duration (2 years)
+  if (data.durationSeconds > MAX_DURATION_SECONDS) {
+    throw new BadRequestError('Duration cannot exceed 2 years')
+  }
+
   return withTransaction(ctx, async (tx) => {
     // Get telegram entity
     const entity = await tx.telegramEntity.findUnique({
@@ -91,6 +99,63 @@ const create = async (ctx: RequestContext, data: {
 
     if (!entity.isActive) {
       throw new BadRequestError('Telegram entity is not active')
+    }
+
+    // Calculate token cost for this duration
+    const costConfigs = await tx.tokenCostConfig.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: { durationUnit: 'desc' }, // Start from largest unit
+    })
+
+    let tokensCost = 0
+    let remainingSeconds = data.durationSeconds
+
+    for (const config of costConfigs) {
+      const secondsPerUnit = getSecondsPerUnit(config.durationUnit)
+      const units = Math.floor(remainingSeconds / secondsPerUnit)
+
+      if (units > 0) {
+        tokensCost += units * config.costPerUnit
+        remainingSeconds -= units * secondsPerUnit
+      }
+    }
+
+    // Check user has enough tokens
+    if (tokensCost > 0) {
+      const balance = await tx.tokenBalance.findUnique({
+        where: { userId: ctx.user!.id },
+      })
+
+      if (!balance || balance.balance < tokensCost) {
+        throw new BadRequestError(`Insufficient tokens. Required: ${tokensCost}, Available: ${balance?.balance || 0}`)
+      }
+
+      // Deduct tokens
+      const newBalance = balance.balance - tokensCost
+
+      await tx.tokenBalance.update({
+        where: { userId: ctx.user!.id },
+        data: {
+          balance: newBalance,
+          totalSpent: { increment: tokensCost },
+        },
+      })
+
+      // Create transaction record
+      await tx.tokenTransaction.create({
+        data: {
+          userId: ctx.user!.id,
+          type: TransactionType.INVITE_COST,
+          status: TransactionStatus.COMPLETED,
+          amount: -tokensCost,
+          balanceAfter: newBalance,
+          description: `Invite link creation (${formatDuration(data.durationSeconds)})`,
+          reference: null, // Will update with invite ID after creation
+        },
+      })
     }
 
     // Invite link expiry - set to 30 days from now
@@ -142,7 +207,7 @@ const create = async (ctx: RequestContext, data: {
         currentUses: 0,
         status: InviteLinkStatus.ACTIVE,
         linkExpiresAt: inviteLinkExpiresAt, // When the bot link expires (30 days)
-        tokensCost: 0, // Free for now, can add pricing later
+        tokensCost,
         metadata: {
           name: data.name,
         },
@@ -155,6 +220,28 @@ const create = async (ctx: RequestContext, data: {
       inviteLink: invite.botStartLink,
     }
   })
+}
+
+// Format duration for display
+function formatDuration(seconds: number): string {
+  const years = Math.floor(seconds / (365 * 24 * 60 * 60))
+  seconds %= 365 * 24 * 60 * 60
+  const months = Math.floor(seconds / (30 * 24 * 60 * 60))
+  seconds %= 30 * 24 * 60 * 60
+  const days = Math.floor(seconds / (24 * 60 * 60))
+  seconds %= 24 * 60 * 60
+  const hours = Math.floor(seconds / (60 * 60))
+  seconds %= 60 * 60
+  const minutes = Math.floor(seconds / 60)
+
+  const parts = []
+  if (years > 0) parts.push(`${years}y`)
+  if (months > 0) parts.push(`${months}mo`)
+  if (days > 0) parts.push(`${days}d`)
+  if (hours > 0) parts.push(`${hours}h`)
+  if (minutes > 0) parts.push(`${minutes}m`)
+
+  return parts.join(' ') || '0m'
 }
 
 // Generate random token

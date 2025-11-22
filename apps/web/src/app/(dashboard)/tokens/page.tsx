@@ -26,14 +26,6 @@ export default function TokensPage() {
     },
   })
 
-  // Fetch costs
-  const { data: costs } = useQuery({
-    queryKey: ['tokens', 'costs'],
-    queryFn: async () => {
-      return api.tokens.getCosts()
-    },
-  })
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -57,7 +49,7 @@ export default function TokensPage() {
       </div>
 
       {/* Balance Card */}
-      <Card className="bg-gradient-to-br from-yellow-500 to-yellow-700 text-white">
+      <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white">
         <CardHeader>
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Coins className="h-5 w-5" />
@@ -77,33 +69,6 @@ export default function TokensPage() {
               <p className="text-white/70">Total Spent</p>
               <p className="font-semibold">{((balance as any)?.totalSpent || 0).toLocaleString()}</p>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pricing */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Token Pricing</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {(costs as any)?.map((cost: any) => (
-              <div
-                key={cost.id}
-                className="flex items-center justify-between p-3 rounded-lg border"
-              >
-                <div>
-                  <p className="text-sm font-medium">{cost.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Duration: {cost.action === 0 ? '1 Hour' : cost.action === 1 ? '3 Hours' : cost.action === 2 ? '6 Hours' : cost.action === 3 ? '12 Hours' : cost.action === 4 ? '24 Hours' : cost.action === 5 ? '3 Days' : cost.action === 6 ? '7 Days' : '30 Days'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold">{cost.cost} tokens</p>
-                </div>
-              </div>
-            ))}
           </div>
         </CardContent>
       </Card>

@@ -1,8 +1,10 @@
 import Router from '../lib/router'
 import type { Request } from 'express'
 import adminService from '../services/admin.service'
+import tokenService from '../services/token.service'
 import { getRequestContext } from '../helper/context'
 import { z } from 'zod'
+import { DurationUnit } from '@super-invite/db'
 
 const router = Router()
 
@@ -214,6 +216,50 @@ router.put(
   },
   {
     validation: UpdateConfigSchema,
+  }
+)
+
+// Token pricing configuration
+router.get(
+  '/token-pricing',
+  async (req: Request) => {
+    return tokenService.getCostConfig()
+  }
+)
+
+const UpsertTokenPricingSchema = z.object({
+  durationUnit: z.number().int().min(0).max(4), // DurationUnit enum
+  costPerUnit: z.number().int().min(0),
+  description: z.string().optional(),
+})
+
+router.post(
+  '/token-pricing',
+  async (req: Request) => {
+    const data = req.validatedBody
+    return tokenService.upsertCostConfig(
+      data.durationUnit as DurationUnit,
+      data.costPerUnit,
+      data.description
+    )
+  },
+  {
+    validation: UpsertTokenPricingSchema,
+  }
+)
+
+const DeleteTokenPricingSchema = z.object({
+  durationUnit: z.coerce.number().int().min(0).max(4),
+})
+
+router.delete(
+  '/token-pricing/:durationUnit',
+  async (req: Request) => {
+    const { durationUnit } = req.validatedParams
+    return tokenService.deleteCostConfig(durationUnit as DurationUnit)
+  },
+  {
+    validation: DeleteTokenPricingSchema,
   }
 )
 

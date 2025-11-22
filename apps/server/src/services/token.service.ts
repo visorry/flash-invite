@@ -1,7 +1,7 @@
 import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
-import { TransactionType, TransactionStatus } from '@super-invite/db'
+import { TransactionType, TransactionStatus, DurationUnit, getSecondsPerUnit } from '@super-invite/db'
 import { withTransaction } from '../helper/db/transaction'
 
 const getBalance = async (ctx: RequestContext) => {
@@ -169,10 +169,84 @@ const getCostConfig = async () => {
       isActive: true,
       deletedAt: null,
     },
-    orderBy: { action: 'asc' },
+    orderBy: { durationUnit: 'asc' },
   })
 
   return configs
+}
+
+// Calculate token cost for a given duration in seconds
+const calculateInviteCost = async (durationSeconds: number): Promise<number> => {
+  const configs = await db.tokenCostConfig.findMany({
+    where: {
+      isActive: true,
+      deletedAt: null,
+    },
+    orderBy: { durationUnit: 'desc' }, // Start from largest unit (year) to smallest (minute)
+  })
+
+  if (configs.length === 0) {
+    return 0 // No pricing configured, free
+  }
+
+  let totalCost = 0
+  let remainingSeconds = durationSeconds
+
+  // Process from largest to smallest unit for best pricing
+  for (const config of configs) {
+    const secondsPerUnit = getSecondsPerUnit(config.durationUnit)
+    const units = Math.floor(remainingSeconds / secondsPerUnit)
+
+    if (units > 0) {
+      totalCost += units * config.costPerUnit
+      remainingSeconds -= units * secondsPerUnit
+    }
+  }
+
+  return totalCost
+}
+
+// Update or create cost config for a duration unit
+const upsertCostConfig = async (
+  durationUnit: DurationUnit,
+  costPerUnit: number,
+  description?: string
+) => {
+  const existing = await db.tokenCostConfig.findUnique({
+    where: { durationUnit },
+  })
+
+  if (existing) {
+    return db.tokenCostConfig.update({
+      where: { durationUnit },
+      data: {
+        costPerUnit,
+        description,
+        isActive: true,
+        deletedAt: null,
+      },
+    })
+  }
+
+  return db.tokenCostConfig.create({
+    data: {
+      durationUnit,
+      costPerUnit,
+      description,
+      isActive: true,
+    },
+  })
+}
+
+// Delete (soft) cost config
+const deleteCostConfig = async (durationUnit: DurationUnit) => {
+  return db.tokenCostConfig.update({
+    where: { durationUnit },
+    data: {
+      isActive: false,
+      deletedAt: new Date(),
+    },
+  })
 }
 
 export default {
@@ -181,4 +255,7 @@ export default {
   addTokens,
   deductTokens,
   getCostConfig,
+  calculateInviteCost,
+  upsertCostConfig,
+  deleteCostConfig,
 }

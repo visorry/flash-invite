@@ -2,7 +2,7 @@
 
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Users, Clock, Calendar, UserCheck, UserX, Filter, RotateCcw } from 'lucide-react'
+import { Users, Clock, Calendar, UserCheck, UserX, Filter, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,9 +23,12 @@ import {
   DrawerTitle,
 } from '@/components/ui/drawer'
 
+const PAGE_SIZE = 10
+
 export default function MembersPage() {
   const { user, isLoading } = useSession()
   const [showFilters, setShowFilters] = useState(false)
+  const [page, setPage] = useState(1)
 
   // Applied filters
   const [filterGroup, setFilterGroup] = useState<string>('all')
@@ -43,6 +46,7 @@ export default function MembersPage() {
     setFilterGroup(tempFilterGroup)
     setFilterStatus(tempFilterStatus)
     setSortBy(tempSortBy)
+    setPage(1) // Reset to first page when filters change
     setShowFilters(false)
   }
 
@@ -67,26 +71,33 @@ export default function MembersPage() {
     },
   })
 
-  // Fetch members
-  const { data: members, isLoading: membersLoading } = useQuery({
-    queryKey: ['members', filterGroup, filterStatus, sortBy],
+  // Fetch members with pagination
+  const { data: membersData, isLoading: membersLoading } = useQuery({
+    queryKey: ['members', filterGroup, filterStatus, sortBy, page],
     queryFn: async () => {
-      const params: any = {}
+      const params: any = {
+        page,
+        size: PAGE_SIZE,
+      }
       if (filterGroup !== 'all') {
         params.telegramEntityId = filterGroup
       }
       if (filterStatus !== 'all') {
         params.isActive = filterStatus
       }
-      
+
       // Parse sort parameter
       const [field, order] = sortBy.split('-')
       params.sort = field
       params.order = order
-      
+
       return api.members.list(params)
     },
   })
+
+  const members = (membersData as any)?.items || []
+  const total = (membersData as any)?.total || 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   if (isLoading) {
     return (
@@ -212,14 +223,14 @@ export default function MembersPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Card>
           <CardContent className="pt-4 pb-4">
-            <div className="text-xl sm:text-2xl font-bold">{(members as any)?.total || 0}</div>
+            <div className="text-xl sm:text-2xl font-bold">{total}</div>
             <p className="text-xs text-muted-foreground">Total</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="text-xl sm:text-2xl font-bold text-green-600">
-              {(members as any)?.items?.filter((m: any) => m.isActive && new Date(m.memberExpiresAt) > new Date()).length || 0}
+              {members.filter((m: any) => m.isActive && new Date(m.memberExpiresAt) > new Date()).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Active</p>
           </CardContent>
@@ -227,7 +238,7 @@ export default function MembersPage() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="text-xl sm:text-2xl font-bold text-orange-600">
-              {(members as any)?.items?.filter((m: any) => new Date(m.memberExpiresAt) < new Date() && !m.kickedAt).length || 0}
+              {members.filter((m: any) => new Date(m.memberExpiresAt) < new Date() && !m.kickedAt).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Expired</p>
           </CardContent>
@@ -235,7 +246,7 @@ export default function MembersPage() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="text-xl sm:text-2xl font-bold text-red-600">
-              {(members as any)?.items?.filter((m: any) => m.kickedAt).length || 0}
+              {members.filter((m: any) => m.kickedAt).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Kicked</p>
           </CardContent>
@@ -247,9 +258,9 @@ export default function MembersPage() {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
-      ) : (members as any)?.items?.length > 0 ? (
+      ) : members.length > 0 ? (
         <div className="space-y-3">
-          {(members as any).items.map((member: any) => (
+          {members.map((member: any) => (
             <Card key={member.id}>
               <CardContent className="pt-4 pb-4 space-y-3">
                 {/* Header */}
@@ -326,6 +337,38 @@ export default function MembersPage() {
               </CardContent>
             </Card>
           ))}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-xs text-muted-foreground">
+                Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} of {total}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <Card>

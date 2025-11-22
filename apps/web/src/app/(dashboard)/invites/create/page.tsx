@@ -7,10 +7,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Link as LinkIcon, ArrowLeft, Clock, Users, Copy, Check, Share2 } from 'lucide-react'
+import { Link as LinkIcon, ArrowLeft, Clock, Users, Copy, Check, Share2, Coins } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { toast } from 'sonner'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+
+// Max duration: 2 years in seconds
+const MAX_DURATION_SECONDS = 2 * 365 * 24 * 60 * 60
 import {
   Select,
   SelectContent,
@@ -43,6 +47,8 @@ function CreateInvitePageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createdInvite, setCreatedInvite] = useState<any>(null)
   const [copied, setCopied] = useState(false)
+  const [tokenCost, setTokenCost] = useState<number>(0)
+  const [isCalculatingCost, setIsCalculatingCost] = useState(false)
 
   // Fetch groups
   const { data: groups } = useQuery({
@@ -52,27 +58,74 @@ function CreateInvitePageContent() {
     },
   })
 
+  // Fetch user token balance
+  const { data: balance } = useQuery({
+    queryKey: ['tokens', 'balance'],
+    queryFn: async () => {
+      return api.tokens.getBalance()
+    },
+  })
+
+  // Calculate duration in seconds
+  const calculateDurationSeconds = () => {
+    const unit = TIME_UNITS.find(u => u.value === formData.durationUnit)
+    return parseInt(formData.durationValue || '0') * (unit?.multiplier || 86400)
+  }
+
+  // Calculate token cost when duration changes
+  useEffect(() => {
+    const durationSeconds = calculateDurationSeconds()
+    if (durationSeconds <= 0) {
+      setTokenCost(0)
+      return
+    }
+
+    setIsCalculatingCost(true)
+    api.tokens.calculateCost(durationSeconds)
+      .then((result: any) => {
+        setTokenCost(result.cost)
+      })
+      .catch(() => {
+        setTokenCost(0)
+      })
+      .finally(() => {
+        setIsCalculatingCost(false)
+      })
+  }, [formData.durationValue, formData.durationUnit])
+
+  // Check if duration exceeds max
+  const isExceedingMax = calculateDurationSeconds() > MAX_DURATION_SECONDS
+  const hasInsufficientBalance = tokenCost > 0 && ((balance as any)?.balance || 0) < tokenCost
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.telegramEntityId || !formData.durationValue) {
       toast.error('Please select a group and duration')
       return
     }
 
+    const durationSeconds = calculateDurationSeconds()
+
+    if (durationSeconds > MAX_DURATION_SECONDS) {
+      toast.error('Duration cannot exceed 2 years')
+      return
+    }
+
+    if (hasInsufficientBalance) {
+      toast.error(`Insufficient tokens. Required: ${tokenCost}, Available: ${(balance as any)?.balance || 0}`)
+      return
+    }
+
     setIsSubmitting(true)
     try {
-      // Calculate duration in seconds
-      const unit = TIME_UNITS.find(u => u.value === formData.durationUnit)
-      const durationSeconds = parseInt(formData.durationValue) * (unit?.multiplier || 86400)
-
       const result = await api.invites.create({
         telegramEntityId: formData.telegramEntityId,
         durationSeconds,
         // memberLimit: formData.memberLimit ? parseInt(formData.memberLimit) : null, // Defaults to 1 on server
         name: formData.name || null,
       })
-      
+
       setCreatedInvite(result)
       toast.success('Invite link created successfully')
     } catch (error: any) {
@@ -305,9 +358,42 @@ function CreateInvitePageContent() {
                 </Select>
               </div>
               <p className="text-xs text-muted-foreground">
-                How long the user can stay in the group after joining
+                How long the user can stay in the group after joining (max 2 years)
               </p>
+              {isExceedingMax && (
+                <p className="text-xs text-destructive">
+                  Duration cannot exceed 2 years
+                </p>
+              )}
             </div>
+
+            {/* Token Cost Display */}
+            {(tokenCost > 0 || isCalculatingCost) && (
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Coins className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm font-medium">Token Cost</span>
+                  </div>
+                  {isCalculatingCost ? (
+                    <span className="text-sm text-muted-foreground">Calculating...</span>
+                  ) : (
+                    <span className="text-lg font-bold text-amber-600">{tokenCost} tokens</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Your Balance</span>
+                  <span className={hasInsufficientBalance ? 'text-destructive font-medium' : 'text-muted-foreground'}>
+                    {((balance as any)?.balance || 0).toLocaleString()} tokens
+                  </span>
+                </div>
+                {hasInsufficientBalance && (
+                  <p className="text-xs text-destructive">
+                    Insufficient token balance. Please purchase more tokens.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Member Limit - Commented out, defaults to 1 (one-time use) */}
             {/* <div className="space-y-2">
@@ -357,10 +443,10 @@ function CreateInvitePageContent() {
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isExceedingMax || hasInsufficientBalance}
                 className="w-full sm:flex-1"
               >
-                {isSubmitting ? 'Creating...' : 'Create Invite Link'}
+                {isSubmitting ? 'Creating...' : tokenCost > 0 ? `Create (${tokenCost} tokens)` : 'Create Invite Link'}
               </Button>
             </div>
           </CardContent>
