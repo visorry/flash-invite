@@ -2,11 +2,12 @@
 
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Users, Clock, Calendar, UserCheck, UserX, Filter } from 'lucide-react'
+import { Users, Clock, Calendar, UserCheck, UserX, Filter, RotateCcw } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { useState } from 'react'
 import {
   Select,
@@ -15,12 +16,48 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 
 export default function MembersPage() {
   const { user, isLoading } = useSession()
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Applied filters
   const [filterGroup, setFilterGroup] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('joined-desc')
+
+  // Temp filters for drawer
+  const [tempFilterGroup, setTempFilterGroup] = useState<string>('all')
+  const [tempFilterStatus, setTempFilterStatus] = useState<string>('all')
+  const [tempSortBy, setTempSortBy] = useState<string>('joined-desc')
+
+  const hasActiveFilters = filterGroup !== 'all' || filterStatus !== 'all' || sortBy !== 'joined-desc'
+
+  const handleApplyFilters = () => {
+    setFilterGroup(tempFilterGroup)
+    setFilterStatus(tempFilterStatus)
+    setSortBy(tempSortBy)
+    setShowFilters(false)
+  }
+
+  const handleResetFilters = () => {
+    setTempFilterGroup('all')
+    setTempFilterStatus('all')
+    setTempSortBy('joined-desc')
+  }
+
+  const handleOpenFilters = () => {
+    setTempFilterGroup(filterGroup)
+    setTempFilterStatus(filterStatus)
+    setTempSortBy(sortBy)
+    setShowFilters(true)
+  }
 
   // Fetch groups for filter
   const { data: groups } = useQuery({
@@ -67,17 +104,21 @@ export default function MembersPage() {
     const duration = new Date(expiresAt).getTime() - new Date(joinedAt).getTime()
     const days = Math.floor(duration / (1000 * 60 * 60 * 24))
     const hours = Math.floor((duration % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    
+    const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60))
+
     if (days > 0) {
       return `${days}d ${hours}h`
     }
-    return `${hours}h`
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`
+    }
+    return `${minutes}m`
   }
 
   const getStatusBadge = (member: any) => {
     const now = new Date()
-    const expiresAt = new Date(member.expiresAt)
-    
+    const expiresAt = new Date(member.memberExpiresAt)
+
     if (member.kickedAt) {
       return <Badge variant="destructive">Kicked</Badge>
     }
@@ -122,49 +163,50 @@ export default function MembersPage() {
             Track users who joined through your invite links
           </p>
         </div>
+        <Button
+          variant={hasActiveFilters ? "default" : "outline"}
+          size="sm"
+          onClick={handleOpenFilters}
+        >
+          <Filter className="h-4 w-4 mr-2" />
+          Filter
+        </Button>
       </div>
 
-      {/* Filters - Compact Design */}
-      <Card>
-        <CardContent className="pt-4 pb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <Select value={filterGroup} onValueChange={setFilterGroup}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All Groups" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Groups</SelectItem>
-                {(groups as any)?.items?.map((group: any) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-9">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="joined-desc">Newest First</SelectItem>
-                <SelectItem value="joined-asc">Oldest First</SelectItem>
-                <SelectItem value="expires-asc">Expiring Soon</SelectItem>
-                <SelectItem value="expires-desc">Expiring Later</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Active Filters Display */}
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Active:</span>
+          {filterGroup !== 'all' && (
+            <Badge variant="secondary" className="text-xs">
+              Group: {(groups as any)?.items?.find((g: any) => g.id === filterGroup)?.title || 'Selected'}
+            </Badge>
+          )}
+          {filterStatus !== 'all' && (
+            <Badge variant="secondary" className="text-xs">
+              Status: {filterStatus === 'true' ? 'Active' : 'Inactive'}
+            </Badge>
+          )}
+          {sortBy !== 'joined-desc' && (
+            <Badge variant="secondary" className="text-xs">
+              Sort: {sortBy === 'joined-asc' ? 'Oldest' : sortBy === 'expires-asc' ? 'Expiring Soon' : 'Expiring Later'}
+            </Badge>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-6 px-2"
+            onClick={() => {
+              setFilterGroup('all')
+              setFilterStatus('all')
+              setSortBy('joined-desc')
+            }}
+          >
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Reset
+          </Button>
+        </div>
+      )}
 
       {/* Stats - Compact */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -177,7 +219,7 @@ export default function MembersPage() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="text-xl sm:text-2xl font-bold text-green-600">
-              {(members as any)?.items?.filter((m: any) => m.isActive && new Date(m.expiresAt) > new Date()).length || 0}
+              {(members as any)?.items?.filter((m: any) => m.isActive && new Date(m.memberExpiresAt) > new Date()).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Active</p>
           </CardContent>
@@ -185,7 +227,7 @@ export default function MembersPage() {
         <Card>
           <CardContent className="pt-4 pb-4">
             <div className="text-xl sm:text-2xl font-bold text-orange-600">
-              {(members as any)?.items?.filter((m: any) => new Date(m.expiresAt) < new Date() && !m.kickedAt).length || 0}
+              {(members as any)?.items?.filter((m: any) => new Date(m.memberExpiresAt) < new Date() && !m.kickedAt).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Expired</p>
           </CardContent>
@@ -254,9 +296,9 @@ export default function MembersPage() {
                     <div className="min-w-0">
                       <p className="text-muted-foreground">Expires</p>
                       <p className="font-medium truncate">
-                        {new Date(member.expiresAt).toLocaleString(undefined, { 
-                          dateStyle: 'short', 
-                          timeStyle: 'short' 
+                        {new Date(member.memberExpiresAt).toLocaleString(undefined, {
+                          dateStyle: 'short',
+                          timeStyle: 'short'
                         })}
                       </p>
                     </div>
@@ -267,7 +309,7 @@ export default function MembersPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs pt-2 border-t">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-3 w-3 flex-shrink-0" />
-                    <span>{formatDuration(member.expiresAt, member.joinedAt)}</span>
+                    <span>{formatDuration(member.memberExpiresAt, member.joinedAt)}</span>
                   </div>
                   <div className="font-medium">
                     {member.kickedAt ? (
@@ -275,8 +317,8 @@ export default function MembersPage() {
                         Kicked {new Date(member.kickedAt).toLocaleDateString()}
                       </span>
                     ) : (
-                      <span className={new Date(member.expiresAt) > new Date() ? 'text-green-600' : 'text-orange-600'}>
-                        {getTimeRemaining(member.expiresAt)}
+                      <span className={new Date(member.memberExpiresAt) > new Date() ? 'text-green-600' : 'text-orange-600'}>
+                        {getTimeRemaining(member.memberExpiresAt)}
                       </span>
                     )}
                   </div>
@@ -296,6 +338,130 @@ export default function MembersPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Filter Drawer */}
+      <Drawer open={showFilters} onOpenChange={setShowFilters}>
+        <DrawerContent className="flex flex-col max-h-[85vh]">
+          <DrawerHeader className="border-b">
+            <DrawerTitle>Sort & Filters</DrawerTitle>
+          </DrawerHeader>
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+            {/* Group Filter */}
+            <div className="space-y-3">
+              <Label>Group</Label>
+              <Select value={tempFilterGroup} onValueChange={setTempFilterGroup}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Groups" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Groups</SelectItem>
+                  {(groups as any)?.items?.map((group: any) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="space-y-3">
+              <Label>Status</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={tempFilterStatus === 'all' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTempFilterStatus('all')}
+                  className="text-xs"
+                >
+                  All
+                </Button>
+                <Button
+                  type="button"
+                  variant={tempFilterStatus === 'true' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTempFilterStatus('true')}
+                  className="text-xs"
+                >
+                  Active
+                </Button>
+                <Button
+                  type="button"
+                  variant={tempFilterStatus === 'false' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTempFilterStatus('false')}
+                  className="text-xs"
+                >
+                  Inactive
+                </Button>
+              </div>
+            </div>
+
+            {/* Sort By */}
+            <div className="space-y-3">
+              <Label>Sort By</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={tempSortBy === 'joined-desc' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTempSortBy('joined-desc')}
+                  className="text-xs"
+                >
+                  Newest First
+                </Button>
+                <Button
+                  type="button"
+                  variant={tempSortBy === 'joined-asc' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTempSortBy('joined-asc')}
+                  className="text-xs"
+                >
+                  Oldest First
+                </Button>
+                <Button
+                  type="button"
+                  variant={tempSortBy === 'expires-asc' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTempSortBy('expires-asc')}
+                  className="text-xs"
+                >
+                  Expiring Soon
+                </Button>
+                <Button
+                  type="button"
+                  variant={tempSortBy === 'expires-desc' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTempSortBy('expires-desc')}
+                  className="text-xs"
+                >
+                  Expiring Later
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="border-t p-4">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleResetFilters}
+              >
+                Reset All
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleApplyFilters}
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }
