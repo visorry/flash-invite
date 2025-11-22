@@ -2,6 +2,7 @@ import Router from '../lib/router'
 import type { Request } from 'express'
 import adminService from '../services/admin.service'
 import tokenService from '../services/token.service'
+import botMemberService from '../services/bot-member.service'
 import { getRequestContext } from '../helper/context'
 import { z } from 'zod'
 import { DurationUnit } from '@super-invite/db'
@@ -260,6 +261,37 @@ router.delete(
   },
   {
     validation: DeleteTokenPricingSchema,
+  }
+)
+
+// Bot members
+router.get(
+  '/bot-members',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return botMemberService.list(ctx)
+  }
+)
+
+router.get(
+  '/bot-members/stats',
+  async (req: Request) => {
+    return botMemberService.getStats()
+  }
+)
+
+const BotMemberParamsSchema = z.object({
+  id: z.string().uuid(),
+})
+
+router.get(
+  '/bot-members/:id',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return botMemberService.getById(id)
+  },
+  {
+    validation: BotMemberParamsSchema,
   }
 )
 

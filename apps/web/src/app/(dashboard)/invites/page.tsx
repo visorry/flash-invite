@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2, Copy, ChevronLeft, ChevronRight, Calendar } from 'lucide-react'
+import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2, Copy, ChevronLeft, ChevronRight, Bot } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
@@ -129,6 +129,12 @@ export default function InvitesPage() {
                       </span>
                       {getStatusBadge(invite.status)}
                     </div>
+                    {invite.telegramEntity && (
+                      <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                        <Bot className="h-3 w-3" />
+                        {invite.telegramEntity.title}
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-1">
                       Created {new Date(invite.createdAt).toLocaleString(undefined, {
                         dateStyle: 'short',

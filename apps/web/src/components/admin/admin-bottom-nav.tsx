@@ -2,14 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, Bot, Link as LinkIcon, Home, ArrowLeft } from "lucide-react"
+import { Users, Bot, Link as LinkIcon, Home, ArrowLeft, MessageCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
   { href: "/admin/dashboard" as any, label: "Overview", icon: <Home className="h-5 w-5" /> },
   { href: "/admin/users" as any, label: "Users", icon: <Users className="h-5 w-5" /> },
+  { href: "/admin/bot" as any, label: "Bot", icon: <MessageCircle className="h-5 w-5" /> },
   { href: "/admin/groups" as any, label: "Groups", icon: <Bot className="h-5 w-5" /> },
-  { href: "/admin/invites" as any, label: "Invites", icon: <LinkIcon className="h-5 w-5" /> },
   { href: "/" as any, label: "Back", icon: <ArrowLeft className="h-5 w-5" /> },
 ]
 

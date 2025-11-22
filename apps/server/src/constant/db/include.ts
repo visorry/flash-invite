@@ -102,19 +102,17 @@ const EntityInclude: EntityIncludeConfig = {
     },
   ],
   [DBEntity.Invite]: [
-    'bot',
+    'telegramEntity',
     'user',
-    'members',
-    { key: 'memberCount', value: 'members', count: true },
     {
-      key: 'bot',
-      value: 'bot',
+      key: 'telegramEntity',
+      value: 'telegramEntity',
       override: () => ({
         select: {
           id: true,
-          name: true,
-          channelName: true,
-          channelId: true,
+          title: true,
+          telegramId: true,
+          type: true,
         }
       }),
     },
@@ -126,26 +124,6 @@ const EntityInclude: EntityIncludeConfig = {
           id: true,
           name: true,
           email: true,
-        }
-      }),
-    },
-    {
-      key: 'members',
-      value: 'members',
-      override: () => ({
-        orderBy: {
-          joinedAt: 'desc'
-        },
-        select: {
-          id: true,
-          telegramUserId: true,
-          telegramUsername: true,
-          firstName: true,
-          lastName: true,
-          joinedAt: true,
-          isActive: true,
-          isKicked: true,
-          kickedAt: true,
         }
       }),
     },

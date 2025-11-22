@@ -88,6 +88,8 @@ export const api = {
       if (params?.size) queryParams.append('size', params.size.toString())
       if (params?.sort) queryParams.append('sort', params.sort)
       if (params?.order) queryParams.append('order', params.order)
+      // Include telegram entity by default
+      queryParams.append('include', 'telegramEntity')
       const queryString = queryParams.toString()
       return apiClient.get(`/api/v1/invites${queryString ? `?${queryString}` : ''}`)
     },
@@ -145,5 +147,15 @@ export const api = {
       apiClient.post('/api/v1/admin/token-pricing', data),
     deleteTokenPricing: (durationUnit: number) =>
       apiClient.delete(`/api/v1/admin/token-pricing/${durationUnit}`),
+    // Bot members
+    listBotMembers: (params?: any) => {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/admin/bot-members${queryString ? `?${queryString}` : ''}`)
+    },
+    getBotMemberStats: () => apiClient.get('/api/v1/admin/bot-members/stats'),
+    getBotMemberById: (id: string) => apiClient.get(`/api/v1/admin/bot-members/${id}`),
   },
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, Bot, Link as LinkIcon, Settings, Home, DollarSign, ArrowLeft, LogOut } from "lucide-react"
+import { Users, Bot, Link as LinkIcon, Settings, Home, DollarSign, ArrowLeft, LogOut, MessageCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 const navItems = [
   { href: "/admin/dashboard", label: "Overview", icon: <Home className="h-5 w-5" /> },
   { href: "/admin/users", label: "Users", icon: <Users className="h-5 w-5" /> },
+  { href: "/admin/bot", label: "Bot Users", icon: <MessageCircle className="h-5 w-5" /> },
   { href: "/admin/groups", label: "Groups", icon: <Bot className="h-5 w-5" /> },
   { href: "/admin/invites", label: "Invites", icon: <LinkIcon className="h-5 w-5" /> },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: <DollarSign className="h-5 w-5" /> },

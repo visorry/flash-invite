@@ -13,6 +13,34 @@ export function registerStartCommand(bot: Telegraf) {
         .join(' ')
       const username = ctx.from.username ?? null
 
+      // Track bot member on every /start interaction
+      try {
+        await db.botMember.upsert({
+          where: { telegramUserId: userId },
+          update: {
+            username,
+            firstName: ctx.from.first_name,
+            lastName: ctx.from.last_name ?? null,
+            languageCode: ctx.from.language_code ?? null,
+            isPremium: ctx.from.is_premium ?? false,
+            isBot: ctx.from.is_bot ?? false,
+            lastActiveAt: new Date(),
+          },
+          create: {
+            telegramUserId: userId,
+            username,
+            firstName: ctx.from.first_name,
+            lastName: ctx.from.last_name ?? null,
+            languageCode: ctx.from.language_code ?? null,
+            isPremium: ctx.from.is_premium ?? false,
+            isBot: ctx.from.is_bot ?? false,
+          },
+        })
+      } catch (botMemberError) {
+        console.error('Failed to track bot member:', botMemberError)
+        // Don't block the flow if tracking fails
+      }
+
       if (!token) {
         console.log(`User ${userId} attempted to start without a token.`)
         return ctx.reply(

@@ -279,6 +279,26 @@ model GroupMember {
   @@map("group_member")
 }
 
+// Bot Member - Track all Telegram users who interact with the bot via /start
+model BotMember {
+  id             String    @id @default(uuid())
+  telegramUserId String    @unique @map("telegram_user_id")
+  username       String?
+  firstName      String?   @map("first_name")
+  lastName       String?   @map("last_name")
+  languageCode   String?   @map("language_code")
+  isPremium      Boolean   @default(false) @map("is_premium")
+  isBot          Boolean   @default(false) @map("is_bot")
+  lastActiveAt   DateTime  @default(now()) @map("last_active_at") @db.Timestamptz(3)
+  metadata       Json?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([username])
+  @@index([lastActiveAt])
+  @@map("bot_member")
+}
+
 // Join Log - Track every join/renewal for analytics
 model JoinLog {
   id               String         @id @default(uuid())
