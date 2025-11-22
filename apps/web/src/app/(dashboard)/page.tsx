@@ -60,19 +60,17 @@ export default function DashboardPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-2 gap-2">
-        <Card className="bg-primary text-primary-foreground hover:shadow-xl hover:scale-[1.02] transition-all">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total<br />Groups
             </CardTitle>
-            <div className="p-2 bg-primary-foreground/20 backdrop-blur-sm rounded-lg">
-              <Bot className="h-4 w-4" />
-            </div>
+            <Bot className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-primary-foreground/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-muted rounded animate-pulse" />
               ) : (
                 ((stats as any)?.totalBots || 0).toLocaleString()
               )}
@@ -80,19 +78,17 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-primary text-primary-foreground hover:shadow-xl hover:scale-[1.02] transition-all">
+        <Card className="hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Active<br />Invites
             </CardTitle>
-            <div className="p-2 bg-primary-foreground/20 backdrop-blur-sm rounded-lg">
-              <Link className="h-4 w-4" />
-            </div>
+            <Link className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {statsLoading ? (
-                <div className="h-8 w-16 bg-primary-foreground/20 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-muted rounded animate-pulse" />
               ) : (
                 ((stats as any)?.activeInvites || 0).toLocaleString()
               )}
@@ -118,15 +114,17 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
+        <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white hover:shadow-xl hover:scale-[1.02] transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
+            <CardTitle className="text-sm font-medium text-white">
               Token<br />Balance
             </CardTitle>
-            <Coins className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-white/20 backdrop-blur-sm rounded-lg">
+              <Coins className="h-4 w-4 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+            <div className="text-2xl font-bold">
               {((balance as any)?.balance || 0).toLocaleString()}
             </div>
           </CardContent>

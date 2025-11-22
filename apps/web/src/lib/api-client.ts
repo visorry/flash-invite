@@ -82,7 +82,15 @@ export const api = {
     syncMembers: (id: string) => apiClient.post(`/api/v1/telegram-entities/${id}/sync-members`),
   },
   invites: {
-    list: (params?: any) => apiClient.get('/api/v1/invites', { ...params }),
+    list: (params?: any) => {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      if (params?.sort) queryParams.append('sort', params.sort)
+      if (params?.order) queryParams.append('order', params.order)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/invites${queryString ? `?${queryString}` : ''}`)
+    },
     getById: (id: string) => apiClient.get(`/api/v1/invites/${id}`),
     create: (data: any) => apiClient.post('/api/v1/invites', data),
     revoke: (id: string) => apiClient.delete(`/api/v1/invites/${id}`),

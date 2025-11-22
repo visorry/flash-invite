@@ -1,8 +1,9 @@
 "use client"
 
+import { useState } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2, Copy } from 'lucide-react'
+import { Plus, Link as LinkIcon, Clock, Users, Ban, Share2, Copy, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
@@ -10,18 +11,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 
+const PAGE_SIZE = 10
+
 export default function InvitesPage() {
   const { user, isLoading } = useSession()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const [page, setPage] = useState(1)
 
-  // Fetch invites
-  const { data: invites, isLoading: invitesLoading } = useQuery({
-    queryKey: ['invites'],
+  // Fetch invites with pagination (latest first)
+  const { data: invitesData, isLoading: invitesLoading } = useQuery({
+    queryKey: ['invites', page],
     queryFn: async () => {
-      return api.invites.list()
+      return api.invites.list({
+        page,
+        size: PAGE_SIZE,
+        sort: 'createdAt',
+        order: 'desc',
+      })
     },
   })
+
+  const invites = (invitesData as any)?.items || []
+  const total = (invitesData as any)?.total || 0
+  const totalPages = Math.ceil(total / PAGE_SIZE)
 
   // Revoke mutation
   const revokeMutation = useMutation({
@@ -101,9 +114,9 @@ export default function InvitesPage() {
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
-      ) : (invites as any)?.items?.length > 0 ? (
+      ) : invites.length > 0 ? (
         <div className="space-y-3">
-          {(invites as any).items.map((invite: any) => (
+          {invites.map((invite: any) => (
             <Card key={invite.id}>
               <CardContent className="pt-4 pb-4 space-y-3">
                 {/* Header */}
@@ -191,6 +204,38 @@ export default function InvitesPage() {
               </CardContent>
             </Card>
           ))}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <p className="text-xs text-muted-foreground">
+                Showing {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} of {total}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <Card>
