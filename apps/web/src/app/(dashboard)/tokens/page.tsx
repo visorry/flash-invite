@@ -2,13 +2,24 @@
 
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { Coins, Clock, TrendingUp, TrendingDown } from 'lucide-react'
+import { Coins, Clock, TrendingUp, TrendingDown, Info, X } from 'lucide-react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+// Duration unit labels
+const DURATION_UNITS = [
+  { value: 0, label: 'Minute' },
+  { value: 1, label: 'Hour' },
+  { value: 2, label: 'Day' },
+  { value: 3, label: 'Month' },
+  { value: 4, label: 'Year' },
+]
+
 export default function TokensPage() {
   const { user, isLoading } = useSession()
+  const [showPricing, setShowPricing] = useState(false)
 
   // Fetch balance
   const { data: balance } = useQuery({
@@ -23,6 +34,14 @@ export default function TokensPage() {
     queryKey: ['tokens', 'transactions'],
     queryFn: async () => {
       return api.tokens.getTransactions()
+    },
+  })
+
+  // Fetch token pricing
+  const { data: pricing } = useQuery({
+    queryKey: ['tokens', 'costs'],
+    queryFn: async () => {
+      return api.tokens.getCosts()
     },
   })
 
@@ -41,12 +60,70 @@ export default function TokensPage() {
   return (
     <div className="flex-1 space-y-6 p-4">
       {/* Header */}
-      <div>
-        <h1 className="text-lg font-semibold">Token Balance</h1>
-        <p className="text-xs text-muted-foreground">
-          Manage your tokens and view transaction history
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">Token Balance</h1>
+          <p className="text-xs text-muted-foreground">
+            Manage your tokens and view transaction history
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setShowPricing(true)}
+          className="h-9 w-9"
+        >
+          <Info className="h-4 w-4" />
+        </Button>
       </div>
+
+      {/* Pricing Modal */}
+      {showPricing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowPricing(false)}>
+          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-amber-500" />
+                  Token Pricing
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowPricing(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(pricing as any)?.length > 0 ? (
+                <div className="space-y-2">
+                  {(pricing as any).map((config: any) => {
+                    const unitLabel = DURATION_UNITS.find(u => u.value === config.durationUnit)?.label || 'Unknown'
+                    return (
+                      <div
+                        key={config.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      >
+                        <span className="text-sm font-medium">Per {unitLabel}</span>
+                        <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                          {config.costPerUnit} tokens
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No pricing configured. Invites are free!
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Balance Card */}
       <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white">
