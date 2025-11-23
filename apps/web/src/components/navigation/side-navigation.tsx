@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward } from "lucide-react"
+import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck } from "lucide-react"
 import { ModeToggle } from "../mode-toggle"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ export function SideNavigation() {
     { to: "/groups", label: "Groups", icon: Bot },
     { to: "/invites", label: "Invites", icon: LinkIcon },
     { to: "/forward-rules", label: "Forwarding", icon: Forward },
+    { to: "/auto-approval", label: "Auto Approval", icon: UserCheck },
     { to: "/members", label: "Members", icon: Users },
     { to: "/tokens", label: "Tokens", icon: Coins },
     { to: "/profile", label: "Profile", icon: User },
