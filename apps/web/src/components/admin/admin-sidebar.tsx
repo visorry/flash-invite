@@ -7,15 +7,35 @@ import { cn } from "@/lib/utils"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
 
-const navItems = [
-  { href: "/admin/dashboard", label: "Overview", icon: <Home className="h-5 w-5" /> },
-  { href: "/admin/users", label: "Users", icon: <Users className="h-5 w-5" /> },
-  { href: "/admin/bot", label: "Bot Users", icon: <MessageCircle className="h-5 w-5" /> },
-  { href: "/admin/broadcast", label: "Broadcast", icon: <Send className="h-5 w-5" /> },
-  { href: "/admin/groups", label: "Groups", icon: <Bot className="h-5 w-5" /> },
-  { href: "/admin/invites", label: "Invites", icon: <LinkIcon className="h-5 w-5" /> },
-  { href: "/admin/subscriptions", label: "Subscriptions", icon: <DollarSign className="h-5 w-5" /> },
-  { href: "/admin/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
+const navSections = [
+  {
+    label: "Overview",
+    items: [
+      { href: "/admin/dashboard", label: "Dashboard", icon: <Home className="h-5 w-5" /> },
+    ]
+  },
+  {
+    label: "Users",
+    items: [
+      { href: "/admin/users", label: "Users", icon: <Users className="h-5 w-5" /> },
+      { href: "/admin/bot", label: "Bot Users", icon: <MessageCircle className="h-5 w-5" /> },
+    ]
+  },
+  {
+    label: "Content",
+    items: [
+      { href: "/admin/groups", label: "Groups", icon: <Bot className="h-5 w-5" /> },
+      { href: "/admin/invites", label: "Invites", icon: <LinkIcon className="h-5 w-5" /> },
+      { href: "/admin/broadcast", label: "Broadcast", icon: <Send className="h-5 w-5" /> },
+    ]
+  },
+  {
+    label: "Settings",
+    items: [
+      { href: "/admin/subscriptions", label: "Subscriptions", icon: <DollarSign className="h-5 w-5" /> },
+      { href: "/admin/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
+    ]
+  },
 ]
 
 export function AdminSidebar() {
@@ -27,29 +47,36 @@ export function AdminSidebar() {
       <div className="flex items-center justify-between h-16 px-6 border-b border-border">
         <h2 className="text-lg font-semibold">Admin Dashboard</h2>
       </div>
-      
-      <div className="flex-1 py-4 flex flex-col">
-        <div className="flex-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || 
-                            (item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href as any}
-                className={cn(
-                  "flex items-center gap-3 mx-3 mb-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
-                  isActive 
-                    ? "text-primary bg-primary/10" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </Link>
-            )
-          })}
+      <div className="flex-1 py-4 flex flex-col overflow-y-auto">
+        <div className="flex-1 space-y-6">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <p className="px-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {section.label}
+              </p>
+              {section.items.map((item) => {
+                const isActive = pathname === item.href ||
+                                (item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href as any}
+                    className={cn(
+                      "flex items-center gap-3 mx-3 mb-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+                      isActive
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          ))}
         </div>
 
         {/* Bottom Section */}
@@ -60,7 +87,7 @@ export function AdminSidebar() {
             className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <ArrowLeft className="h-5 w-5" />
-            <span>Back to Dashboard</span>
+            <span>Back to App</span>
           </Link>
 
           {/* User Info */}
