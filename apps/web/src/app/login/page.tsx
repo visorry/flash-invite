@@ -8,10 +8,11 @@ import { toast } from 'sonner'
 import { signIn } from '@/lib/auth-client'
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isTelegramLoading, setIsTelegramLoading] = useState(false)
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true)
+    setIsGoogleLoading(true)
 
     try {
       await signIn.social({
@@ -20,8 +21,78 @@ export default function LoginPage() {
       })
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in with Google')
-      setIsLoading(false)
+      setIsGoogleLoading(false)
     }
+  }
+
+  const handleTelegramSignIn = async () => {
+    setIsTelegramLoading(true)
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      const response = await fetch(`${apiUrl}/api/v1/auth/telegram-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.data?.telegramLoginUrl) {
+        toast.info('Opening Telegram...')
+        window.open(data.data.telegramLoginUrl, '_blank')
+
+        // Start polling for login completion
+        const loginToken = data.data.loginToken
+        pollForLogin(loginToken)
+      } else {
+        toast.error(data.error?.message || 'Failed to initiate Telegram login')
+        setIsTelegramLoading(false)
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to start Telegram login')
+      setIsTelegramLoading(false)
+    }
+  }
+
+  const pollForLogin = async (token: string) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+    let attempts = 0
+    const maxAttempts = 60 // 5 minutes (5 second intervals)
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/api/v1/auth/telegram-status/${token}`, {
+          credentials: 'include',
+        })
+        const data = await response.json()
+
+        if (data.success && data.data?.completed) {
+          // Redirect to API server to complete login and set cookie
+          window.location.href = `${apiUrl}/api/v1/auth/telegram-complete?token=${token}`
+        } else {
+          attempts++
+          if (attempts < maxAttempts) {
+            setTimeout(checkStatus, 5000) // Check every 5 seconds
+          } else {
+            toast.error('Login timed out. Please try again.')
+            setIsTelegramLoading(false)
+          }
+        }
+      } catch (error) {
+        console.error('Poll error:', error)
+        attempts++
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 5000)
+        } else {
+          setIsTelegramLoading(false)
+        }
+      }
+    }
+
+    checkStatus()
   }
 
   return (
@@ -38,14 +109,14 @@ export default function LoginPage() {
             Sign in to your account to continue
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <Button
             onClick={handleGoogleSignIn}
             className="w-full"
-            disabled={isLoading}
+            disabled={isGoogleLoading || isTelegramLoading}
             variant="outline"
           >
-            {isLoading ? (
+            {isGoogleLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
@@ -71,6 +142,38 @@ export default function LoginPage() {
                   />
                 </svg>
                 Continue with Google
+              </>
+            )}
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or
+              </span>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleTelegramSignIn}
+            className="w-full"
+            disabled={isGoogleLoading || isTelegramLoading}
+            variant="outline"
+          >
+            {isTelegramLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Waiting for Telegram...
+              </>
+            ) : (
+              <>
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+                Continue with Telegram
               </>
             )}
           </Button>

@@ -44,11 +44,18 @@ export function registerStartCommand(bot: Telegraf) {
       if (!token) {
         console.log(`User ${userId} attempted to start without a token.`)
         return ctx.reply(
-          '🚫 *Missing Token!*\n\nTo continue, please use the invite link provided to you.`',
+          '🚫 *Missing Token!*\n\nTo continue, please use the invite link provided to you.',
           {
             parse_mode: 'Markdown',
           }
         )
+      }
+
+      // Check if this is a login token
+      if (token.startsWith('login_')) {
+        const loginToken = token.replace('login_', '')
+        console.log(`User ${userId} attempting login with token: ${loginToken}`)
+        return await handleTelegramLogin(ctx, loginToken, userId, username, fullName)
       }
 
       try {
@@ -293,5 +300,77 @@ async function processStartToken(
       fullName,
     })
     throw error
+  }
+}
+
+async function handleTelegramLogin(
+  ctx: any,
+  loginToken: string,
+  userId: string,
+  username: string | null,
+  fullName: string
+) {
+  try {
+    // Find the login token
+    const tokenRecord = await db.telegramLoginToken.findFirst({
+      where: {
+        token: loginToken,
+        expiresAt: { gt: new Date() },
+      },
+    })
+
+    if (!tokenRecord) {
+      return ctx.reply(
+        '❌ *Login Failed*\n\nThis login link has expired or is invalid.\n\nPlease go back to the website and try again.',
+        { parse_mode: 'Markdown' }
+      )
+    }
+
+    // Update the token with user info
+    await db.telegramLoginToken.update({
+      where: { id: tokenRecord.id },
+      data: {
+        telegramUserId: userId,
+        username,
+        fullName,
+      },
+    })
+
+    // Get the API URL - redirect to API server which will set cookie and redirect to web app
+    const apiUrl = process.env.BETTER_AUTH_URL || 'http://localhost:3000'
+    const callbackUrl = `${apiUrl}/api/v1/auth/telegram-complete?token=${loginToken}`
+
+    // Telegram doesn't allow localhost URLs in inline buttons
+    if (apiUrl.includes('localhost')) {
+      return ctx.reply(
+        `✅ *Login Successful!*\n\nWelcome, ${fullName}!\n\nCopy and paste this link in your browser to complete login:\n\n\`${callbackUrl}\``,
+        {
+          parse_mode: 'Markdown',
+        }
+      )
+    }
+
+    return ctx.reply(
+      `✅ *Login Successful!*\n\nWelcome, ${fullName}!\n\nClick the button below to complete your login and access your dashboard.`,
+      {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: '🚀 Go to Dashboard',
+                url: callbackUrl,
+              },
+            ],
+          ],
+        },
+      }
+    )
+  } catch (error) {
+    console.error('Telegram login error:', error)
+    return ctx.reply(
+      '❌ *Login Failed*\n\nSomething went wrong. Please try again.',
+      { parse_mode: 'Markdown' }
+    )
   }
 }

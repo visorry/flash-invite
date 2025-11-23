@@ -38,7 +38,7 @@ export const auth: Auth = betterAuth({
 			secure: process.env.NODE_ENV === 'production',
 			httpOnly: false,
 			path: "/",
-			domain: process.env.COOKIE_DOMAIN,
+			domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : "localhost",
 		},
 	},
 });

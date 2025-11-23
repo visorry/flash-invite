@@ -10,6 +10,11 @@ import * as telegramEntitiesRoute from './telegram-entities.route'
 import * as tokensRoute from './tokens.route'
 import * as adminRoute from './admin.route'
 import * as botRoute from './bot.route'
+import * as authRoute from './auth.route'
+
+const publicAPIs = Promise.resolve({
+  auth: authRoute,
+})
 
 const v1APIs = Promise.resolve({
   bots: botsRoute,
@@ -26,9 +31,12 @@ const adminAPIs = Promise.resolve({
 })
 
 export const setupRoutes = (app: Express) => {
+  // Public routes (no auth required)
+  restHandler(publicAPIs, '/api/v1', app)
+
   // Protected routes (auth required)
   restHandler(v1APIs, '/api/v1', app, requireAuth)
-  
+
   // Admin routes (auth + admin required)
   restHandler(adminAPIs, '/api/v1', app, [requireAuth, requireAdmin])
 }

@@ -53,13 +53,13 @@ export default function GroupsPage() {
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-semibold">Telegram Groups</h1>
-          <p className="text-xs text-muted-foreground hidden sm:block">
+          <p className="text-xs text-muted-foreground sm:block">
             Manage your Telegram groups and channels
           </p>
         </div>
         <Button onClick={() => router.push('/groups/add' as any)} size="sm" className="shrink-0">
           <Plus className="w-4 h-4 sm:mr-2" />
-          <span className="hidden sm:inline">Add Group</span>
+          <span className="sm:inline">Add Group</span>
         </Button>
       </div>
 

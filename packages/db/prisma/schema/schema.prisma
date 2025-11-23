@@ -13,14 +13,16 @@ datasource db {
 // ============ AUTH MODELS ============
 
 model User {
-  id            String    @id @map("_id")
-  name          String
-  email         String
-  emailVerified Boolean
-  image         String?
-  isAdmin       Boolean   @default(false) @map("is_admin")
-  createdAt     DateTime
-  updatedAt     DateTime
+  id               String    @id @map("_id")
+  name             String
+  email            String
+  emailVerified    Boolean
+  image            String?
+  isAdmin          Boolean   @default(false) @map("is_admin")
+  telegramId       String?   @unique @map("telegram_id")
+  telegramUsername String?   @map("telegram_username")
+  createdAt        DateTime
+  updatedAt        DateTime
 
   // Auth relations
   sessions      Session[]
@@ -367,4 +369,19 @@ model Broadcast {
   @@index([status])
   @@index([createdAt])
   @@map("broadcast")
+}
+
+// Telegram Login Token - Temporary tokens for Telegram login flow
+model TelegramLoginToken {
+  id             String    @id @default(uuid())
+  token          String    @unique
+  telegramUserId String?   @map("telegram_user_id")
+  username       String?
+  fullName       String?   @map("full_name")
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([token])
+  @@index([expiresAt])
+  @@map("telegram_login_token")
 }
