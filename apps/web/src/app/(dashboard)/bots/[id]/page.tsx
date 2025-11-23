@@ -1,6 +1,7 @@
 "use client"
 
 import { useSession } from '@/hooks/use-session'
+import { useConfirm } from '@/hooks/use-confirm'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Bot, RefreshCw, Star, Users, Link as LinkIcon, Unlink } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -15,6 +16,7 @@ export default function BotDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const queryClient = useQueryClient()
+  const { confirm, ConfirmDialog } = useConfirm()
   const botId = params.id as string
 
   // Fetch bot details
@@ -99,6 +101,7 @@ export default function BotDetailsPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4">
+      <ConfirmDialog />
       {/* Header */}
       <div className="flex items-center gap-2">
         <Button
@@ -245,10 +248,14 @@ export default function BotDetailsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => {
-                        if (confirm('Unlink this bot from the group?')) {
-                          unlinkMutation.mutate(link.telegramEntityId)
-                        }
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Unlink bot?',
+                          description: 'This will remove the bot from this group.',
+                          confirmText: 'Unlink',
+                          destructive: true,
+                        })
+                        if (confirmed) unlinkMutation.mutate(link.telegramEntityId)
                       }}
                       disabled={unlinkMutation.isPending}
                       title="Unlink"

@@ -1,6 +1,7 @@
 "use client"
 
 import { useSession } from '@/hooks/use-session'
+import { useConfirm } from '@/hooks/use-confirm'
 import { Button } from '@/components/ui/button'
 import { Plus, Bot, Star, Trash2, RefreshCw } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ export default function BotsPage() {
   const { user, isLoading } = useSession()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { confirm, ConfirmDialog } = useConfirm()
 
   // Fetch bots
   const { data: bots, isLoading: botsLoading } = useQuery({
@@ -75,6 +77,7 @@ export default function BotsPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4">
+      <ConfirmDialog />
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -144,10 +147,14 @@ export default function BotsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => {
-                        if (confirm('Are you sure you want to remove this bot?')) {
-                          deleteMutation.mutate(bot.id)
-                        }
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Remove bot?',
+                          description: 'This will remove the bot from your account. You can re-add it later.',
+                          confirmText: 'Remove',
+                          destructive: true,
+                        })
+                        if (confirmed) deleteMutation.mutate(bot.id)
                       }}
                       disabled={deleteMutation.isPending}
                     >

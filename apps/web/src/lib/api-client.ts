@@ -161,6 +161,12 @@ export const api = {
       apiClient.post('/api/v1/admin/token-pricing', data),
     deleteTokenPricing: (durationUnit: number) =>
       apiClient.delete(`/api/v1/admin/token-pricing/${durationUnit}`),
+    // Automation pricing
+    getAutomationPricing: () => apiClient.get('/api/v1/admin/automation-pricing'),
+    upsertAutomationPricing: (data: { featureType: number; costPerRule: number; freeRulesAllowed: number; description?: string }) =>
+      apiClient.post('/api/v1/admin/automation-pricing', data),
+    deleteAutomationPricing: (featureType: number) =>
+      apiClient.delete(`/api/v1/admin/automation-pricing/${featureType}`),
     // Bot members
     listBotMembers: (params?: any) => {
       const queryParams = new URLSearchParams()

@@ -201,6 +201,22 @@ model BotCostConfig {
   @@map("bot_cost_config")
 }
 
+// Automation Cost Configuration - pricing for automation features (auto-approval, forward rules)
+model AutomationCostConfig {
+  id               String    @id @default(uuid())
+  featureType      Int       @unique @map("feature_type") // 0=auto_approval, 1=forward_rule
+  costPerRule      Int       @map("cost_per_rule") // tokens required per rule
+  freeRulesAllowed Int       @default(1) @map("free_rules_allowed") // number of free rules per user
+  description      String?
+  isActive         Boolean   @default(true) @map("is_active")
+  metadata         Json?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("automation_cost_config")
+}
+
 // User's Telegram Bots
 model Bot {
   id              String    @id @default(uuid())

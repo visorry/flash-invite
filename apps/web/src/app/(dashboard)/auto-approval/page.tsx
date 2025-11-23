@@ -1,6 +1,7 @@
 "use client"
 
 import { useSession } from '@/hooks/use-session'
+import { useConfirm } from '@/hooks/use-confirm'
 import { Button } from '@/components/ui/button'
 import { Plus, Power, Trash2, Pencil, UserCheck, Clock, Shield } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ export default function AutoApprovalPage() {
   const { user, isLoading } = useSession()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { confirm, ConfirmDialog } = useConfirm()
 
   // Fetch auto-approval rules
   const { data: rules, isLoading: rulesLoading } = useQuery({
@@ -72,6 +74,7 @@ export default function AutoApprovalPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4">
+      <ConfirmDialog />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -156,10 +159,14 @@ export default function AutoApprovalPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => {
-                        if (confirm('Delete this auto-approval rule?')) {
-                          deleteMutation.mutate(rule.id)
-                        }
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Delete rule?',
+                          description: 'This will permanently delete this auto-approval rule.',
+                          confirmText: 'Delete',
+                          destructive: true,
+                        })
+                        if (confirmed) deleteMutation.mutate(rule.id)
                       }}
                       disabled={deleteMutation.isPending}
                       title="Delete"

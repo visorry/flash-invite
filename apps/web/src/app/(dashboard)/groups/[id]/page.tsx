@@ -1,6 +1,7 @@
 "use client"
 
 import { useSession } from '@/hooks/use-session'
+import { useConfirm } from '@/hooks/use-confirm'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Bot, Users, Link as LinkIcon, Plus, Star, Unlink } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -15,6 +16,7 @@ export default function GroupDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const queryClient = useQueryClient()
+  const { confirm, ConfirmDialog } = useConfirm()
   const groupId = params.id as string
 
   // Fetch group details
@@ -113,6 +115,7 @@ export default function GroupDetailsPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4">
+      <ConfirmDialog />
       {/* Header */}
       <div className="flex items-center gap-2">
         <Button
@@ -185,85 +188,94 @@ export default function GroupDetailsPage() {
 
       {/* Linked Bots */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="text-sm">Linked Bots</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           {linkedBots.length > 0 ? (
-            <div className="space-y-3">
+            <>
               {linkedBots.map((link: any) => (
                 <div
                   key={link.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
+                  className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">
-                        @{link.bot?.username || 'Unknown'}
-                      </span>
-                      {link.isPrimary && (
-                        <Badge className="bg-green-500 text-xs">Primary</Badge>
-                      )}
-                      {link.isAdmin && (
-                        <Badge variant="outline" className="text-xs">Admin</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
+                  <Bot className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium truncate">
+                    @{link.bot?.username || 'Unknown'}
+                  </span>
+                  <div className="flex items-center gap-1 ml-auto shrink-0">
+                    {link.isPrimary && (
+                      <Badge className="bg-green-500 text-[10px] px-1.5 py-0">
+                        <span className="hidden sm:inline">Primary</span>
+                        <Star className="h-3 w-3 sm:hidden" />
+                      </Badge>
+                    )}
+                    {link.isAdmin && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        <span className="hidden sm:inline">Admin</span>
+                        <span className="sm:hidden">A</span>
+                      </Badge>
+                    )}
                     {!link.isPrimary && (
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="ghost"
+                        className="h-7 w-7"
                         onClick={() => setPrimaryMutation.mutate(link.botId)}
                         disabled={setPrimaryMutation.isPending}
                         title="Set as primary"
                       >
-                        <Star className="h-4 w-4" />
+                        <Star className="h-3.5 w-3.5" />
                       </Button>
                     )}
                     <Button
-                      size="sm"
+                      size="icon"
                       variant="ghost"
-                      onClick={() => {
-                        if (confirm('Unlink this bot from the group?')) {
-                          unlinkBotMutation.mutate(link.botId)
-                        }
+                      className="h-7 w-7"
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Unlink bot?',
+                          description: 'This will remove the bot from this group.',
+                          confirmText: 'Unlink',
+                          destructive: true,
+                        })
+                        if (confirmed) unlinkBotMutation.mutate(link.botId)
                       }}
                       disabled={unlinkBotMutation.isPending}
                       title="Unlink"
                     >
-                      <Unlink className="h-4 w-4 text-destructive" />
+                      <Unlink className="h-3.5 w-3.5 text-destructive" />
                     </Button>
                   </div>
                 </div>
               ))}
-            </div>
+            </>
           ) : (
-            <div className="text-center py-4">
+            <div className="text-center py-3">
               <p className="text-sm text-muted-foreground">No bots linked</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Link a bot to create invite links for this group
+              <p className="text-xs text-muted-foreground">
+                Link a bot to create invite links
               </p>
             </div>
           )}
 
           {/* Link new bot */}
           {unlinkedBots.length > 0 && (
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-xs text-muted-foreground mb-2">Link a bot:</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="pt-2 border-t">
+              <div className="flex flex-wrap gap-1.5">
                 {unlinkedBots.map((bot: any) => (
                   <Button
                     key={bot.id}
                     size="sm"
                     variant="outline"
+                    className="h-8 text-xs"
                     onClick={() => linkBotMutation.mutate({
                       botId: bot.id,
                       isPrimary: linkedBots.length === 0
                     })}
                     disabled={linkBotMutation.isPending}
                   >
-                    <LinkIcon className="h-3 w-3 mr-1" />
+                    <Plus className="h-3 w-3 mr-1" />
                     @{bot.username}
                   </Button>
                 ))}
@@ -272,11 +284,11 @@ export default function GroupDetailsPage() {
           )}
 
           {botsList.length === 0 && (
-            <div className="mt-4 pt-4 border-t text-center">
-              <p className="text-xs text-muted-foreground mb-2">No bots available</p>
+            <div className="pt-2 border-t text-center">
               <Button
                 size="sm"
                 variant="outline"
+                className="h-8 text-xs"
                 onClick={() => router.push('/bots/add' as any)}
               >
                 <Plus className="h-3 w-3 mr-1" />

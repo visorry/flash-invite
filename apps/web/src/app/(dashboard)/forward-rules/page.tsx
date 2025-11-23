@@ -1,6 +1,7 @@
 "use client"
 
 import { useSession } from '@/hooks/use-session'
+import { useConfirm } from '@/hooks/use-confirm'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Plus, Power, Trash2, Play, Pause, RotateCcw, Clock, Pencil } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -14,6 +15,7 @@ export default function ForwardRulesPage() {
   const { user, isLoading } = useSession()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const { confirm, ConfirmDialog } = useConfirm()
 
   // Fetch forward rules
   const { data: rules, isLoading: rulesLoading } = useQuery({
@@ -111,6 +113,7 @@ export default function ForwardRulesPage() {
 
   return (
     <div className="flex-1 space-y-6 p-4">
+      <ConfirmDialog />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -218,10 +221,14 @@ export default function ForwardRulesPage() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
-                              if (confirm('Reset this scheduler? Progress will be lost.')) {
-                                resetMutation.mutate(rule.id)
-                              }
+                            onClick={async () => {
+                              const confirmed = await confirm({
+                                title: 'Reset scheduler?',
+                                description: 'This will reset progress. All forwarded messages will start from the beginning.',
+                                confirmText: 'Reset',
+                                destructive: true,
+                              })
+                              if (confirmed) resetMutation.mutate(rule.id)
                             }}
                             disabled={resetMutation.isPending}
                             title="Reset"
@@ -254,10 +261,14 @@ export default function ForwardRulesPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => {
-                        if (confirm('Delete this forward rule?')) {
-                          deleteMutation.mutate(rule.id)
-                        }
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Delete rule?',
+                          description: 'This will permanently delete this forward rule.',
+                          confirmText: 'Delete',
+                          destructive: true,
+                        })
+                        if (confirmed) deleteMutation.mutate(rule.id)
                       }}
                       disabled={deleteMutation.isPending}
                       title="Delete"

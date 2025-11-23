@@ -1,13 +1,14 @@
 import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
-import { ForwardScheduleMode, ForwardScheduleStatus } from '@super-invite/db'
+import { ForwardScheduleMode, ForwardScheduleStatus, AutomationFeatureType, TransactionType, TransactionStatus } from '@super-invite/db'
 import {
   startScheduledRule,
   pauseScheduledRule,
   resumeScheduledRule,
   resetScheduledRule,
 } from '../jobs/forward-scheduler'
+import tokenService from './token.service'
 
 interface CreateForwardRuleData {
   botId: string
@@ -225,54 +226,105 @@ const create = async (ctx: RequestContext, data: CreateForwardRuleData) => {
     throw new BadRequestError('A forward rule with these source and destination already exists')
   }
 
-  // Create the rule
-  const rule = await db.forwardRule.create({
-    data: {
-      userId: ctx.user.id,
-      botId: data.botId,
-      sourceEntityId: data.sourceEntityId,
-      destinationEntityId: data.destinationEntityId,
-      name: data.name,
-      scheduleMode: data.scheduleMode ?? ForwardScheduleMode.REALTIME,
-      intervalMinutes: data.intervalMinutes ?? 30,
-      startFromMessageId: data.startFromMessageId,
-      endAtMessageId: data.endAtMessageId,
-      shuffle: data.shuffle ?? false,
-      repeatWhenDone: data.repeatWhenDone ?? false,
-      forwardMedia: data.forwardMedia ?? true,
-      forwardText: data.forwardText ?? true,
-      forwardDocuments: data.forwardDocuments ?? true,
-      forwardStickers: data.forwardStickers ?? false,
-      forwardPolls: data.forwardPolls ?? true,
-      removeLinks: data.removeLinks ?? false,
-      addWatermark: data.addWatermark,
-      includeKeywords: data.includeKeywords ?? [],
-      excludeKeywords: data.excludeKeywords ?? [],
-    },
-    include: {
-      bot: {
-        select: {
-          id: true,
-          username: true,
+  // Calculate token cost for automation
+  const { cost: tokensCost } = await tokenService.calculateAutomationCost(
+    ctx.user.id,
+    AutomationFeatureType.FORWARD_RULE
+  )
+
+  // Check user balance if tokens are required
+  if (tokensCost > 0) {
+    const balance = await db.tokenBalance.findUnique({
+      where: { userId: ctx.user.id },
+    })
+
+    if (!balance || balance.balance < tokensCost) {
+      throw new BadRequestError(
+        `Insufficient tokens. Required: ${tokensCost}, Available: ${balance?.balance || 0}`
+      )
+    }
+  }
+
+  // Create the rule and deduct tokens in a transaction
+  const rule = await db.$transaction(async (tx) => {
+    // Deduct tokens if cost > 0
+    if (tokensCost > 0) {
+      const balance = await tx.tokenBalance.findUnique({
+        where: { userId: ctx.user!.id },
+      })
+
+      const newBalance = balance!.balance - tokensCost
+
+      await tx.tokenBalance.update({
+        where: { userId: ctx.user!.id },
+        data: {
+          balance: newBalance,
+          totalSpent: { increment: tokensCost },
+        },
+      })
+
+      // Record the transaction
+      await tx.tokenTransaction.create({
+        data: {
+          userId: ctx.user!.id,
+          type: TransactionType.AUTOMATION_COST,
+          status: TransactionStatus.COMPLETED,
+          amount: -tokensCost,
+          balanceAfter: newBalance,
+          description: `Forward rule: ${data.name}`,
+        },
+      })
+    }
+
+    // Create the rule
+    return tx.forwardRule.create({
+      data: {
+        userId: ctx.user!.id,
+        botId: data.botId,
+        sourceEntityId: data.sourceEntityId,
+        destinationEntityId: data.destinationEntityId,
+        name: data.name,
+        scheduleMode: data.scheduleMode ?? ForwardScheduleMode.REALTIME,
+        intervalMinutes: data.intervalMinutes ?? 30,
+        startFromMessageId: data.startFromMessageId,
+        endAtMessageId: data.endAtMessageId,
+        shuffle: data.shuffle ?? false,
+        repeatWhenDone: data.repeatWhenDone ?? false,
+        forwardMedia: data.forwardMedia ?? true,
+        forwardText: data.forwardText ?? true,
+        forwardDocuments: data.forwardDocuments ?? true,
+        forwardStickers: data.forwardStickers ?? false,
+        forwardPolls: data.forwardPolls ?? true,
+        removeLinks: data.removeLinks ?? false,
+        addWatermark: data.addWatermark,
+        includeKeywords: data.includeKeywords ?? [],
+        excludeKeywords: data.excludeKeywords ?? [],
+      },
+      include: {
+        bot: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        sourceEntity: {
+          select: {
+            id: true,
+            title: true,
+            username: true,
+            type: true,
+          },
+        },
+        destinationEntity: {
+          select: {
+            id: true,
+            title: true,
+            username: true,
+            type: true,
+          },
         },
       },
-      sourceEntity: {
-        select: {
-          id: true,
-          title: true,
-          username: true,
-          type: true,
-        },
-      },
-      destinationEntity: {
-        select: {
-          id: true,
-          title: true,
-          username: true,
-          type: true,
-        },
-      },
-    },
+    })
   })
 
   return rule

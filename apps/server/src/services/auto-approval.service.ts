@@ -1,7 +1,9 @@
 import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
+import { AutomationFeatureType, TransactionType, TransactionStatus } from '@super-invite/db'
 import { getBot } from '../bot/bot-manager'
+import tokenService from './token.service'
 
 interface CreateAutoApprovalData {
   botId: string
@@ -154,38 +156,89 @@ const create = async (ctx: RequestContext, data: CreateAutoApprovalData) => {
     throw new BadRequestError('An auto-approval rule already exists for this entity')
   }
 
-  // Create the rule
-  const rule = await db.autoApprovalRule.create({
-    data: {
-      userId: ctx.user.id,
-      botId: data.botId,
-      telegramEntityId: data.telegramEntityId,
-      name: data.name,
-      approvalMode: data.approvalMode ?? 0,
-      delaySeconds: data.delaySeconds ?? 0,
-      requirePremium: data.requirePremium ?? false,
-      requireUsername: data.requireUsername ?? false,
-      minAccountAge: data.minAccountAge,
-      blockedCountries: data.blockedCountries ?? [],
-      sendWelcomeMsg: data.sendWelcomeMsg ?? false,
-      welcomeMessage: data.welcomeMessage,
-    },
-    include: {
-      bot: {
-        select: {
-          id: true,
-          username: true,
+  // Calculate token cost for automation
+  const { cost: tokensCost } = await tokenService.calculateAutomationCost(
+    ctx.user.id,
+    AutomationFeatureType.AUTO_APPROVAL
+  )
+
+  // Check user balance if tokens are required
+  if (tokensCost > 0) {
+    const balance = await db.tokenBalance.findUnique({
+      where: { userId: ctx.user.id },
+    })
+
+    if (!balance || balance.balance < tokensCost) {
+      throw new BadRequestError(
+        `Insufficient tokens. Required: ${tokensCost}, Available: ${balance?.balance || 0}`
+      )
+    }
+  }
+
+  // Create the rule and deduct tokens in a transaction
+  const rule = await db.$transaction(async (tx) => {
+    // Deduct tokens if cost > 0
+    if (tokensCost > 0) {
+      const balance = await tx.tokenBalance.findUnique({
+        where: { userId: ctx.user!.id },
+      })
+
+      const newBalance = balance!.balance - tokensCost
+
+      await tx.tokenBalance.update({
+        where: { userId: ctx.user!.id },
+        data: {
+          balance: newBalance,
+          totalSpent: { increment: tokensCost },
+        },
+      })
+
+      // Record the transaction
+      await tx.tokenTransaction.create({
+        data: {
+          userId: ctx.user!.id,
+          type: TransactionType.AUTOMATION_COST,
+          status: TransactionStatus.COMPLETED,
+          amount: -tokensCost,
+          balanceAfter: newBalance,
+          description: `Auto-approval rule: ${data.name}`,
+        },
+      })
+    }
+
+    // Create the rule
+    return tx.autoApprovalRule.create({
+      data: {
+        userId: ctx.user!.id,
+        botId: data.botId,
+        telegramEntityId: data.telegramEntityId,
+        name: data.name,
+        approvalMode: data.approvalMode ?? 0,
+        delaySeconds: data.delaySeconds ?? 0,
+        requirePremium: data.requirePremium ?? false,
+        requireUsername: data.requireUsername ?? false,
+        minAccountAge: data.minAccountAge,
+        blockedCountries: data.blockedCountries ?? [],
+        sendWelcomeMsg: data.sendWelcomeMsg ?? false,
+        welcomeMessage: data.welcomeMessage,
+      },
+      include: {
+        bot: {
+          select: {
+            id: true,
+            username: true,
+          },
+        },
+        telegramEntity: {
+          select: {
+            id: true,
+            title: true,
+            username: true,
+            type: true,
+          },
         },
       },
-      telegramEntity: {
-        select: {
-          id: true,
-          title: true,
-          username: true,
-          type: true,
-        },
-      },
-    },
+    })
   })
 
   return rule

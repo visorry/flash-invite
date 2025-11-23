@@ -1,7 +1,7 @@
 import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
-import { TransactionType, TransactionStatus, DurationUnit, getSecondsPerUnit } from '@super-invite/db'
+import { TransactionType, TransactionStatus, DurationUnit, getSecondsPerUnit, AutomationFeatureType, getAutomationFeatureTypeLabel } from '@super-invite/db'
 import { withTransaction } from '../helper/db/transaction'
 
 const getBalance = async (ctx: RequestContext) => {
@@ -249,6 +249,112 @@ const deleteCostConfig = async (durationUnit: DurationUnit) => {
   })
 }
 
+// ============ Automation Cost Config ============
+
+// Get all automation cost configs
+const getAutomationCostConfig = async () => {
+  const configs = await db.automationCostConfig.findMany({
+    where: {
+      isActive: true,
+      deletedAt: null,
+    },
+    orderBy: { featureType: 'asc' },
+  })
+  return configs
+}
+
+// Get automation cost config for a specific feature type
+const getAutomationCostForFeature = async (featureType: AutomationFeatureType) => {
+  const config = await db.automationCostConfig.findFirst({
+    where: {
+      featureType,
+      isActive: true,
+      deletedAt: null,
+    },
+  })
+  return config
+}
+
+// Calculate automation cost for a user (considering free rules allowed)
+const calculateAutomationCost = async (
+  userId: string,
+  featureType: AutomationFeatureType
+): Promise<{ cost: number; freeUsed: number; freeAllowed: number }> => {
+  const config = await getAutomationCostForFeature(featureType)
+
+  if (!config) {
+    return { cost: 0, freeUsed: 0, freeAllowed: 0 }
+  }
+
+  // Count existing rules for this user and feature type
+  let existingCount = 0
+  if (featureType === AutomationFeatureType.AUTO_APPROVAL) {
+    existingCount = await db.autoApprovalRule.count({
+      where: { userId },
+    })
+  } else if (featureType === AutomationFeatureType.FORWARD_RULE) {
+    existingCount = await db.forwardRule.count({
+      where: { userId, deletedAt: null },
+    })
+  }
+
+  const freeAllowed = config.freeRulesAllowed
+  const freeUsed = Math.min(existingCount, freeAllowed)
+
+  // If user has used all free rules, they need to pay
+  if (existingCount >= freeAllowed) {
+    return { cost: config.costPerRule, freeUsed, freeAllowed }
+  }
+
+  return { cost: 0, freeUsed, freeAllowed }
+}
+
+// Update or create automation cost config
+const upsertAutomationCostConfig = async (
+  featureType: AutomationFeatureType,
+  costPerRule: number,
+  freeRulesAllowed: number,
+  description?: string
+) => {
+  const existing = await db.automationCostConfig.findUnique({
+    where: { featureType },
+  })
+
+  if (existing) {
+    return db.automationCostConfig.update({
+      where: { featureType },
+      data: {
+        costPerRule,
+        freeRulesAllowed,
+        description,
+        isActive: true,
+        deletedAt: null,
+      },
+    })
+  }
+
+  return db.automationCostConfig.create({
+    data: {
+      featureType,
+      costPerRule,
+      freeRulesAllowed,
+      description,
+      isActive: true,
+    },
+  })
+}
+
+// Delete (soft) automation cost config
+const deleteAutomationCostConfig = async (featureType: AutomationFeatureType) => {
+  return db.automationCostConfig.update({
+    where: { featureType },
+    data: {
+      isActive: false,
+      deletedAt: new Date(),
+    },
+  })
+}
+
 export default {
   getBalance,
   getTransactions,
@@ -258,4 +364,10 @@ export default {
   calculateInviteCost,
   upsertCostConfig,
   deleteCostConfig,
+  // Automation cost
+  getAutomationCostConfig,
+  getAutomationCostForFeature,
+  calculateAutomationCost,
+  upsertAutomationCostConfig,
+  deleteAutomationCostConfig,
 }

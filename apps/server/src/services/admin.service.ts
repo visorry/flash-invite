@@ -1,6 +1,7 @@
-import { NotFoundError } from '../errors/http-exception'
+import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
 import db from '@super-invite/db'
+import { validateBotToken, addBot, removeBot, getBotInstance } from '../bot/bot-manager'
 
 const listUsers = async (ctx: RequestContext) => {
   const pagination = ctx.pagination || {}
@@ -378,42 +379,161 @@ const getConfig = async (_ctx: RequestContext) => {
   const configs = await db.config.findMany({
     where: {
       key: {
-        in: ['botToken', 'botUsername'],
+        in: ['botToken', 'botUsername', 'systemBotId'],
       },
     },
   })
 
   const configMap: any = {
-    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
-    botUsername: process.env.TELEGRAM_BOT_USERNAME || '',
+    botToken: '',
+    botUsername: '',
+    systemBotId: '',
+    botStatus: 'not_configured',
   }
 
   configs.forEach((config) => {
     configMap[config.key] = config.value
   })
 
+  // Check if the system bot is running
+  if (configMap.systemBotId) {
+    const botInstance = getBotInstance(configMap.systemBotId)
+    configMap.botStatus = botInstance ? 'running' : 'stopped'
+  } else if (configMap.botToken) {
+    configMap.botStatus = 'configured'
+  }
+
+  // Mask the token for security
+  if (configMap.botToken) {
+    configMap.botToken = configMap.botToken.substring(0, 10) + '...'
+  }
+
   return configMap
 }
 
 const updateConfig = async (_ctx: RequestContext, data: any) => {
-  // Update or create config entries
+  // If a new bot token is provided, validate and register it
   if (data.botToken) {
+    // Validate the token
+    const validation = await validateBotToken(data.botToken)
+    if (!validation.valid) {
+      throw new BadRequestError(validation.error || 'Invalid bot token')
+    }
+
+    // Check if we already have a system bot running
+    const existingSystemBotId = await db.config.findUnique({
+      where: { key: 'systemBotId' },
+    })
+
+    // Remove old system bot if it exists
+    if (existingSystemBotId?.value) {
+      try {
+        await removeBot(existingSystemBotId.value)
+      } catch (e) {
+        console.log('Failed to remove old system bot:', e)
+      }
+      // Delete the old bot record
+      await db.bot.delete({
+        where: { id: existingSystemBotId.value },
+      }).catch(() => {})
+    }
+
+    // Create a new bot record for the system bot (no user association)
+    // We'll use a special system user ID or null
+    const systemBot = await db.bot.create({
+      data: {
+        userId: _ctx.user!.id, // Admin user who configured it
+        token: data.botToken,
+        username: validation.username || '',
+        firstName: validation.firstName || 'System Bot',
+        botId: validation.botId || '',
+        status: 0, // ACTIVE
+        isDefault: false,
+      },
+    })
+
+    // Start the bot
+    try {
+      await addBot({
+        dbBotId: systemBot.id,
+        token: data.botToken,
+        userId: _ctx.user!.id,
+      })
+    } catch (error: any) {
+      // Clean up if bot failed to start
+      await db.bot.delete({ where: { id: systemBot.id } })
+      throw new BadRequestError(`Failed to start bot: ${error.message}`)
+    }
+
+    // Store config
     await db.config.upsert({
       where: { key: 'botToken' },
       update: { value: data.botToken },
       create: { key: 'botToken', value: data.botToken },
     })
-  }
 
-  if (data.botUsername) {
     await db.config.upsert({
       where: { key: 'botUsername' },
-      update: { value: data.botUsername },
-      create: { key: 'botUsername', value: data.botUsername },
+      update: { value: validation.username || '' },
+      create: { key: 'botUsername', value: validation.username || '' },
+    })
+
+    await db.config.upsert({
+      where: { key: 'systemBotId' },
+      update: { value: systemBot.id },
+      create: { key: 'systemBotId', value: systemBot.id },
     })
   }
 
   return getConfig(_ctx)
+}
+
+// Initialize system bot from database config on server startup
+const initializeSystemBot = async () => {
+  const configs = await db.config.findMany({
+    where: {
+      key: { in: ['botToken', 'systemBotId'] },
+    },
+  })
+
+  const configMap: Record<string, string> = {}
+  configs.forEach((c) => {
+    configMap[c.key] = c.value
+  })
+
+  if (!configMap.botToken || !configMap.systemBotId) {
+    console.log('No system bot configured in database')
+    return
+  }
+
+  // Check if bot record exists
+  const botRecord = await db.bot.findUnique({
+    where: { id: configMap.systemBotId },
+  })
+
+  if (!botRecord) {
+    console.log('System bot record not found, skipping initialization')
+    return
+  }
+
+  // Check if already running
+  const existing = getBotInstance(configMap.systemBotId)
+  if (existing) {
+    console.log('System bot already running')
+    return
+  }
+
+  // Start the bot
+  try {
+    await addBot({
+      dbBotId: botRecord.id,
+      token: botRecord.token,
+      userId: botRecord.userId,
+    })
+    console.log(`System bot @${botRecord.username} initialized from database config`)
+  } catch (error) {
+    console.error('Failed to initialize system bot:', error)
+  }
 }
 
 export default {
@@ -432,4 +552,5 @@ export default {
   deletePlan,
   getConfig,
   updateConfig,
+  initializeSystemBot,
 }

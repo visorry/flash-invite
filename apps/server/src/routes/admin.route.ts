@@ -6,7 +6,7 @@ import botMemberService from '../services/bot-member.service'
 import broadcastService from '../services/broadcast.service'
 import { getRequestContext } from '../helper/context'
 import { z } from 'zod'
-import { DurationUnit } from '@super-invite/db'
+import { DurationUnit, AutomationFeatureType } from '@super-invite/db'
 
 const router = Router()
 
@@ -262,6 +262,52 @@ router.delete(
   },
   {
     validation: DeleteTokenPricingSchema,
+  }
+)
+
+// Automation pricing configuration
+router.get(
+  '/automation-pricing',
+  async (req: Request) => {
+    return tokenService.getAutomationCostConfig()
+  }
+)
+
+const UpsertAutomationPricingSchema = z.object({
+  featureType: z.number().int().min(0).max(1), // AutomationFeatureType enum
+  costPerRule: z.number().int().min(0),
+  freeRulesAllowed: z.number().int().min(0),
+  description: z.string().optional(),
+})
+
+router.post(
+  '/automation-pricing',
+  async (req: Request) => {
+    const data = req.validatedBody
+    return tokenService.upsertAutomationCostConfig(
+      data.featureType as AutomationFeatureType,
+      data.costPerRule,
+      data.freeRulesAllowed,
+      data.description
+    )
+  },
+  {
+    validation: UpsertAutomationPricingSchema,
+  }
+)
+
+const DeleteAutomationPricingSchema = z.object({
+  featureType: z.coerce.number().int().min(0).max(1),
+})
+
+router.delete(
+  '/automation-pricing/:featureType',
+  async (req: Request) => {
+    const { featureType } = req.validatedParams
+    return tokenService.deleteAutomationCostConfig(featureType as AutomationFeatureType)
+  },
+  {
+    validation: DeleteAutomationPricingSchema,
   }
 )
 

@@ -8,11 +8,39 @@ const router = Router()
 
 export const name = 'auth'
 
+// Helper to get bot username from database or env
+async function getSystemBotUsername(): Promise<string> {
+  // Try database first
+  const config = await db.config.findUnique({
+    where: { key: 'botUsername' },
+  })
+
+  if (config?.value) {
+    return config.value.replace('@', '')
+  }
+
+  // Fallback to env
+  return (process.env.TELEGRAM_BOT_USERNAME || '').replace('@', '')
+}
+
 // Initiate Telegram login
 router.post(
   '/telegram-login',
   async (_req: Request, res: Response) => {
     try {
+      // Get bot username from database
+      const botUsername = await getSystemBotUsername()
+
+      if (!botUsername) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: {
+            message: 'System bot not configured. Please configure a bot in admin settings.',
+          },
+        })
+      }
+
       // Generate a unique token for telegram login
       const loginToken = randomBytes(8).toString('hex')
 
@@ -24,8 +52,6 @@ router.post(
         },
       })
 
-      // Remove @ if present in bot username
-      const botUsername = (process.env.TELEGRAM_BOT_USERNAME || 'userinfobot').replace('@', '')
       const telegramLoginUrl = `https://t.me/${botUsername}?start=login_${loginToken}`
 
       res.json({

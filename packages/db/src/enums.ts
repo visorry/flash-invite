@@ -29,6 +29,7 @@ export enum TransactionType {
   INVITE_COST = 3,
   SUBSCRIPTION = 4,
   BOT_CREATION = 5,
+  AUTOMATION_COST = 6,
 }
 
 // Transaction Status
@@ -93,6 +94,12 @@ export enum ForwardScheduleStatus {
   COMPLETED = 3, // Finished all messages
 }
 
+// Automation Feature Types (for cost configuration)
+export enum AutomationFeatureType {
+  AUTO_APPROVAL = 0,
+  FORWARD_RULE = 1,
+}
+
 // Helper to get duration unit label
 export function getDurationUnitLabel(unit: DurationUnit): string {
   const labels: Record<DurationUnit, string> = {
@@ -115,4 +122,13 @@ export function getSecondsPerUnit(unit: DurationUnit): number {
     [DurationUnit.YEAR]: 31536000, // 365 days
   }
   return seconds[unit]
+}
+
+// Helper to get automation feature type label
+export function getAutomationFeatureTypeLabel(type: AutomationFeatureType): string {
+  const labels: Record<AutomationFeatureType, string> = {
+    [AutomationFeatureType.AUTO_APPROVAL]: 'Auto Approval',
+    [AutomationFeatureType.FORWARD_RULE]: 'Forward Rule',
+  }
+  return labels[type]
 }
