@@ -8,11 +8,14 @@ export const auth: Auth = betterAuth({
 	database: prismaAdapter(prisma, {
 		provider: "postgresql",
 	}),
-	trustedOrigins: process.env.CORS_ORIGINS 
+	trustedOrigins: process.env.CORS_ORIGINS
 		? process.env.CORS_ORIGINS.split(',').filter(Boolean)
 		: ["http://localhost:3001", "http://localhost:3000"],
-	emailAndPassword: {
-		enabled: true,
+	socialProviders: {
+		google: {
+			clientId: process.env.GOOGLE_CLIENT_ID || "",
+			clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+		},
 	},
 	user: {
 		additionalFields: {

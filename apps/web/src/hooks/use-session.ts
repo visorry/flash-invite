@@ -12,7 +12,7 @@ export function useSession() {
     // Redirect to login if not authenticated
     if (!isPending && !session && typeof window !== 'undefined') {
       const path = window.location.pathname
-      if (!path.includes('/login') && !path.includes('/register')) {
+      if (!path.includes('/login')) {
         router.push('/login' as any)
       }
     }
