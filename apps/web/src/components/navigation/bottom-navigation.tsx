@@ -16,7 +16,7 @@ export function BottomNavigation() {
   ] as const
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-primary dark:bg-background border-t dark:border-t sm:hidden">
+    <div className="fixed bottom-0 left-2 right-2 z-50 bg-primary dark:bg-background border border-primary-foreground/20 dark:border-border rounded-t-2xl sm:hidden shadow-lg pb-[env(safe-area-inset-bottom)]">
       <nav className="flex items-center justify-around h-16 px-2">
         {links.map(({ to, label, icon: Icon }) => {
           const isActive = pathname === to || (to !== "/" && pathname.startsWith(to))

@@ -88,7 +88,7 @@ export function AdminBottomNav() {
       )}
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border sm:hidden pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed bottom-0 left-2 right-2 z-50 bg-background border border-border rounded-t-2xl sm:hidden pb-[env(safe-area-inset-bottom)] shadow-lg">
         <div className="flex items-center justify-around h-16 px-2">
           {/* Primary nav items */}
           {primaryNavItems.map((item) => {
