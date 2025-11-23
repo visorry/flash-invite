@@ -3,6 +3,7 @@ import { registerStartCommand } from './commands/start'
 import { handleChatMember } from './handlers/chat-member'
 import { handleMyChatMember } from './handlers/my-chat-member'
 import { handleChannelPost, handleGroupMessage } from './handlers/channel-post'
+import { setupChatJoinRequestHandler } from './handlers/chat-join-request'
 
 export function initBot(token: string, dbBotId: string): Telegraf {
   const bot = new Telegraf(token)
@@ -27,6 +28,9 @@ export function initBot(token: string, dbBotId: string): Telegraf {
 
   // Handle group messages for forwarding
   bot.on('message', handleGroupMessage)
+
+  // Handle chat join requests for auto-approval
+  setupChatJoinRequestHandler(bot, dbBotId)
 
   // Handle errors
   bot.catch((err: any) => {

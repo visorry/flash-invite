@@ -38,9 +38,9 @@ export const auth: Auth = betterAuth({
 			domain: process.env.COOKIE_DOMAIN || undefined,
 		},
 		defaultCookieAttributes: {
-			sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+			sameSite: "lax",
 			secure: process.env.NODE_ENV === 'production',
-			httpOnly: false,
+			httpOnly: process.env.NODE_ENV === 'production',
 			path: "/",
 		},
 	},
