@@ -1,5 +1,5 @@
 import db from '@super-invite/db'
-import { telegramBot } from '../lib/telegram'
+import { getBot } from '../bot/bot-manager'
 
 /**
  * Kick expired members from groups
@@ -9,21 +9,27 @@ export async function kickExpiredMembers() {
   const startTime = Date.now()
   console.log('[KICK_JOB] Starting expired members check...')
 
-  try {
-    // Find all members whose access has expired
-    const expiredMembers = await db.groupMember.findMany({
-      where: {
-        memberExpiresAt: {
-          lte: new Date(), // Member access expired
+  // Find all members whose access has expired
+  const expiredMembers = await db.groupMember.findMany({
+    where: {
+      memberExpiresAt: {
+        lte: new Date(), // Member access expired
+      },
+      isActive: true, // Still active (not kicked yet)
+      kickedAt: null, // Not already kicked
+    },
+    include: {
+      telegramEntity: {
+        include: {
+          botLinks: {
+            where: { isPrimary: true },
+            include: { bot: true },
+          },
         },
-        isActive: true, // Still active (not kicked yet)
-        kickedAt: null, // Not already kicked
       },
-      include: {
-        telegramEntity: true,
-      },
-      take: 100, // Process in batches to avoid overload
-    })
+    },
+    take: 100, // Process in batches to avoid overload
+  })
 
     if (expiredMembers.length === 0) {
       console.log('[KICK_JOB] No expired members found')
@@ -56,6 +62,21 @@ export async function kickExpiredMembers() {
     for (const [chatId, members] of Object.entries(membersByChat)) {
       console.log(`[KICK_JOB] Processing ${members.length} members from chat ${chatId}`)
 
+      // Get the bot for this chat from the first member
+      const firstMember = members[0]!
+      const primaryBotLink = firstMember.telegramEntity.botLinks[0]
+
+      if (!primaryBotLink || !primaryBotLink.bot) {
+        console.error(`[KICK_JOB] No primary bot found for chat ${chatId}, skipping`)
+        continue
+      }
+
+      const bot = getBot(primaryBotLink.botId)
+      if (!bot) {
+        console.error(`[KICK_JOB] Bot ${primaryBotLink.botId} not running, skipping chat ${chatId}`)
+        continue
+      }
+
       // Process members with staggered delays
       for (let i = 0; i < members.length; i++) {
         const member = members[i]!
@@ -66,19 +87,19 @@ export async function kickExpiredMembers() {
           await new Promise(resolve => setTimeout(resolve, 100))
         }
 
-        try {
+        await (async () => {
           // Ban member from Telegram group
-          await telegramBot.banChatMember(
+          await bot.telegram.banChatMember(
             chatId,
             userId,
-            Math.floor(Date.now() / 1000) + 60 // Ban for 60 seconds
+            { until_date: Math.floor(Date.now() / 1000) + 60 } // Ban for 60 seconds
           )
 
           // Wait 2 seconds before unbanning
           await new Promise(resolve => setTimeout(resolve, 2000))
 
           // Unban so they can rejoin with a new invite
-          await telegramBot.unbanChatMember(chatId, userId, true)
+          await bot.telegram.unbanChatMember(chatId, userId, { only_if_banned: true })
 
           // Update member record
           await db.groupMember.update({
@@ -95,16 +116,14 @@ export async function kickExpiredMembers() {
           )
 
           // Send notification message
-          try {
-            await new Promise(resolve => setTimeout(resolve, 200))
-            await (telegramBot as any).sendMessage(
-              userId,
-              `👋 Your access to *${member.telegramEntity.title}* has expired and you've been removed.\n\nThank you for being part of the community!`,
-              { parse_mode: 'Markdown' }
-            )
+          await bot.telegram.sendMessage(
+            userId,
+            `👋 Your access to *${member.telegramEntity.title}* has expired and you've been removed.\n\nThank you for being part of the community!`,
+            { parse_mode: 'Markdown' }
+          ).then(() => {
             notified++
             console.log(`[KICK_JOB] 📧 Notification sent to user ${member.telegramUserId}`)
-          } catch (notifyError: any) {
+          }).catch((notifyError: any) => {
             const errorCode = notifyError.response?.error_code
             if (errorCode === 403) {
               console.log(`[KICK_JOB] ⚠️ User ${member.telegramUserId} has blocked the bot`)
@@ -114,8 +133,8 @@ export async function kickExpiredMembers() {
                 notifyError.message
               )
             }
-          }
-        } catch (error: any) {
+          })
+        })().catch(async (error: any) => {
           const errorCode = error.response?.error_code
           const errorMessage = error.message || ''
 
@@ -181,7 +200,7 @@ export async function kickExpiredMembers() {
             )
             failed++
           }
-        }
+        })
       }
     }
 
@@ -198,13 +217,6 @@ export async function kickExpiredMembers() {
       notified,
       duration,
     }
-  } catch (error: any) {
-    console.error('[KICK_JOB] Fatal error:', error)
-    return {
-      success: false,
-      error: error.message,
-    }
-  }
 }
 
 /**

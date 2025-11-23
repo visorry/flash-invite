@@ -36,11 +36,22 @@ const list = async (ctx: RequestContext) => {
 }
 
 const getById = async (ctx: RequestContext, id: string) => {
-  const include = generatePrismaInclude(DBEntity.Bot, ctx)
-
   const entity = await db.telegramEntity.findUnique({
     where: { id },
-    ...(include && { include }),
+    include: {
+      botLinks: {
+        include: {
+          bot: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              status: true,
+            },
+          },
+        },
+      },
+    },
   })
 
   if (!entity) {
@@ -156,10 +167,41 @@ const deleteEntity = async (ctx: RequestContext, id: string) => {
 }
 
 const syncMemberCount = async (ctx: RequestContext, id: string) => {
-  const entity = await getById(ctx, id)
+  const entity = await db.telegramEntity.findUnique({
+    where: { id },
+    include: {
+      botLinks: {
+        where: { isPrimary: true },
+        include: { bot: true },
+      },
+    },
+  })
+
+  if (!entity) {
+    throw new NotFoundError('Telegram entity not found')
+  }
+
+  // Check ownership
+  if (ctx.user && entity.userId !== ctx.user.id) {
+    throw new NotFoundError('Telegram entity not found')
+  }
+
+  // Get the primary bot for this entity
+  const primaryBotLink = entity.botLinks[0]
+  if (!primaryBotLink) {
+    throw new BadRequestError('No bot is linked to this entity. Please link a bot first.')
+  }
+
+  // Import bot manager to get the bot instance
+  const { getBot } = await import('../bot/bot-manager')
+  const bot = getBot(primaryBotLink.botId)
+
+  if (!bot) {
+    throw new BadRequestError('Bot is not running. Please check bot status.')
+  }
 
   try {
-    const memberCount = await telegramBot.getChatMemberCount(entity.telegramId)
+    const memberCount = await bot.telegram.getChatMembersCount(entity.telegramId)
 
     const updated = await db.telegramEntity.update({
       where: { id },

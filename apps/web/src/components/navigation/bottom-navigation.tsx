@@ -3,14 +3,14 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Bot, Link as LinkIcon, Users } from "lucide-react"
+import { Home, Cpu, Link as LinkIcon, Users } from "lucide-react"
 
 export function BottomNavigation() {
   const pathname = usePathname()
 
   const links = [
     { to: "/", label: "Home", icon: Home },
-    { to: "/groups", label: "Groups", icon: Bot },
+    { to: "/bots", label: "Bots", icon: Cpu },
     { to: "/invites", label: "Invites", icon: LinkIcon },
     { to: "/members", label: "Members", icon: Users },
   ] as const

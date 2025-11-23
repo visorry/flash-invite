@@ -28,6 +28,7 @@ export enum TransactionType {
   REFUND = 2,
   INVITE_COST = 3,
   SUBSCRIPTION = 4,
+  BOT_CREATION = 5,
 }
 
 // Transaction Status
@@ -69,6 +70,27 @@ export enum BroadcastStatus {
   COMPLETED = 2,
   FAILED = 3,
   CANCELLED = 4,
+}
+
+// Bot Status
+export enum BotStatus {
+  ACTIVE = 0,
+  INACTIVE = 1,
+  ERROR = 2,
+}
+
+// Forward Rule Schedule Mode
+export enum ForwardScheduleMode {
+  REALTIME = 0,  // Forward as messages arrive
+  SCHEDULED = 1, // Forward on a schedule from history
+}
+
+// Forward Rule Schedule Status
+export enum ForwardScheduleStatus {
+  IDLE = 0,      // Not started
+  RUNNING = 1,   // Currently active
+  PAUSED = 2,    // Temporarily paused
+  COMPLETED = 3, // Finished all messages
 }
 
 // Helper to get duration unit label

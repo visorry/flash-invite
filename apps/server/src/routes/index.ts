@@ -11,6 +11,7 @@ import * as tokensRoute from './tokens.route'
 import * as adminRoute from './admin.route'
 import * as botRoute from './bot.route'
 import * as authRoute from './auth.route'
+import * as forwardRulesRoute from './forward-rules.route'
 
 const publicAPIs = Promise.resolve({
   auth: authRoute,
@@ -24,6 +25,7 @@ const v1APIs = Promise.resolve({
   'telegram-entities': telegramEntitiesRoute,
   tokens: tokensRoute,
   bot: botRoute,
+  'forward-rules': forwardRulesRoute,
 })
 
 const adminAPIs = Promise.resolve({

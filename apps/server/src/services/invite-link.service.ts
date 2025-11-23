@@ -166,29 +166,26 @@ const create = async (ctx: RequestContext, data: {
     // Generate unique token
     const token = generateToken()
 
-    // Get bot username from config
-    let botUsername = ''
-    try {
-      const botConfig = await tx.config.findUnique({
-        where: { key: 'botUsername' },
-      })
-      if (botConfig?.value) {
-        botUsername = botConfig.value
-      }
-    } catch (error) {
-      console.warn('Failed to get bot username from config:', error)
+    // Get primary bot for this entity
+    const primaryBotLink = await tx.botTelegramEntity.findFirst({
+      where: {
+        telegramEntityId: data.telegramEntityId,
+        isPrimary: true,
+      },
+      include: {
+        bot: true,
+      },
+    })
+
+    if (!primaryBotLink || !primaryBotLink.bot) {
+      throw new BadRequestError('No bot is assigned to this group. Please link a bot first.')
     }
 
-    // Fallback to env if not in config
-    if (!botUsername) {
-      botUsername = process.env.TELEGRAM_BOT_USERNAME || ''
-    }
-
-    // Remove @ if present
-    botUsername = botUsername.replace('@', '')
+    const bot = primaryBotLink.bot
+    const botUsername = bot.username.replace('@', '')
 
     if (!botUsername) {
-      throw new BadRequestError('Bot username not configured. Please set TELEGRAM_BOT_USERNAME in environment or configure in Admin Settings.')
+      throw new BadRequestError('Bot username not available')
     }
 
     // Create bot start link
@@ -199,6 +196,7 @@ const create = async (ctx: RequestContext, data: {
       data: {
         telegramEntityId: data.telegramEntityId,
         userId: ctx.user!.id,
+        botId: bot.id,
         botStartLink,
         token, // Store token as root column for fast queries
         durationType: 0, // Custom duration

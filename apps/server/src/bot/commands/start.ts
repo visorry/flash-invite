@@ -13,10 +13,18 @@ export function registerStartCommand(bot: Telegraf) {
         .join(' ')
       const username = ctx.from.username ?? null
 
+      // Get botId from context (set by middleware in bot.ts)
+      const dbBotId = (ctx as any).dbBotId as string
+
       // Track bot member on every /start interaction
-      try {
+      if (dbBotId) {
         await db.botMember.upsert({
-          where: { telegramUserId: userId },
+          where: {
+            botId_telegramUserId: {
+              botId: dbBotId,
+              telegramUserId: userId,
+            },
+          },
           update: {
             username,
             firstName: ctx.from.first_name,
@@ -27,6 +35,7 @@ export function registerStartCommand(bot: Telegraf) {
             lastActiveAt: new Date(),
           },
           create: {
+            botId: dbBotId,
             telegramUserId: userId,
             username,
             firstName: ctx.from.first_name,
@@ -35,10 +44,9 @@ export function registerStartCommand(bot: Telegraf) {
             isPremium: ctx.from.is_premium ?? false,
             isBot: ctx.from.is_bot ?? false,
           },
+        }).catch((botMemberError) => {
+          console.error('Failed to track bot member:', botMemberError)
         })
-      } catch (botMemberError) {
-        console.error('Failed to track bot member:', botMemberError)
-        // Don't block the flow if tracking fails
       }
 
       if (!token) {

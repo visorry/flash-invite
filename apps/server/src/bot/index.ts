@@ -1,69 +1,99 @@
-import { botManager } from './bot-manager'
+import {
+  initializeAllBots,
+  getBot,
+  getAllBots,
+  healthCheck,
+  getStats,
+  stopAllBots,
+  botManager,
+} from './bot-manager'
 
 async function initializeBots() {
-  try {
-    // Initialize default bot first
-    await botManager.initializeDefaultBot()
+  await initializeAllBots()
 
-    // Initialize custom bots from database
-    await botManager.initializeCustomBots()
+  const allBots = getAllBots()
 
-    const defaultBot = botManager.getDefaultBot()
+  if (allBots.length > 0) {
+    // Set up periodic health checks
+    setInterval(
+      async () => {
+        await healthCheck()
+      },
+      5 * 60 * 1000
+    ) // 5 minutes
 
-    if (defaultBot) {
-      // Set up periodic health checks
-      setInterval(
-        async () => {
-          await botManager.healthCheck()
-        },
-        5 * 60 * 1000
-      ) // 5 minutes
-
-      console.log('Bot system initialized successfully')
-      console.log('Bot stats:', botManager.getStats())
-    } else {
-      console.warn('No default bot initialized - bot features will be unavailable')
-    }
-  } catch (error) {
-    console.error('Failed to initialize bot system:', error)
-    // Don't exit - allow server to run without bots
+    console.log('Bot system initialized successfully')
+    console.log('Bot stats:', getStats())
+  } else {
+    console.warn('No bots initialized - bot features will be unavailable')
   }
 }
 
 // Export initialization function and manager
 export { initializeBots, botManager }
 
+// Export individual functions for direct use
+export {
+  initializeAllBots,
+  getBot,
+  getAllBots,
+  healthCheck,
+  getStats,
+  stopAllBots,
+} from './bot-manager'
+
+// Helper to get bot for a specific entity (uses primary bot)
+export async function getBotForEntity(telegramEntityId: string) {
+  const db = (await import('@super-invite/db')).default
+
+  const botLink = await db.botTelegramEntity.findFirst({
+    where: {
+      telegramEntityId,
+      isPrimary: true,
+    },
+    include: {
+      bot: true,
+    },
+  })
+
+  if (!botLink) return null
+
+  return getBot(botLink.botId)
+}
+
 // Legacy export for backward compatibility with existing code
 export const telegramBot: any = {
   sendMessage: async (chatId: string | number, text: string, options?: any) => {
-    const bot = botManager.getDefaultBot()
-    if (!bot) throw new Error('No bot available')
-    return bot.telegram.sendMessage(chatId, text, options)
+    // For legacy calls, we need to find which bot to use
+    // This should be updated to use getBotForEntity in callers
+    const allBots = getAllBots()
+    if (allBots.length === 0) throw new Error('No bot available')
+    return allBots[0].bot.telegram.sendMessage(chatId, text, options)
   },
   createChatInviteLink: async (chatId: string | number, options?: any) => {
-    const bot = botManager.getDefaultBot()
-    if (!bot) throw new Error('No bot available')
-    return bot.telegram.createChatInviteLink(chatId, options)
+    const allBots = getAllBots()
+    if (allBots.length === 0) throw new Error('No bot available')
+    return allBots[0].bot.telegram.createChatInviteLink(chatId, options)
   },
   revokeChatInviteLink: async (chatId: string | number, inviteLink: string) => {
-    const bot = botManager.getDefaultBot()
-    if (!bot) throw new Error('No bot available')
-    return bot.telegram.revokeChatInviteLink(chatId, inviteLink)
+    const allBots = getAllBots()
+    if (allBots.length === 0) throw new Error('No bot available')
+    return allBots[0].bot.telegram.revokeChatInviteLink(chatId, inviteLink)
   },
   getChatMember: async (chatId: string | number, userId: number) => {
-    const bot = botManager.getDefaultBot()
-    if (!bot) throw new Error('No bot available')
-    return bot.telegram.getChatMember(chatId, userId)
+    const allBots = getAllBots()
+    if (allBots.length === 0) throw new Error('No bot available')
+    return allBots[0].bot.telegram.getChatMember(chatId, userId)
   },
   banChatMember: async (chatId: string | number, userId: number) => {
-    const bot = botManager.getDefaultBot()
-    if (!bot) throw new Error('No bot available')
-    return bot.telegram.banChatMember(chatId, userId)
+    const allBots = getAllBots()
+    if (allBots.length === 0) throw new Error('No bot available')
+    return allBots[0].bot.telegram.banChatMember(chatId, userId)
   },
   unbanChatMember: async (chatId: string | number, userId: number) => {
-    const bot = botManager.getDefaultBot()
-    if (!bot) throw new Error('No bot available')
-    return bot.telegram.unbanChatMember(chatId, userId)
+    const allBots = getAllBots()
+    if (allBots.length === 0) throw new Error('No bot available')
+    return allBots[0].bot.telegram.unbanChatMember(chatId, userId)
   },
 }
 

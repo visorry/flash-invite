@@ -73,6 +73,20 @@ export const api = {
   auth: {
     me: () => apiClient.get('/api/v1/auth/me'),
   },
+  bots: {
+    list: () => apiClient.get('/api/v1/bots'),
+    getById: (id: string) => apiClient.get(`/api/v1/bots/${id}`),
+    create: (token: string) => apiClient.post('/api/v1/bots', { token }),
+    delete: (id: string) => apiClient.delete(`/api/v1/bots/${id}`),
+    setDefault: (id: string) => apiClient.post(`/api/v1/bots/${id}/default`),
+    getChats: (id: string) => apiClient.get(`/api/v1/bots/${id}/chats`),
+    syncChats: (id: string) => apiClient.post(`/api/v1/bots/${id}/sync`),
+    linkToEntity: (id: string, telegramEntityId: string, isPrimary: boolean = false) =>
+      apiClient.post(`/api/v1/bots/${id}/entities`, { telegramEntityId, isPrimary }),
+    unlinkFromEntity: (id: string, entityId: string) =>
+      apiClient.delete(`/api/v1/bots/${id}/entities/${entityId}`),
+    getCost: () => apiClient.get('/api/v1/bots/cost'),
+  },
   telegramEntities: {
     list: (params?: any) => apiClient.get('/api/v1/telegram-entities', { ...params }),
     getById: (id: string) => apiClient.get(`/api/v1/telegram-entities/${id}`),
@@ -206,5 +220,60 @@ export const api = {
       filterCriteria?: { isPremium?: boolean; languageCode?: string; activeWithinDays?: number };
     }) => apiClient.post('/api/v1/admin/broadcast/send', data),
     cancelBroadcast: (id: string) => apiClient.post(`/api/v1/admin/broadcast/${id}/cancel`),
+  },
+  forwardRules: {
+    list: (params?: { botId?: string }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.botId) queryParams.append('botId', params.botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/forward-rules${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/forward-rules/${id}`),
+    create: (data: {
+      botId: string
+      sourceEntityId: string
+      destinationEntityId: string
+      name: string
+      scheduleMode?: number
+      intervalMinutes?: number
+      startFromMessageId?: number
+      endAtMessageId?: number
+      shuffle?: boolean
+      repeatWhenDone?: boolean
+      forwardMedia?: boolean
+      forwardText?: boolean
+      forwardDocuments?: boolean
+      forwardStickers?: boolean
+      forwardPolls?: boolean
+      removeLinks?: boolean
+      addWatermark?: string
+      includeKeywords?: string[]
+      excludeKeywords?: string[]
+    }) => apiClient.post('/api/v1/forward-rules', data),
+    update: (id: string, data: {
+      name?: string
+      isActive?: boolean
+      scheduleMode?: number
+      intervalMinutes?: number
+      startFromMessageId?: number | null
+      endAtMessageId?: number | null
+      shuffle?: boolean
+      repeatWhenDone?: boolean
+      forwardMedia?: boolean
+      forwardText?: boolean
+      forwardDocuments?: boolean
+      forwardStickers?: boolean
+      forwardPolls?: boolean
+      removeLinks?: boolean
+      addWatermark?: string | null
+      includeKeywords?: string[]
+      excludeKeywords?: string[]
+    }) => apiClient.put(`/api/v1/forward-rules/${id}`, data),
+    toggle: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/toggle`),
+    delete: (id: string) => apiClient.delete(`/api/v1/forward-rules/${id}`),
+    start: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/start`),
+    pause: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/pause`),
+    resume: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/resume`),
+    reset: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/reset`),
   },
 }

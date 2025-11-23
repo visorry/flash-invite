@@ -33,12 +33,15 @@ export const auth: Auth = betterAuth({
 		},
 	},
 	advanced: {
+		crossSubDomainCookies: {
+			enabled: process.env.NODE_ENV === 'production',
+			domain: process.env.COOKIE_DOMAIN || undefined,
+		},
 		defaultCookieAttributes: {
 			sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
 			secure: process.env.NODE_ENV === 'production',
 			httpOnly: false,
 			path: "/",
-			domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : "localhost",
 		},
 	},
 });
