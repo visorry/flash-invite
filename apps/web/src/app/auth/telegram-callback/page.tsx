@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
-export default function TelegramCallbackPage() {
+function TelegramCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
@@ -66,53 +66,86 @@ export default function TelegramCallbackPage() {
   }, [searchParams, router])
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="h-6 w-6 text-primary" />
-            </div>
+    <Card className="w-full max-w-md">
+      <CardHeader className="space-y-1 text-center">
+        <div className="flex justify-center mb-4">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <Bot className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">
-            {status === 'loading' && 'Completing Login...'}
-            {status === 'success' && 'Login Successful!'}
-            {status === 'error' && 'Login Failed'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center">
-          {status === 'loading' && (
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground">
-                Please wait while we complete your Telegram login...
-              </p>
-            </div>
-          )}
+        </div>
+        <CardTitle className="text-2xl font-bold">
+          {status === 'loading' && 'Completing Login...'}
+          {status === 'success' && 'Login Successful!'}
+          {status === 'error' && 'Login Failed'}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-center">
+        {status === 'loading' && (
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">
+              Please wait while we complete your Telegram login...
+            </p>
+          </div>
+        )}
 
-          {status === 'success' && (
-            <div className="flex flex-col items-center gap-4">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <p className="text-muted-foreground">
-                Redirecting you to the dashboard...
-              </p>
-            </div>
-          )}
+        {status === 'success' && (
+          <div className="flex flex-col items-center gap-4">
+            <CheckCircle className="h-8 w-8 text-green-500" />
+            <p className="text-muted-foreground">
+              Redirecting you to the dashboard...
+            </p>
+          </div>
+        )}
 
-          {status === 'error' && (
-            <div className="flex flex-col items-center gap-4">
-              <XCircle className="h-8 w-8 text-red-500" />
-              <p className="text-muted-foreground">{errorMessage}</p>
-              <a
-                href="/login"
-                className="text-primary hover:underline font-medium"
-              >
-                Back to Login
-              </a>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {status === 'error' && (
+          <div className="flex flex-col items-center gap-4">
+            <XCircle className="h-8 w-8 text-red-500" />
+            <p className="text-muted-foreground">{errorMessage}</p>
+            <a
+              href="/login"
+              className="text-primary hover:underline font-medium"
+            >
+              Back to Login
+            </a>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader className="space-y-1 text-center">
+        <div className="flex justify-center mb-4">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <Bot className="h-6 w-6 text-primary" />
+          </div>
+        </div>
+        <CardTitle className="text-2xl font-bold">
+          Completing Login...
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="text-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">
+            Please wait while we complete your Telegram login...
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default function TelegramCallbackPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+      <Suspense fallback={<LoadingFallback />}>
+        <TelegramCallbackContent />
+      </Suspense>
     </div>
   )
 }
