@@ -106,8 +106,8 @@ export default function BotsPage() {
                       @{bot.username}
                       {bot.isDefault && (
                         <Badge className="bg-yellow-500">
-                          <Star className="h-3 w-3 mr-1" />
-                          Default
+                          <Star className="h-3 w-3 sm:mr-1" />
+                          <span className="hidden sm:inline">Default</span>
                         </Badge>
                       )}
                       {bot.status === 0 ? (
