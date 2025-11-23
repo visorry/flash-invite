@@ -153,12 +153,15 @@ router.get(
       const isProduction = process.env.NODE_ENV === 'production'
       // For cross-subdomain cookies, keep the leading dot for proper subdomain sharing
       const cookieDomain = process.env.COOKIE_DOMAIN || undefined
-      // Use __Secure- prefix in production (required for secure cookies)
+      // Better Auth uses __Secure- prefix in production
       const cookieName = isProduction ? '__Secure-better-auth.session_token' : 'better-auth.session_token'
+
+      console.log('Setting cookie:', { isProduction, cookieName, cookieDomain, NODE_ENV: process.env.NODE_ENV })
+
       res.cookie(cookieName, signedToken, {
-        httpOnly: isProduction,
+        httpOnly: false,
         secure: isProduction,
-        sameSite: 'lax',
+        sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         domain: isProduction ? cookieDomain : undefined,

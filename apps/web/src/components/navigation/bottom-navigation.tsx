@@ -3,22 +3,22 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Cpu, Link as LinkIcon, UserCheck } from "lucide-react"
+import { Home, Settings2, Zap, User } from "lucide-react"
 
 export function BottomNavigation() {
   const pathname = usePathname()
 
-  const links = [
+  const tabs = [
     { to: "/", label: "Home", icon: Home },
-    { to: "/bots", label: "Bots", icon: Cpu },
-    { to: "/invites", label: "Invites", icon: LinkIcon },
-    { to: "/auto-approval", label: "Approve", icon: UserCheck },
+    { to: "/manage", label: "Manage", icon: Settings2 },
+    { to: "/automate", label: "Automate", icon: Zap },
+    { to: "/account", label: "Account", icon: User },
   ] as const
 
   return (
     <div className="fixed bottom-0 left-2 right-2 z-50 bg-[oklch(0.145_0_0)] border border-white/10 rounded-t-2xl sm:hidden shadow-lg pb-[env(safe-area-inset-bottom)]">
       <nav className="flex items-center justify-around h-16 px-2">
-        {links.map(({ to, label, icon: Icon }) => {
+        {tabs.map(({ to, label, icon: Icon }) => {
           const isActive = pathname === to || (to !== "/" && pathname.startsWith(to))
           return (
             <Link
