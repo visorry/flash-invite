@@ -151,6 +151,7 @@ router.get(
 
       // Set cookie using BetterAuth's cookie settings
       const isProduction = process.env.NODE_ENV === 'production'
+      console.log("NODE_ENV", process.env.NODE_ENV)
       // For cross-subdomain cookies, keep the leading dot for proper subdomain sharing
       const cookieDomain = process.env.COOKIE_DOMAIN || undefined
       // Better Auth uses __Secure- prefix in production
