@@ -1,6 +1,6 @@
 import type { RequestContext } from '../types/app'
 import db, { BroadcastStatus } from '@super-invite/db'
-import { botManager } from '../bot'
+import { getBot } from '../bot/bot-manager'
 
 // Template operations
 const listTemplates = async (ctx: RequestContext) => {
@@ -101,6 +101,7 @@ const getBroadcastById = async (id: string) => {
 }
 
 interface BroadcastFilter {
+  botId?: string
   isPremium?: boolean
   languageCode?: string
   activeWithinDays?: number
@@ -109,6 +110,11 @@ interface BroadcastFilter {
 const getFilteredBotMembers = async (ctx: RequestContext, filter?: BroadcastFilter) => {
   const pagination = ctx.pagination || {}
   const where: any = {}
+
+  // Filter by bot
+  if (filter?.botId) {
+    where.botId = filter.botId
+  }
 
   if (filter?.isPremium !== undefined) {
     where.isPremium = filter.isPremium
@@ -153,6 +159,7 @@ const getFilteredBotMembers = async (ctx: RequestContext, filter?: BroadcastFilt
 }
 
 const createBroadcast = async (data: {
+  botId: string
   templateId?: string
   content: string
   parseMode?: string
@@ -162,6 +169,7 @@ const createBroadcast = async (data: {
 }) => {
   return db.broadcast.create({
     data: {
+      botId: data.botId,
       templateId: data.templateId || null,
       content: data.content,
       parseMode: data.parseMode || null,
@@ -220,10 +228,10 @@ const sendBroadcast = async (broadcastId: string) => {
     }
   }
 
-  // Get the default bot
-  const bot = botManager.getDefaultBot()
+  // Get the bot for this broadcast
+  const bot = getBot(broadcast.botId)
   if (!bot) {
-    throw new Error('No bot available for broadcasting')
+    throw new Error('Bot not found or not running')
   }
 
   // Send messages

@@ -151,13 +151,15 @@ router.get(
 
       // Set cookie using BetterAuth's cookie settings
       const isProduction = process.env.NODE_ENV === 'production'
+      // For cross-subdomain cookies, use the domain without leading dot for Express
+      const cookieDomain = process.env.COOKIE_DOMAIN?.replace(/^\./, '') || undefined
       res.cookie('better-auth.session_token', signedToken, {
         httpOnly: false,
         secure: isProduction,
         sameSite: isProduction ? 'none' : 'lax',
         path: '/',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        domain: isProduction ? process.env.COOKIE_DOMAIN : 'localhost',
+        domain: isProduction ? cookieDomain : undefined,
       })
 
       // Redirect to web app

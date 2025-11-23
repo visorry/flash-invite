@@ -198,6 +198,7 @@ export const api = {
     getBroadcastRecipients: (params?: {
       page?: number;
       size?: number;
+      botId?: string;
       isPremium?: boolean;
       languageCode?: string;
       activeWithinDays?: number
@@ -205,6 +206,7 @@ export const api = {
       const queryParams = new URLSearchParams()
       if (params?.page) queryParams.append('page', params.page.toString())
       if (params?.size) queryParams.append('size', params.size.toString())
+      if (params?.botId) queryParams.append('botId', params.botId)
       if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString())
       if (params?.languageCode) queryParams.append('languageCode', params.languageCode)
       if (params?.activeWithinDays) queryParams.append('activeWithinDays', params.activeWithinDays.toString())
@@ -212,14 +214,51 @@ export const api = {
       return apiClient.get(`/api/v1/admin/broadcast/recipients${queryString ? `?${queryString}` : ''}`)
     },
     sendBroadcast: (data: {
+      botId: string;
       templateId?: string;
       content: string;
       parseMode?: string;
       buttons?: any;
       recipientIds: string[];
-      filterCriteria?: { isPremium?: boolean; languageCode?: string; activeWithinDays?: number };
+      filterCriteria?: { botId?: string; isPremium?: boolean; languageCode?: string; activeWithinDays?: number };
     }) => apiClient.post('/api/v1/admin/broadcast/send', data),
     cancelBroadcast: (id: string) => apiClient.post(`/api/v1/admin/broadcast/${id}/cancel`),
+  },
+  autoApproval: {
+    list: (params?: { botId?: string }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.botId) queryParams.append('botId', params.botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/auto-approval${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/auto-approval/${id}`),
+    create: (data: {
+      botId: string
+      telegramEntityId: string
+      name: string
+      approvalMode?: number
+      delaySeconds?: number
+      requirePremium?: boolean
+      requireUsername?: boolean
+      minAccountAge?: number
+      blockedCountries?: string[]
+      sendWelcomeMsg?: boolean
+      welcomeMessage?: string
+    }) => apiClient.post('/api/v1/auto-approval', data),
+    update: (id: string, data: {
+      name?: string
+      isActive?: boolean
+      approvalMode?: number
+      delaySeconds?: number
+      requirePremium?: boolean
+      requireUsername?: boolean
+      minAccountAge?: number | null
+      blockedCountries?: string[]
+      sendWelcomeMsg?: boolean
+      welcomeMessage?: string | null
+    }) => apiClient.put(`/api/v1/auto-approval/${id}`, data),
+    toggle: (id: string) => apiClient.post(`/api/v1/auto-approval/${id}/toggle`),
+    delete: (id: string) => apiClient.delete(`/api/v1/auto-approval/${id}`),
   },
   forwardRules: {
     list: (params?: { botId?: string }) => {

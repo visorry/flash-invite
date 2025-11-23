@@ -218,7 +218,6 @@ const create = async (ctx: RequestContext, data: CreateForwardRuleData) => {
       botId: data.botId,
       sourceEntityId: data.sourceEntityId,
       destinationEntityId: data.destinationEntityId,
-      deletedAt: null,
     },
   })
 
@@ -347,7 +346,7 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateForwardRu
   return updatedRule
 }
 
-// Delete a forward rule (soft delete)
+// Delete a forward rule (hard delete)
 const deleteRule = async (ctx: RequestContext, ruleId: string) => {
   if (!ctx.user) {
     throw new BadRequestError('User not authenticated')
@@ -357,7 +356,6 @@ const deleteRule = async (ctx: RequestContext, ruleId: string) => {
     where: {
       id: ruleId,
       userId: ctx.user.id,
-      deletedAt: null,
     },
   })
 
@@ -365,9 +363,8 @@ const deleteRule = async (ctx: RequestContext, ruleId: string) => {
     throw new NotFoundError('Forward rule not found')
   }
 
-  await db.forwardRule.update({
+  await db.forwardRule.delete({
     where: { id: ruleId },
-    data: { deletedAt: new Date() },
   })
 
   return { success: true }

@@ -219,10 +219,13 @@ model Bot {
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  entityLinks  BotTelegramEntity[]
-  inviteLinks  InviteLink[]
-  botMembers   BotMember[]
-  forwardRules ForwardRule[]
+  entityLinks       BotTelegramEntity[]
+  inviteLinks       InviteLink[]
+  botMembers        BotMember[]
+  forwardRules      ForwardRule[]
+  broadcasts        Broadcast[]
+  autoApprovalRules AutoApprovalRule[]
+  welcomeConfigs    WelcomeConfig[]
 
   @@index([userId])
   @@index([status])
@@ -273,8 +276,10 @@ model TelegramEntity {
   inviteLinks           InviteLink[]
   groupMembers          GroupMember[]
   joinLogs              JoinLog[]
-  forwardRulesAsSource  ForwardRule[] @relation("ForwardSource")
-  forwardRulesAsDest    ForwardRule[] @relation("ForwardDestination")
+  forwardRulesAsSource  ForwardRule[]      @relation("ForwardSource")
+  forwardRulesAsDest    ForwardRule[]      @relation("ForwardDestination")
+  autoApprovalRules     AutoApprovalRule[]
+  welcomeConfigs        WelcomeConfig[]
 
   @@unique([telegramId, userId]) // Same group can exist for different users
   @@index([userId])
@@ -425,6 +430,8 @@ model BroadcastTemplate {
 // Broadcast - Track broadcast sends
 model Broadcast {
   id              String             @id @default(uuid())
+  botId           String             @map("bot_id")
+  bot             Bot                @relation(fields: [botId], references: [id], onDelete: Cascade)
   templateId      String?            @map("template_id")
   template        BroadcastTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   content         String             @db.Text // Actual message sent (in case template was modified)
@@ -442,6 +449,7 @@ model Broadcast {
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  @@index([botId])
   @@index([status])
   @@index([createdAt])
   @@map("broadcast")
@@ -528,4 +536,81 @@ model ForwardRule {
   @@index([scheduleMode])
   @@index([nextRunAt])
   @@map("forward_rule")
+}
+
+// Auto Approval Rule - Automatically approve join requests
+model AutoApprovalRule {
+  id               String         @id @default(uuid())
+  userId           String         @map("user_id")
+  botId            String         @map("bot_id")
+  bot              Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
+  telegramEntityId String         @map("telegram_entity_id")
+  telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
+  name             String         // User-friendly name
+  isActive         Boolean        @default(true) @map("is_active")
+
+  // Approval mode: 0=instant, 1=delayed, 2=captcha
+  approvalMode     Int            @default(0) @map("approval_mode")
+  delaySeconds     Int            @default(0) @map("delay_seconds") // For delayed mode
+
+  // Filters
+  requirePremium   Boolean        @default(false) @map("require_premium")
+  requireUsername  Boolean        @default(false) @map("require_username")
+  minAccountAge    Int?           @map("min_account_age") // Days
+  blockedCountries String[]       @map("blocked_countries") // ISO country codes
+
+  // Actions after approval
+  sendWelcomeMsg   Boolean        @default(false) @map("send_welcome_msg")
+  welcomeMessage   String?        @map("welcome_message") @db.Text
+
+  // Stats
+  approvedCount    Int            @default(0) @map("approved_count")
+  rejectedCount    Int            @default(0) @map("rejected_count")
+  lastApprovedAt   DateTime?      @map("last_approved_at") @db.Timestamptz(3)
+
+  metadata         Json?
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([botId, telegramEntityId]) // One rule per entity per bot
+  @@index([userId])
+  @@index([botId])
+  @@index([telegramEntityId])
+  @@index([isActive])
+  @@map("auto_approval_rule")
+}
+
+// Welcome/Goodbye Message Configuration
+model WelcomeConfig {
+  id               String         @id @default(uuid())
+  userId           String         @map("user_id")
+  botId            String         @map("bot_id")
+  bot              Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
+  telegramEntityId String         @map("telegram_entity_id")
+  telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
+
+  // Welcome settings
+  welcomeEnabled   Boolean        @default(false) @map("welcome_enabled")
+  welcomeMessage   String?        @map("welcome_message") @db.Text
+  welcomeParseMode String?        @map("welcome_parse_mode") // HTML, Markdown
+  welcomeButtons   Json?          @map("welcome_buttons") // Inline keyboard
+
+  // Goodbye settings
+  goodbyeEnabled   Boolean        @default(false) @map("goodbye_enabled")
+  goodbyeMessage   String?        @map("goodbye_message") @db.Text
+  goodbyeParseMode String?        @map("goodbye_parse_mode")
+
+  // Options
+  deleteAfterSecs  Int?           @map("delete_after_secs") // Auto-delete welcome after X seconds
+  mentionUser      Boolean        @default(true) @map("mention_user")
+
+  metadata         Json?
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([botId, telegramEntityId])
+  @@index([userId])
+  @@index([botId])
+  @@index([telegramEntityId])
+  @@map("welcome_config")
 }

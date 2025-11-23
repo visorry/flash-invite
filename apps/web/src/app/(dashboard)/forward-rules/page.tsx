@@ -2,7 +2,7 @@
 
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Plus, Power, Trash2, Play, Pause, RotateCcw, Clock } from 'lucide-react'
+import { ArrowRight, Plus, Power, Trash2, Play, Pause, RotateCcw, Clock, Pencil } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
@@ -243,6 +243,14 @@ export default function ForwardRulesPage() {
                         <Power className={`h-4 w-4 ${rule.isActive ? 'text-green-500' : 'text-muted-foreground'}`} />
                       </Button>
                     )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => router.push(`/forward-rules/${rule.id}/edit` as any)}
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"

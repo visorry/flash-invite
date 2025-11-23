@@ -433,6 +433,7 @@ router.get(
 
 // Create and send broadcast
 const CreateBroadcastSchema = z.object({
+  botId: z.string().uuid(),
   templateId: z.string().uuid().optional(),
   content: z.string().min(1),
   parseMode: z.string().optional(),
@@ -443,6 +444,7 @@ const CreateBroadcastSchema = z.object({
   }))).optional(),
   recipientIds: z.array(z.string().uuid()).min(1),
   filterCriteria: z.object({
+    botId: z.string().uuid().optional(),
     isPremium: z.boolean().optional(),
     languageCode: z.string().optional(),
     activeWithinDays: z.number().int().positive().optional(),

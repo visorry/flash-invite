@@ -60,7 +60,7 @@ router.put(
     return forwardRuleService.update(ctx, id, req.validatedBody)
   },
   {
-    validation: UpdateForwardRuleSchema,
+    validation: [ForwardRuleParamsSchema, UpdateForwardRuleSchema],
   }
 )
 

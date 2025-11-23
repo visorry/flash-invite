@@ -12,6 +12,7 @@ import * as adminRoute from './admin.route'
 import * as botRoute from './bot.route'
 import * as authRoute from './auth.route'
 import * as forwardRulesRoute from './forward-rules.route'
+import * as autoApprovalRoute from './auto-approval.route'
 
 const publicAPIs = Promise.resolve({
   auth: authRoute,
@@ -26,6 +27,7 @@ const v1APIs = Promise.resolve({
   tokens: tokensRoute,
   bot: botRoute,
   'forward-rules': forwardRulesRoute,
+  'auto-approval': autoApprovalRoute,
 })
 
 const adminAPIs = Promise.resolve({
