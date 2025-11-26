@@ -501,7 +501,23 @@ model ForwardRule {
 
   // Scheduling mode: 0=realtime, 1=scheduled
   scheduleMode        Int            @default(0) @map("schedule_mode")
-  intervalMinutes     Int            @default(30) @map("interval_minutes") // Time between scheduled posts
+  
+  // Batch configuration
+  batchSize           Int            @default(1) @map("batch_size") // Number of posts per batch
+  
+  // Post interval configuration
+  postInterval        Int            @default(30) @map("post_interval") // Interval value
+  postIntervalUnit    Int            @default(0) @map("post_interval_unit") // 0=minutes, 1=hours, 2=days, 3=months
+  
+  // Delete interval configuration
+  deleteAfterEnabled  Boolean        @default(false) @map("delete_after_enabled")
+  deleteInterval      Int?           @map("delete_interval") // Interval value
+  deleteIntervalUnit  Int?           @map("delete_interval_unit") // 0=minutes, 1=hours, 2=days, 3=months, 4=never
+  
+  // Broadcast message after batch completion
+  broadcastEnabled    Boolean        @default(false) @map("broadcast_enabled")
+  broadcastMessage    String?        @map("broadcast_message") @db.Text
+  broadcastParseMode  String?        @map("broadcast_parse_mode") // HTML, Markdown, or null
 
   // Range selection for scheduled mode
   startFromMessageId  Int?           @map("start_from_message_id") // Starting message ID
