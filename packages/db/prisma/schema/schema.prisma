@@ -507,17 +507,20 @@ model ForwardRule {
   
   // Post interval configuration
   postInterval        Int            @default(30) @map("post_interval") // Interval value
-  postIntervalUnit    Int            @default(0) @map("post_interval_unit") // 0=minutes, 1=hours, 2=days, 3=months
+  postIntervalUnit    Int            @default(1) @map("post_interval_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months
   
   // Delete interval configuration
   deleteAfterEnabled  Boolean        @default(false) @map("delete_after_enabled")
   deleteInterval      Int?           @map("delete_interval") // Interval value
-  deleteIntervalUnit  Int?           @map("delete_interval_unit") // 0=minutes, 1=hours, 2=days, 3=months, 4=never
+  deleteIntervalUnit  Int?           @map("delete_interval_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
   
   // Broadcast message after batch completion
   broadcastEnabled    Boolean        @default(false) @map("broadcast_enabled")
   broadcastMessage    String?        @map("broadcast_message") @db.Text
   broadcastParseMode  String?        @map("broadcast_parse_mode") // HTML, Markdown, or null
+  broadcastDeleteAfter Boolean       @default(false) @map("broadcast_delete_after")
+  broadcastDeleteInterval Int?       @map("broadcast_delete_interval")
+  broadcastDeleteUnit Int?           @map("broadcast_delete_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
 
   // Range selection for scheduled mode
   startFromMessageId  Int?           @map("start_from_message_id") // Starting message ID
@@ -583,7 +586,8 @@ model AutoApprovalRule {
 
   // Approval mode: 0=instant, 1=delayed, 2=captcha
   approvalMode     Int            @default(0) @map("approval_mode")
-  delaySeconds     Int            @default(0) @map("delay_seconds") // For delayed mode
+  delayInterval    Int            @default(0) @map("delay_interval") // Delay value
+  delayUnit        Int            @default(0) @map("delay_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months
 
   // Filters
   requirePremium   Boolean        @default(false) @map("require_premium")

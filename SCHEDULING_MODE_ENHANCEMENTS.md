@@ -13,12 +13,13 @@ Enhanced the Forward Rules scheduling mode with batch processing, flexible inter
 ### 2. Post Interval with Units
 - **Fields**: 
   - `postInterval`: The interval value (default: 30)
-  - `postIntervalUnit`: The time unit (default: 0 = minutes)
+  - `postIntervalUnit`: The time unit (default: 1 = minutes)
 - **Units**:
-  - 0 = Minutes
-  - 1 = Hours
-  - 2 = Days
-  - 3 = Months
+  - 0 = Seconds
+  - 1 = Minutes
+  - 2 = Hours
+  - 3 = Days
+  - 4 = Months
 - **Description**: Flexible time interval between batch executions
 
 ### 3. Delete Interval with Units
@@ -27,11 +28,12 @@ Enhanced the Forward Rules scheduling mode with batch processing, flexible inter
   - `deleteInterval`: The interval value
   - `deleteIntervalUnit`: The time unit
 - **Units**:
-  - 0 = Minutes
-  - 1 = Hours
-  - 2 = Days
-  - 3 = Months
-  - 4 = Never (no deletion)
+  - 0 = Seconds
+  - 1 = Minutes
+  - 2 = Hours
+  - 3 = Days
+  - 4 = Months
+  - 5 = Never (no deletion)
 - **Description**: Automatically delete forwarded messages after specified time
 
 ### 4. Broadcast Message Configuration
@@ -48,10 +50,10 @@ Enhanced the Forward Rules scheduling mode with batch processing, flexible inter
 ```sql
 - batch_size (INT, default: 1)
 - post_interval (INT, default: 30)
-- post_interval_unit (INT, default: 0)
+- post_interval_unit (INT, default: 1) -- 0=seconds, 1=minutes, 2=hours, 3=days, 4=months
 - delete_after_enabled (BOOLEAN, default: false)
 - delete_interval (INT, nullable)
-- delete_interval_unit (INT, nullable)
+- delete_interval_unit (INT, nullable) -- 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
 - broadcast_enabled (BOOLEAN, default: false)
 - broadcast_message (TEXT, nullable)
 - broadcast_parse_mode (VARCHAR, nullable)
@@ -80,17 +82,17 @@ Enhanced the Forward Rules scheduling mode with batch processing, flexible inter
 
 #### 4. Scheduler (`apps/server/src/jobs/forward-scheduler.ts`)
 - Modified `processRule()` to process batches instead of single messages
-- Added `calculateNextRunTime()` helper for flexible intervals
-- Added `scheduleMessageDeletion()` for auto-deletion
+- Added `calculateNextRunTime()` helper for flexible intervals (supports seconds, minutes, hours, days, months)
+- Added `scheduleMessageDeletion()` for auto-deletion (supports seconds, minutes, hours, days, months)
 - Added `sendBroadcastMessage()` for batch completion notifications
 - Updated `forwardMessageById()` to schedule deletions
 
 ### Frontend Changes
 
-#### UI (`apps/web/src/app/(dashboard)/forward-rules/create/page.tsx`)
+#### UI (`apps/web/src/app/(dashboard)/forward-rules/create/page.tsx` & `edit/page.tsx`)
 - Added batch size input
-- Added post interval with unit selector (Minutes/Hours/Days/Months)
-- Added delete interval toggle with unit selector (Minutes/Hours/Days/Months/Never)
+- Added post interval with unit selector (Seconds/Minutes/Hours/Days/Months)
+- Added delete interval toggle with unit selector (Seconds/Minutes/Hours/Days/Months/Never)
 - Added broadcast message toggle with text area and parse mode selector
 - Updated form submission to include all new fields
 
@@ -103,10 +105,10 @@ Enhanced the Forward Rules scheduling mode with batch processing, flexible inter
   scheduleMode: 1, // Scheduled
   batchSize: 5, // Forward 5 posts per batch
   postInterval: 6, // Every 6...
-  postIntervalUnit: 1, // ...hours
+  postIntervalUnit: 2, // ...hours
   deleteAfterEnabled: true,
   deleteInterval: 24, // Delete after 24...
-  deleteIntervalUnit: 1, // ...hours
+  deleteIntervalUnit: 2, // ...hours
   broadcastEnabled: true,
   broadcastMessage: "📰 Latest news batch delivered!",
   broadcastParseMode: "HTML"
@@ -118,15 +120,34 @@ This configuration will:
 2. Delete each forwarded message after 24 hours
 3. Send a broadcast message after each batch of 5 messages
 
-## Migration
-
-Run the migration:
-```bash
-cd packages/db
-npx prisma migrate dev
+### Example with Seconds:
+```typescript
+{
+  name: "Quick Test Forward",
+  scheduleMode: 1,
+  batchSize: 2,
+  postInterval: 30, // Every 30...
+  postIntervalUnit: 0, // ...seconds
+  deleteAfterEnabled: true,
+  deleteInterval: 60, // Delete after 60...
+  deleteIntervalUnit: 0, // ...seconds
+}
 ```
 
-The migration file: `20251126141015_add_batch_and_broadcast_to_forward_rules`
+This will forward 2 messages every 30 seconds and delete them after 60 seconds.
+
+## Migrations
+
+Two migrations were applied:
+
+1. `20251126141015_add_batch_and_broadcast_to_forward_rules` - Initial batch and broadcast features
+2. `20251126180516_add_seconds_to_intervals` - Added seconds option to intervals
+
+Run migrations:
+```bash
+cd packages/db
+bunx prisma migrate dev
+```
 
 ## Notes
 

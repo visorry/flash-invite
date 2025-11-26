@@ -25,7 +25,8 @@ export default function EditAutoApprovalPage() {
 
   // Approval settings
   const [approvalMode, setApprovalMode] = useState(0)
-  const [delaySeconds, setDelaySeconds] = useState(30)
+  const [delayInterval, setDelayInterval] = useState(30)
+  const [delayUnit, setDelayUnit] = useState(0)
 
   // Filters
   const [requirePremium, setRequirePremium] = useState(false)
@@ -50,7 +51,8 @@ export default function EditAutoApprovalPage() {
       setName(r.name || '')
       setIsActive(r.isActive ?? true)
       setApprovalMode(r.approvalMode ?? 0)
-      setDelaySeconds(r.delaySeconds ?? 30)
+      setDelayInterval(r.delayInterval ?? 30)
+      setDelayUnit(r.delayUnit ?? 0)
       setRequirePremium(r.requirePremium ?? false)
       setRequireUsername(r.requireUsername ?? false)
       setMinAccountAge(r.minAccountAge?.toString() || '')
@@ -65,7 +67,8 @@ export default function EditAutoApprovalPage() {
       name,
       isActive,
       approvalMode,
-      delaySeconds: approvalMode === 1 ? delaySeconds : 0,
+      delayInterval: approvalMode === 1 ? delayInterval : 0,
+      delayUnit: approvalMode === 1 ? delayUnit : 0,
       requirePremium,
       requireUsername,
       minAccountAge: minAccountAge ? parseInt(minAccountAge) : null,
@@ -174,16 +177,28 @@ export default function EditAutoApprovalPage() {
 
           {approvalMode === 1 && (
             <div>
-              <Label htmlFor="delay" className="text-xs">Delay (seconds)</Label>
-              <Input
-                id="delay"
-                type="number"
-                min={1}
-                max={86400}
-                value={delaySeconds}
-                onChange={(e) => setDelaySeconds(parseInt(e.target.value) || 30)}
-                className="mt-1"
-              />
+              <Label htmlFor="delay" className="text-xs">Delay</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="delay"
+                  type="number"
+                  min={1}
+                  value={delayInterval}
+                  onChange={(e) => setDelayInterval(parseInt(e.target.value) || 1)}
+                  className="flex-1"
+                />
+                <select
+                  value={delayUnit}
+                  onChange={(e) => setDelayUnit(parseInt(e.target.value))}
+                  className="w-32 h-9 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  <option value={0}>Seconds</option>
+                  <option value={1}>Minutes</option>
+                  <option value={2}>Hours</option>
+                  <option value={3}>Days</option>
+                  <option value={4}>Months</option>
+                </select>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Wait this long before approving
               </p>

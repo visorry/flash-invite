@@ -27,13 +27,16 @@ export default function CreateForwardRulePage() {
   const [scheduleMode, setScheduleMode] = useState(0) // 0=realtime, 1=scheduled
   const [batchSize, setBatchSize] = useState(1)
   const [postInterval, setPostInterval] = useState(30)
-  const [postIntervalUnit, setPostIntervalUnit] = useState(0) // 0=minutes, 1=hours, 2=days, 3=months
+  const [postIntervalUnit, setPostIntervalUnit] = useState(1) // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months
   const [deleteAfterEnabled, setDeleteAfterEnabled] = useState(false)
   const [deleteInterval, setDeleteInterval] = useState(1)
-  const [deleteIntervalUnit, setDeleteIntervalUnit] = useState(1) // 0=minutes, 1=hours, 2=days, 3=months, 4=never
+  const [deleteIntervalUnit, setDeleteIntervalUnit] = useState(2) // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
   const [broadcastEnabled, setBroadcastEnabled] = useState(false)
   const [broadcastMessage, setBroadcastMessage] = useState('')
   const [broadcastParseMode, setBroadcastParseMode] = useState('')
+  const [broadcastDeleteAfter, setBroadcastDeleteAfter] = useState(false)
+  const [broadcastDeleteInterval, setBroadcastDeleteInterval] = useState(1)
+  const [broadcastDeleteUnit, setBroadcastDeleteUnit] = useState(2)
   const [startFromMessageId, setStartFromMessageId] = useState('')
   const [endAtMessageId, setEndAtMessageId] = useState('')
   const [shuffle, setShuffle] = useState(false)
@@ -79,11 +82,14 @@ export default function CreateForwardRulePage() {
       postInterval,
       postIntervalUnit,
       deleteAfterEnabled,
-      deleteInterval: deleteAfterEnabled && deleteIntervalUnit !== 4 ? deleteInterval : undefined,
+      deleteInterval: deleteAfterEnabled && deleteIntervalUnit !== 5 ? deleteInterval : undefined,
       deleteIntervalUnit: deleteAfterEnabled ? deleteIntervalUnit : undefined,
       broadcastEnabled,
       broadcastMessage: broadcastEnabled ? broadcastMessage : undefined,
       broadcastParseMode: broadcastEnabled && broadcastParseMode ? broadcastParseMode : undefined,
+      broadcastDeleteAfter: broadcastEnabled ? broadcastDeleteAfter : undefined,
+      broadcastDeleteInterval: broadcastEnabled && broadcastDeleteAfter && broadcastDeleteUnit !== 5 ? broadcastDeleteInterval : undefined,
+      broadcastDeleteUnit: broadcastEnabled && broadcastDeleteAfter ? broadcastDeleteUnit : undefined,
       startFromMessageId: startFromMessageId ? parseInt(startFromMessageId) : undefined,
       endAtMessageId: endAtMessageId ? parseInt(endAtMessageId) : undefined,
       shuffle,
@@ -298,10 +304,11 @@ export default function CreateForwardRulePage() {
                     onChange={(e) => setPostIntervalUnit(parseInt(e.target.value))}
                     className="w-32 h-9 px-3 rounded-md border border-input bg-background text-sm"
                   >
-                    <option value={0}>Minutes</option>
-                    <option value={1}>Hours</option>
-                    <option value={2}>Days</option>
-                    <option value={3}>Months</option>
+                    <option value={0}>Seconds</option>
+                    <option value={1}>Minutes</option>
+                    <option value={2}>Hours</option>
+                    <option value={3}>Days</option>
+                    <option value={4}>Months</option>
                   </select>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -326,18 +333,19 @@ export default function CreateForwardRulePage() {
                       value={deleteInterval}
                       onChange={(e) => setDeleteInterval(parseInt(e.target.value) || 1)}
                       className="flex-1"
-                      disabled={deleteIntervalUnit === 4}
+                      disabled={deleteIntervalUnit === 5}
                     />
                     <select
                       value={deleteIntervalUnit}
                       onChange={(e) => setDeleteIntervalUnit(parseInt(e.target.value))}
                       className="w-32 h-9 px-3 rounded-md border border-input bg-background text-sm"
                     >
-                      <option value={0}>Minutes</option>
-                      <option value={1}>Hours</option>
-                      <option value={2}>Days</option>
-                      <option value={3}>Months</option>
-                      <option value={4}>Never</option>
+                      <option value={0}>Seconds</option>
+                      <option value={1}>Minutes</option>
+                      <option value={2}>Hours</option>
+                      <option value={3}>Days</option>
+                      <option value={4}>Months</option>
+                      <option value={5}>Never</option>
                     </select>
                   </div>
                 )}
@@ -377,6 +385,44 @@ export default function CreateForwardRulePage() {
                       <option value="HTML">HTML</option>
                       <option value="Markdown">Markdown</option>
                     </select>
+                    
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label htmlFor="broadcastDelete" className="text-xs">Auto-Delete Broadcast</Label>
+                        <Switch
+                          id="broadcastDelete"
+                          checked={broadcastDeleteAfter}
+                          onCheckedChange={setBroadcastDeleteAfter}
+                        />
+                      </div>
+                      {broadcastDeleteAfter && (
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={broadcastDeleteInterval}
+                            onChange={(e) => setBroadcastDeleteInterval(parseInt(e.target.value) || 1)}
+                            className="flex-1"
+                            disabled={broadcastDeleteUnit === 5}
+                          />
+                          <select
+                            value={broadcastDeleteUnit}
+                            onChange={(e) => setBroadcastDeleteUnit(parseInt(e.target.value))}
+                            className="w-32 h-9 px-3 rounded-md border border-input bg-background text-sm"
+                          >
+                            <option value={0}>Seconds</option>
+                            <option value={1}>Minutes</option>
+                            <option value={2}>Hours</option>
+                            <option value={3}>Days</option>
+                            <option value={4}>Months</option>
+                            <option value={5}>Never</option>
+                          </select>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Automatically delete broadcast message after specified time
+                      </p>
+                    </div>
                   </>
                 )}
               </div>

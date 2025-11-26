@@ -243,7 +243,8 @@ export const api = {
       telegramEntityId: string
       name: string
       approvalMode?: number
-      delaySeconds?: number
+      delayInterval?: number
+      delayUnit?: number
       requirePremium?: boolean
       requireUsername?: boolean
       minAccountAge?: number
@@ -255,7 +256,8 @@ export const api = {
       name?: string
       isActive?: boolean
       approvalMode?: number
-      delaySeconds?: number
+      delayInterval?: number
+      delayUnit?: number
       requirePremium?: boolean
       requireUsername?: boolean
       minAccountAge?: number | null
@@ -280,7 +282,18 @@ export const api = {
       destinationEntityId: string
       name: string
       scheduleMode?: number
-      intervalMinutes?: number
+      batchSize?: number
+      postInterval?: number
+      postIntervalUnit?: number
+      deleteAfterEnabled?: boolean
+      deleteInterval?: number
+      deleteIntervalUnit?: number
+      broadcastEnabled?: boolean
+      broadcastMessage?: string
+      broadcastParseMode?: string
+      broadcastDeleteAfter?: boolean
+      broadcastDeleteInterval?: number
+      broadcastDeleteUnit?: number
       startFromMessageId?: number
       endAtMessageId?: number
       shuffle?: boolean
@@ -299,7 +312,18 @@ export const api = {
       name?: string
       isActive?: boolean
       scheduleMode?: number
-      intervalMinutes?: number
+      batchSize?: number
+      postInterval?: number
+      postIntervalUnit?: number
+      deleteAfterEnabled?: boolean
+      deleteInterval?: number | null
+      deleteIntervalUnit?: number | null
+      broadcastEnabled?: boolean
+      broadcastMessage?: string | null
+      broadcastParseMode?: string | null
+      broadcastDeleteAfter?: boolean | null
+      broadcastDeleteInterval?: number | null
+      broadcastDeleteUnit?: number | null
       startFromMessageId?: number | null
       endAtMessageId?: number | null
       shuffle?: boolean

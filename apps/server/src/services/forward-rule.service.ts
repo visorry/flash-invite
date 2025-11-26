@@ -25,6 +25,9 @@ interface CreateForwardRuleData {
   broadcastEnabled?: boolean
   broadcastMessage?: string
   broadcastParseMode?: string
+  broadcastDeleteAfter?: boolean
+  broadcastDeleteInterval?: number
+  broadcastDeleteUnit?: number
   startFromMessageId?: number
   endAtMessageId?: number
   shuffle?: boolean
@@ -53,6 +56,9 @@ interface UpdateForwardRuleData {
   broadcastEnabled?: boolean
   broadcastMessage?: string | null
   broadcastParseMode?: string | null
+  broadcastDeleteAfter?: boolean
+  broadcastDeleteInterval?: number | null
+  broadcastDeleteUnit?: number | null
   startFromMessageId?: number | null
   endAtMessageId?: number | null
   shuffle?: boolean
@@ -303,13 +309,16 @@ const create = async (ctx: RequestContext, data: CreateForwardRuleData) => {
         scheduleMode: data.scheduleMode ?? ForwardScheduleMode.REALTIME,
         batchSize: data.batchSize ?? 1,
         postInterval: data.postInterval ?? 30,
-        postIntervalUnit: data.postIntervalUnit ?? 0,
+        postIntervalUnit: data.postIntervalUnit ?? 1,
         deleteAfterEnabled: data.deleteAfterEnabled ?? false,
         deleteInterval: data.deleteInterval,
         deleteIntervalUnit: data.deleteIntervalUnit,
         broadcastEnabled: data.broadcastEnabled ?? false,
         broadcastMessage: data.broadcastMessage,
         broadcastParseMode: data.broadcastParseMode,
+        broadcastDeleteAfter: data.broadcastDeleteAfter ?? false,
+        broadcastDeleteInterval: data.broadcastDeleteInterval,
+        broadcastDeleteUnit: data.broadcastDeleteUnit,
         startFromMessageId: data.startFromMessageId,
         endAtMessageId: data.endAtMessageId,
         shuffle: data.shuffle ?? false,
@@ -387,6 +396,9 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateForwardRu
       broadcastEnabled: data.broadcastEnabled,
       broadcastMessage: data.broadcastMessage,
       broadcastParseMode: data.broadcastParseMode,
+      broadcastDeleteAfter: data.broadcastDeleteAfter,
+      broadcastDeleteInterval: data.broadcastDeleteInterval,
+      broadcastDeleteUnit: data.broadcastDeleteUnit,
       startFromMessageId: data.startFromMessageId,
       endAtMessageId: data.endAtMessageId,
       shuffle: data.shuffle,
