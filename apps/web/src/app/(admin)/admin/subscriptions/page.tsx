@@ -21,6 +21,7 @@ import {
 import { toast } from 'sonner'
 import { useState } from 'react'
 import PlansManagement from '@/components/admin/PlansManagement'
+import TokenBundlesManagement from '@/components/admin/TokenBundlesManagement'
 
 const STATUS_LABELS = {
   0: { label: 'Active', variant: 'default' as const },
@@ -106,12 +107,15 @@ export default function AdminSubscriptionsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="subscriptions" className="space-y-4">
-        <TabsList className="w-full grid grid-cols-2">
+        <TabsList className="w-full grid grid-cols-3">
           <TabsTrigger value="subscriptions" className="text-xs md:text-sm">
             User Subscriptions
           </TabsTrigger>
           <TabsTrigger value="plans" className="text-xs md:text-sm">
             Plans Management
+          </TabsTrigger>
+          <TabsTrigger value="bundles" className="text-xs md:text-sm">
+            Token Bundles
           </TabsTrigger>
         </TabsList>
 
@@ -209,6 +213,10 @@ export default function AdminSubscriptionsPage() {
 
         <TabsContent value="plans" className="mt-4">
           <PlansManagement />
+        </TabsContent>
+
+        <TabsContent value="bundles" className="mt-4">
+          <TokenBundlesManagement />
         </TabsContent>
       </Tabs>
 

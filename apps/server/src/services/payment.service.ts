@@ -3,6 +3,7 @@ import type { RequestContext } from '../types/app'
 import db, { PaymentStatus, PaymentType, TransactionType } from '@super-invite/db'
 import cashfreeService from './cashfree.service'
 import tokenService from './token.service'
+import emailService from './email.service'
 import { withTransaction } from '../helper/db/transaction'
 
 const createOrder = async (
@@ -109,12 +110,21 @@ const verifyPayment = async (orderId: string) => {
 
     if (cfOrder.order_status === 'PAID') {
         // Process successful payment
-        await withTransaction({} as any, async (tx) => { // Using empty context for system action
+        const txResult = await withTransaction({} as any, async (tx) => { // Using empty context for system action
             // 1. Update Payment Order
-            await tx.paymentOrder.update({
-                where: { id: paymentOrder.id },
+            // Atomic update to prevent double-spending
+            const updateResult = await tx.paymentOrder.updateMany({
+                where: {
+                    id: paymentOrder.id,
+                    status: PaymentStatus.PENDING
+                },
                 data: { status: PaymentStatus.SUCCESS },
             })
+
+            if (updateResult.count === 0) {
+                console.log(`Order ${orderId} skipped - already processed (race condition)`)
+                return { updated: false }
+            }
 
             // 2. Fulfill Order
             if (paymentOrder.type === PaymentType.TOKEN_BUNDLE) {
@@ -168,7 +178,7 @@ const verifyPayment = async (orderId: string) => {
 
                 if (!plan) {
                     console.error(`Plan ${paymentOrder.referenceId} not found`)
-                    return
+                    return { updated: true }
                 }
 
                 // Check if subscription already exists for this payment order (idempotency)
@@ -184,7 +194,7 @@ const verifyPayment = async (orderId: string) => {
 
                 if (existingSubForOrder) {
                     console.log(`Subscription already created for order ${paymentOrder.orderId}`)
-                    return // Skip duplicate creation
+                    return { updated: true } // Skip duplicate creation
                 }
 
                 // Get current active subscription
@@ -244,7 +254,7 @@ const verifyPayment = async (orderId: string) => {
                         console.log(`Extended subscription ${activeSub.id} to ${endDate}`)
 
                         // Don't create new subscription, just return
-                        return
+                        return { updated: true }
                     } else {
                         // UPGRADE/DOWNGRADE: Different plan - cancel old, create new
                         console.log(`Upgrading subscription for user ${paymentOrder.userId} from plan ${activeSub.planId} to ${plan.id}`)
@@ -331,7 +341,26 @@ const verifyPayment = async (orderId: string) => {
                     })
                 }
             }
+
+            return { updated: true }
         })
+
+        // Send Invoice Email
+        if (txResult?.updated && paymentOrder.user?.email) {
+            const invoiceData = {
+                orderId: paymentOrder.orderId,
+                amount: paymentOrder.amount,
+                currency: 'INR',
+                description: paymentOrder.type === PaymentType.TOKEN_BUNDLE
+                    ? `Token Bundle Purchase`
+                    : `Subscription Purchase`,
+                customerName: paymentOrder.user.name || 'Customer'
+            }
+            // Fire and forget
+            emailService.sendInvoice(paymentOrder.user.email, invoiceData).catch(err => {
+                console.error('Failed to send invoice email:', err)
+            })
+        }
 
         return { status: 'SUCCESS', orderId }
     } else if (cfOrder.order_status === 'FAILED') {

@@ -21,117 +21,33 @@ export default function TokensPage() {
   const { user, isLoading } = useSession()
   const [showPricing, setShowPricing] = useState(false)
 
-  // Fetch balance
-  const { data: balance } = useQuery({
-    queryKey: ['tokens', 'balance'],
+  // Fetch active subscription
+  const { data: activeSub } = useQuery({
+    queryKey: ['subscription', 'active'],
     queryFn: async () => {
-      return api.tokens.getBalance()
+      return api.subscriptions.getActive()
     },
   })
 
-  // Fetch transactions
-  const { data: transactions, isLoading: transactionsLoading } = useQuery({
-    queryKey: ['tokens', 'transactions'],
-    queryFn: async () => {
-      return api.tokens.getTransactions()
-    },
-  })
+    // ... (existing queries)
 
-  // Fetch token pricing
-  const { data: pricing } = useQuery({
-    queryKey: ['tokens', 'costs'],
-    queryFn: async () => {
-      return api.tokens.getCosts()
-    },
-  })
+    // ...
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return null
-  }
-
-  return (
-    <div className="flex-1 space-y-6 p-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold">Token Balance</h1>
-          <p className="text-xs text-muted-foreground">
-            Manage your tokens and view transaction history
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => setShowPricing(true)}
-          className="h-9 w-9"
-        >
-          <Info className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Pricing Modal */}
-      {showPricing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowPricing(false)}>
-          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Coins className="h-4 w-4 text-amber-500" />
-                  Token Pricing
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setShowPricing(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {(pricing as any)?.length > 0 ? (
-                <div className="space-y-2">
-                  {(pricing as any).map((config: any) => {
-                    const unitLabel = DURATION_UNITS.find(u => u.value === config.durationUnit)?.label || 'Unknown'
-                    return (
-                      <div
-                        key={config.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                      >
-                        <span className="text-sm font-medium">Per {unitLabel}</span>
-                        <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
-                          {config.costPerUnit} tokens
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No pricing configured. Invites are free!
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Balance Card */}
-      <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white">
+    // Balance Card
+    < Card className = "bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white" >
         <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Coins className="h-5 w-5" />
-            Current Balance
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Coins className="h-5 w-5" />
+                Current Balance
+            </CardTitle>
+            {(activeSub as any) && (
+                <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" onClick={() => window.location.href = '/subscription'}>
+                    <Crown className="h-3 w-3" />
+                    <span>{(activeSub as any).plan.name}</span>
+                </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="text-4xl font-bold mb-4">
@@ -147,17 +63,47 @@ export default function TokensPage() {
               <p className="font-semibold">{((balance as any)?.totalSpent || 0).toLocaleString()}</p>
             </div>
           </div>
+          
+          {(activeSub as any) ? (
+            <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-between text-xs">
+                <div>
+                    <p className="text-white/70">Plan Expires</p>
+                    <p className="font-medium">
+                        {new Date((activeSub as any).endDate).toLocaleDateString()}
+                    </p>
+                </div>
+                <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="h-7 text-xs bg-white text-amber-600 hover:bg-white/90"
+                    onClick={() => window.location.href = '/subscription'}
+                >
+                    Manage Plan
+                </Button>
+            </div>
+          ) : (
+             <div className="mt-4 pt-4 border-t border-white/20">
+                <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    className="w-full h-8 text-xs bg-white text-amber-600 hover:bg-white/90"
+                    onClick={() => window.location.href = '/subscription'}
+                >
+                    Upgrade to Premium
+                </Button>
+             </div>
+          )}
         </CardContent>
-      </Card>
+      </Card >
 
-      {/* Purchase Tokens */}
-      <div className="space-y-4">
+    {/* Purchase Tokens */ }
+    < div className = "space-y-4" >
         <h2 className="text-lg font-semibold">Purchase Tokens</h2>
         <TokenBundles />
-      </div>
+      </div >
 
-      {/* Transaction History */}
-      <Card>
+    {/* Transaction History */ }
+    < Card >
         <CardHeader>
           <CardTitle className="text-lg">Transaction History</CardTitle>
         </CardHeader>
@@ -205,8 +151,8 @@ export default function TokensPage() {
             </div>
           )}
         </CardContent>
-      </Card>
-    </div>
+      </Card >
+    </div >
   )
 }
 
@@ -214,7 +160,7 @@ function TokenBundles() {
   const { data: bundles, isLoading } = useQuery({
     queryKey: ['token-bundles'],
     queryFn: async () => {
-      return api.payments.getBundles()
+      return api.tokenBundles.getBundles()
     }
   })
 
@@ -233,29 +179,59 @@ function TokenBundles() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
       {(bundles as any).map((bundle: any) => (
-        <Card key={bundle.id} className="flex flex-col">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{bundle.name}</CardTitle>
-            <p className="text-xs text-muted-foreground">{bundle.description}</p>
-          </CardHeader>
-          <CardContent className="flex-1 pb-2">
-            <div className="flex items-center justify-center py-4">
-              <Coins className="h-8 w-8 text-yellow-500 mr-2" />
-              <div className="text-2xl font-bold">{bundle.tokens}</div>
+        <Card key={bundle.id} className="overflow-hidden">
+          {/* Desktop View */}
+          <div className="hidden md:flex flex-col h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{bundle.name}</CardTitle>
+              <p className="text-xs text-muted-foreground">{bundle.description}</p>
+            </CardHeader>
+            <CardContent className="flex-1 pb-2">
+              <div className="flex items-center justify-center py-4">
+                <Coins className="h-8 w-8 text-yellow-500 mr-2" />
+                <div className="text-2xl font-bold">{bundle.tokens}</div>
+              </div>
+              <div className="text-center text-xl font-bold">
+                ₹{bundle.price}
+              </div>
+            </CardContent>
+            <div className="p-4 pt-0 mt-auto">
+              <PaymentButton
+                referenceId={bundle.id}
+                type={1}
+                amount={bundle.price}
+                label="Buy Now"
+              />
             </div>
-            <div className="text-center text-xl font-bold">
-              ₹{bundle.price}
+          </div>
+
+          {/* Mobile View - Horizontal Compact Card */}
+          <div className="flex md:hidden items-center justify-between p-3">
+            <div className="flex items-center gap-3">
+              <div className="bg-yellow-100 dark:bg-yellow-900/20 p-2 rounded-lg flex-shrink-0">
+                <Coins className="h-5 w-5 text-yellow-600 dark:text-yellow-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm leading-none mb-1">{bundle.name}</h3>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{bundle.tokens}</span> tokens
+                </p>
+              </div>
             </div>
-          </CardContent>
-          <div className="p-4 pt-0 mt-auto">
-            <PaymentButton
-              referenceId={bundle.id}
-              type={1} // TOKEN_BUNDLE
-              amount={bundle.price}
-              label="Buy Now"
-            />
+
+            <div className="flex items-center gap-3">
+              <div className="font-bold text-sm">₹{bundle.price}</div>
+              <PaymentButton
+                referenceId={bundle.id}
+                type={1}
+                amount={bundle.price}
+                label="Buy"
+                size="sm"
+                className="h-8 px-4"
+              />
+            </div>
           </div>
         </Card>
       ))}
@@ -265,7 +241,21 @@ function TokenBundles() {
 
 import { toast } from 'sonner'
 
-function PaymentButton({ referenceId, type, amount, label }: { referenceId: string, type: number, amount: number, label: string }) {
+function PaymentButton({
+  referenceId,
+  type,
+  amount,
+  label,
+  className,
+  size = "default"
+}: {
+  referenceId: string,
+  type: number,
+  amount: number,
+  label: string,
+  className?: string,
+  size?: "default" | "sm" | "lg" | "icon"
+}) {
   const [loading, setLoading] = useState(false)
 
   const handleClick = async () => {
@@ -295,8 +285,13 @@ function PaymentButton({ referenceId, type, amount, label }: { referenceId: stri
   }
 
   return (
-    <Button onClick={handleClick} disabled={loading} className="w-full">
-      {loading ? 'Processing...' : label}
+    <Button
+      onClick={handleClick}
+      disabled={loading}
+      className={className || "w-full"}
+      size={size}
+    >
+      {loading ? '...' : label}
     </Button>
   )
 }

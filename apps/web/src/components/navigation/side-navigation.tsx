@@ -27,10 +27,6 @@ export function SideNavigation() {
 
   const isAdmin = (user as any)?.isAdmin === true
 
-  // Debug: log user object
-  console.log('SideNav - User object:', user)
-  console.log('SideNav - isAdmin:', isAdmin)
-
   return (
     <aside className="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 hidden sm:block">
       <div className="h-full px-3 py-4 overflow-y-auto bg-background border-r flex flex-col">

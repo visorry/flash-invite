@@ -592,6 +592,47 @@ router.patch(
   }
 )
 
+// Seed default token bundles
+import { DEFAULT_TOKEN_BUNDLES } from '../config/default-token-bundles'
+
+router.post(
+  '/seed/token-bundles',
+  async (_req: Request) => {
+    console.log('[ADMIN] Starting token bundles seed...')
+    const results = {
+      created: 0,
+      skipped: 0,
+      errors: [] as string[],
+    }
+
+    for (const bundleData of DEFAULT_TOKEN_BUNDLES) {
+      try {
+        // Check if bundle exists by name (including soft deleted ones)
+        const existing = await db.tokenBundle.findFirst({
+          where: { name: bundleData.name }
+        })
+
+        if (existing) {
+          results.skipped++
+          continue
+        }
+
+        await db.tokenBundle.create({
+          data: bundleData,
+        })
+        results.created++
+        console.log(`[ADMIN] Created token bundle "${bundleData.name}"`)
+      } catch (error: any) {
+        results.errors.push(`${bundleData.name}: ${error.message}`)
+        console.error(`[ADMIN] Error creating token bundle "${bundleData.name}":`, error)
+      }
+    }
+
+    console.log('[ADMIN] Token bundles seed completed:', results)
+    return results
+  }
+)
+
 // ============ User Migration Routes ============
 import userOnboardingService from '../services/user-onboarding.service'
 

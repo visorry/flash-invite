@@ -64,6 +64,14 @@ class ApiClient {
   async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' })
   }
+
+  async patch<T>(endpoint: string, body?: any, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    })
+  }
 }
 
 export const apiClient = new ApiClient(API_URL)
@@ -236,6 +244,7 @@ export const api = {
     // Seed/Reset
     seed: {
       plans: () => apiClient.post('/api/v1/admin/seed/plans'),
+      tokenBundles: () => apiClient.post('/api/v1/admin/seed/token-bundles'),
     },
     reset: {
       plans: () => apiClient.post('/api/v1/admin/reset/plans'),
@@ -346,7 +355,7 @@ export const api = {
     getPlans: () => apiClient.get('/api/v1/payments/plans'),
   },
   tokenBundles: {
-    getAll: () => apiClient.get('/api/v1/token-bundles'),
+    getBundles: () => apiClient.get('/api/v1/token-bundles'),
     purchase: (bundleId: string) =>
       apiClient.post<{ paymentSessionId: string; orderId: string }>('/api/v1/token-bundles/purchase', { bundleId }),
   },
