@@ -150,6 +150,12 @@ export default function TokensPage() {
         </CardContent>
       </Card>
 
+      {/* Purchase Tokens */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Purchase Tokens</h2>
+        <TokenBundles />
+      </div>
+
       {/* Transaction History */}
       <Card>
         <CardHeader>
@@ -201,5 +207,96 @@ export default function TokensPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function TokenBundles() {
+  const { data: bundles, isLoading } = useQuery({
+    queryKey: ['token-bundles'],
+    queryFn: async () => {
+      return api.payments.getBundles()
+    }
+  })
+
+  if (isLoading) {
+    return <div className="flex justify-center p-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div></div>
+  }
+
+  if (!bundles || (bundles as any).length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          No token bundles available at the moment.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {(bundles as any).map((bundle: any) => (
+        <Card key={bundle.id} className="flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">{bundle.name}</CardTitle>
+            <p className="text-xs text-muted-foreground">{bundle.description}</p>
+          </CardHeader>
+          <CardContent className="flex-1 pb-2">
+            <div className="flex items-center justify-center py-4">
+              <Coins className="h-8 w-8 text-yellow-500 mr-2" />
+              <div className="text-2xl font-bold">{bundle.tokens}</div>
+            </div>
+            <div className="text-center text-xl font-bold">
+              ₹{bundle.price}
+            </div>
+          </CardContent>
+          <div className="p-4 pt-0 mt-auto">
+            <PaymentButton
+              referenceId={bundle.id}
+              type={1} // TOKEN_BUNDLE
+              amount={bundle.price}
+              label="Buy Now"
+            />
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+import { toast } from 'sonner'
+
+function PaymentButton({ referenceId, type, amount, label }: { referenceId: string, type: number, amount: number, label: string }) {
+  const [loading, setLoading] = useState(false)
+
+  const handleClick = async () => {
+    setLoading(true)
+    try {
+      const { paymentSessionId } = await api.payments.createOrder({
+        referenceId,
+        type
+      })
+
+      const { load } = await import('@cashfreepayments/cashfree-js')
+      const cashfree = await load({
+        mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox',
+      })
+
+      await cashfree.checkout({
+        paymentSessionId,
+        redirectTarget: '_self',
+      })
+
+    } catch (error) {
+      console.error(error)
+      toast.error('Payment initialization failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Button onClick={handleClick} disabled={loading} className="w-full">
+      {loading ? 'Processing...' : label}
+    </Button>
   )
 }

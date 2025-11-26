@@ -3,6 +3,7 @@ import type { Request, Response } from 'express'
 import { randomBytes } from 'crypto'
 import db from '@super-invite/db'
 import { auth } from '@super-invite/auth'
+import userOnboardingService from '../services/user-onboarding.service'
 
 const router = Router()
 
@@ -121,6 +122,15 @@ router.get(
             updatedAt: now,
           },
         })
+
+        // Assign free tier subscription to new user
+        try {
+          await userOnboardingService.assignFreeTier(user.id)
+          console.log(`[AUTH] Assigned free tier to new user ${user.id}`)
+        } catch (error) {
+          console.error(`[AUTH] Failed to assign free tier to user ${user.id}:`, error)
+          // Don't fail the login if free tier assignment fails
+        }
       } else {
         // Update user info
         user = await db.user.update({

@@ -22,7 +22,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
-    
+
     const response = await fetch(url, {
       ...options,
       credentials: 'include',
@@ -146,9 +146,9 @@ export const api = {
     listPlans: () => apiClient.get('/api/v1/admin/plans'),
     listAllGroups: (params?: any) => apiClient.get('/api/v1/admin/telegram-entities', { ...params }),
     listAllInvites: (params?: any) => apiClient.get('/api/v1/admin/invite-links', { ...params }),
-    addTokens: (userId: string, amount: number, description?: string) => 
+    addTokens: (userId: string, amount: number, description?: string) =>
       apiClient.post(`/api/v1/admin/users/${userId}/tokens`, { amount, description }),
-    addSubscription: (userId: string, planId: string) => 
+    addSubscription: (userId: string, planId: string) =>
       apiClient.post(`/api/v1/admin/users/${userId}/subscription`, { planId }),
     createPlan: (data: any) => apiClient.post('/api/v1/admin/plans', data),
     updatePlan: (id: string, data: any) => apiClient.put(`/api/v1/admin/plans/${id}`, data),
@@ -229,6 +229,24 @@ export const api = {
       filterCriteria?: { botId?: string; isPremium?: boolean; languageCode?: string; activeWithinDays?: number };
     }) => apiClient.post('/api/v1/admin/broadcast/send', data),
     cancelBroadcast: (id: string) => apiClient.post(`/api/v1/admin/broadcast/${id}/cancel`),
+    // Migration
+    migration: {
+      assignFreeTier: () => apiClient.post('/api/v1/admin/migrate/assign-free-tier'),
+    },
+    // Seed/Reset
+    seed: {
+      plans: () => apiClient.post('/api/v1/admin/seed/plans'),
+    },
+    reset: {
+      plans: () => apiClient.post('/api/v1/admin/reset/plans'),
+    },
+    tokenBundles: {
+      list: () => apiClient.get('/api/v1/admin/token-bundles'),
+      create: (data: any) => apiClient.post('/api/v1/admin/token-bundles', data),
+      update: (id: string, data: any) => apiClient.put(`/api/v1/admin/token-bundles/${id}`, data),
+      delete: (id: string) => apiClient.delete(`/api/v1/admin/token-bundles/${id}`),
+      toggle: (id: string) => apiClient.patch(`/api/v1/admin/token-bundles/${id}/toggle`),
+    },
   },
   autoApproval: {
     list: (params?: { botId?: string }) => {
@@ -320,5 +338,21 @@ export const api = {
     pause: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/pause`),
     resume: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/resume`),
     reset: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/reset`),
+  },
+  payments: {
+    createOrder: (data: { referenceId: string; type: number }) =>
+      apiClient.post<{ paymentSessionId: string; orderId: string }>('/api/v1/payments/create-order', data),
+    verify: (orderId: string) => apiClient.post<{ status: string; orderId: string }>('/api/v1/payments/verify', { orderId }),
+    getPlans: () => apiClient.get('/api/v1/payments/plans'),
+  },
+  tokenBundles: {
+    getAll: () => apiClient.get('/api/v1/token-bundles'),
+    purchase: (bundleId: string) =>
+      apiClient.post<{ paymentSessionId: string; orderId: string }>('/api/v1/token-bundles/purchase', { bundleId }),
+  },
+  subscriptions: {
+    getActive: () => apiClient.get('/api/v1/subscriptions/active'),
+    cancel: (subscriptionId: string) => apiClient.post(`/api/v1/subscriptions/${subscriptionId}/cancel`),
+    getHistory: () => apiClient.get('/api/v1/subscriptions/history'),
   },
 }

@@ -1,5 +1,6 @@
 import { kickExpiredMembers, cleanupOldInvites, sendExpiryWarnings } from './kick-expired-members'
 import { processScheduledForwards } from './forward-scheduler'
+import { checkExpiredSubscriptions } from './subscription-expiry.job'
 
 /**
  * Initialize all scheduled jobs
@@ -46,6 +47,16 @@ export function initializeScheduler() {
     }
   }, 60 * 1000) // Every 1 minute
 
+  // Check expired subscriptions every hour
+  const subscriptionExpiryInterval = setInterval(async () => {
+    console.log('[SCHEDULER] Running subscription expiry check...')
+    try {
+      await checkExpiredSubscriptions()
+    } catch (error) {
+      console.error('[SCHEDULER] Error in subscription expiry job:', error)
+    }
+  }, 60 * 60 * 1000) // Every 1 hour
+
   // Run kick job immediately on startup
   console.log('[SCHEDULER] Running initial kick job in 5 seconds...')
   setTimeout(() => {
@@ -55,18 +66,28 @@ export function initializeScheduler() {
     })
   }, 5000) // Wait 5 seconds after startup
 
-  // Store intervals for cleanup on shutdown
-  ;(global as any).schedulerIntervals = {
-    kick: kickInterval,
-    warning: warningInterval,
-    cleanup: cleanupInterval,
-    forward: forwardInterval,
-  }
+  // Run subscription expiry check on startup (after 10 seconds)
+  setTimeout(() => {
+    console.log('[SCHEDULER] Running initial subscription expiry check...')
+    checkExpiredSubscriptions().catch((error) => {
+      console.error('[SCHEDULER] Error in initial subscription expiry check:', error)
+    })
+  }, 10000)
+
+    // Store intervals for cleanup on shutdown
+    ; (global as any).schedulerIntervals = {
+      kick: kickInterval,
+      warning: warningInterval,
+      cleanup: cleanupInterval,
+      forward: forwardInterval,
+      subscriptionExpiry: subscriptionExpiryInterval,
+    }
 
   console.log('✅ Job scheduler initialized')
   console.log('  - Kick expired members: Every 1 minute')
   console.log('  - Send expiry warnings: Every 5 minutes')
   console.log('  - Cleanup old invite links: Every 24 hours')
   console.log('  - Process scheduled forwards: Every 1 minute')
+  console.log('  - Check expired subscriptions: Every 1 hour')
   console.log('  - GroupMember records: Kept permanently for analytics')
 }

@@ -100,6 +100,20 @@ export enum AutomationFeatureType {
   FORWARD_RULE = 1,
 }
 
+// Payment Status
+export enum PaymentStatus {
+  PENDING = 0,
+  SUCCESS = 1,
+  FAILED = 2,
+  CANCELLED = 3,
+}
+
+// Payment Type
+export enum PaymentType {
+  SUBSCRIPTION = 0,
+  TOKEN_BUNDLE = 1,
+}
+
 // Helper to get duration unit label
 export function getDurationUnitLabel(unit: DurationUnit): string {
   const labels: Record<DurationUnit, string> = {
