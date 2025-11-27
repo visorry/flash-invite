@@ -16,7 +16,18 @@ interface CreateForwardRuleData {
   destinationEntityId: string
   name: string
   scheduleMode?: number
-  intervalMinutes?: number
+  batchSize?: number
+  postInterval?: number
+  postIntervalUnit?: number
+  deleteAfterEnabled?: boolean
+  deleteInterval?: number
+  deleteIntervalUnit?: number
+  broadcastEnabled?: boolean
+  broadcastMessage?: string
+  broadcastParseMode?: string
+  broadcastDeleteAfter?: boolean
+  broadcastDeleteInterval?: number
+  broadcastDeleteUnit?: number
   startFromMessageId?: number
   endAtMessageId?: number
   shuffle?: boolean
@@ -36,7 +47,18 @@ interface UpdateForwardRuleData {
   name?: string
   isActive?: boolean
   scheduleMode?: number
-  intervalMinutes?: number
+  batchSize?: number
+  postInterval?: number
+  postIntervalUnit?: number
+  deleteAfterEnabled?: boolean
+  deleteInterval?: number | null
+  deleteIntervalUnit?: number | null
+  broadcastEnabled?: boolean
+  broadcastMessage?: string | null
+  broadcastParseMode?: string | null
+  broadcastDeleteAfter?: boolean
+  broadcastDeleteInterval?: number | null
+  broadcastDeleteUnit?: number | null
   startFromMessageId?: number | null
   endAtMessageId?: number | null
   shuffle?: boolean
@@ -285,7 +307,18 @@ const create = async (ctx: RequestContext, data: CreateForwardRuleData) => {
         destinationEntityId: data.destinationEntityId,
         name: data.name,
         scheduleMode: data.scheduleMode ?? ForwardScheduleMode.REALTIME,
-        intervalMinutes: data.intervalMinutes ?? 30,
+        batchSize: data.batchSize ?? 1,
+        postInterval: data.postInterval ?? 30,
+        postIntervalUnit: data.postIntervalUnit ?? 1,
+        deleteAfterEnabled: data.deleteAfterEnabled ?? false,
+        deleteInterval: data.deleteInterval,
+        deleteIntervalUnit: data.deleteIntervalUnit,
+        broadcastEnabled: data.broadcastEnabled ?? false,
+        broadcastMessage: data.broadcastMessage,
+        broadcastParseMode: data.broadcastParseMode,
+        broadcastDeleteAfter: data.broadcastDeleteAfter ?? false,
+        broadcastDeleteInterval: data.broadcastDeleteInterval,
+        broadcastDeleteUnit: data.broadcastDeleteUnit,
         startFromMessageId: data.startFromMessageId,
         endAtMessageId: data.endAtMessageId,
         shuffle: data.shuffle ?? false,
@@ -354,7 +387,18 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateForwardRu
       name: data.name,
       isActive: data.isActive,
       scheduleMode: data.scheduleMode,
-      intervalMinutes: data.intervalMinutes,
+      batchSize: data.batchSize,
+      postInterval: data.postInterval,
+      postIntervalUnit: data.postIntervalUnit,
+      deleteAfterEnabled: data.deleteAfterEnabled,
+      deleteInterval: data.deleteInterval,
+      deleteIntervalUnit: data.deleteIntervalUnit,
+      broadcastEnabled: data.broadcastEnabled,
+      broadcastMessage: data.broadcastMessage,
+      broadcastParseMode: data.broadcastParseMode,
+      broadcastDeleteAfter: data.broadcastDeleteAfter,
+      broadcastDeleteInterval: data.broadcastDeleteInterval,
+      broadcastDeleteUnit: data.broadcastDeleteUnit,
       startFromMessageId: data.startFromMessageId,
       endAtMessageId: data.endAtMessageId,
       shuffle: data.shuffle,

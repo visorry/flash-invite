@@ -71,34 +71,57 @@ async function processRule(rule: any) {
     }
   }
 
-  // Get next message ID
-  const messageId = messageQueue.shift()!
-
-  // Forward the message
+  // Process batch of messages
+  const batchSize = rule.batchSize || 1
+  const batch = messageQueue.splice(0, Math.min(batchSize, messageQueue.length))
+  
   const sourceChatId = rule.sourceEntity.telegramId
   const destChatId = rule.destinationEntity.telegramId
+  
+  let successCount = 0
+  let lastProcessedId = rule.lastProcessedMsgId
 
-  const success = await forwardMessageById(bot, sourceChatId, destChatId, messageId, rule)
+  // Forward each message in the batch
+  for (const messageId of batch) {
+    const success = await forwardMessageById(bot, sourceChatId, destChatId, messageId, rule)
+    if (success) {
+      successCount++
+      lastProcessedId = messageId
+    }
+  }
 
-  // Calculate next run time
-  const nextRunAt = new Date(Date.now() + rule.intervalMinutes * 60 * 1000)
+  // Send broadcast message if enabled and batch is complete
+  if (rule.broadcastEnabled && rule.broadcastMessage && successCount > 0) {
+    await sendBroadcastMessage(
+      bot, 
+      destChatId, 
+      rule.broadcastMessage, 
+      rule.broadcastParseMode,
+      rule.broadcastDeleteAfter,
+      rule.broadcastDeleteInterval,
+      rule.broadcastDeleteUnit
+    )
+  }
+
+  // Calculate next run time based on interval unit
+  const nextRunAt = calculateNextRunTime(rule.postInterval, rule.postIntervalUnit)
 
   // Update rule
   await db.forwardRule.update({
     where: { id: rule.id },
     data: {
       messageQueue: messageQueue,
-      lastProcessedMsgId: messageId,
+      lastProcessedMsgId: lastProcessedId,
       nextRunAt,
-      ...(success && {
-        forwardedCount: { increment: 1 },
+      ...(successCount > 0 && {
+        forwardedCount: { increment: successCount },
         lastForwardedAt: new Date(),
       }),
     },
   })
 
-  if (success) {
-    console.log(`[FORWARD_SCHEDULER] Forwarded message ${messageId} for rule ${rule.id}`)
+  if (successCount > 0) {
+    console.log(`[FORWARD_SCHEDULER] Forwarded ${successCount}/${batch.length} messages for rule ${rule.id}`)
   }
 }
 
@@ -133,14 +156,26 @@ async function forwardMessageById(
   try {
     // If no modifications needed, just forward
     if (!rule.removeLinks && !rule.addWatermark) {
-      await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
+      const forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
+      
+      // Schedule deletion if enabled
+      if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
+        scheduleMessageDeletion(bot, destChatId, forwardedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+      }
+      
       return true
     }
 
     // Need to copy with modifications - this is more complex
     // For now, just forward directly
     // TODO: Implement copyMessage with modifications
-    await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
+    const forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
+    
+    // Schedule deletion if enabled
+    if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
+      scheduleMessageDeletion(bot, destChatId, forwardedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+    }
+    
     return true
   } catch (error: any) {
     // Handle "message not found" error - skip this message and continue
@@ -166,6 +201,93 @@ async function forwardMessageById(
 
     // Re-throw other errors
     throw error
+  }
+}
+
+/**
+ * Calculate next run time based on interval and unit
+ * @param interval - The interval value
+ * @param unit - 0=seconds, 1=minutes, 2=hours, 3=days, 4=months
+ */
+function calculateNextRunTime(interval: number, unit: number): Date {
+  const now = new Date()
+  
+  switch (unit) {
+    case 0: // seconds
+      return new Date(now.getTime() + interval * 1000)
+    case 1: // minutes
+      return new Date(now.getTime() + interval * 60 * 1000)
+    case 2: // hours
+      return new Date(now.getTime() + interval * 60 * 60 * 1000)
+    case 3: // days
+      return new Date(now.getTime() + interval * 24 * 60 * 60 * 1000)
+    case 4: // months
+      const nextMonth = new Date(now)
+      nextMonth.setMonth(nextMonth.getMonth() + interval)
+      return nextMonth
+    default:
+      return new Date(now.getTime() + interval * 60 * 1000)
+  }
+}
+
+/**
+ * Schedule a message for deletion after specified interval
+ */
+function scheduleMessageDeletion(bot: any, chatId: string, messageId: number, interval: number, unit: number) {
+  let delayMs = 0
+  
+  switch (unit) {
+    case 0: // seconds
+      delayMs = interval * 1000
+      break
+    case 1: // minutes
+      delayMs = interval * 60 * 1000
+      break
+    case 2: // hours
+      delayMs = interval * 60 * 60 * 1000
+      break
+    case 3: // days
+      delayMs = interval * 24 * 60 * 60 * 1000
+      break
+    case 4: // months
+      delayMs = interval * 30 * 24 * 60 * 60 * 1000 // Approximate
+      break
+  }
+  
+  setTimeout(async () => {
+    try {
+      await bot.telegram.deleteMessage(chatId, messageId)
+      console.log(`[FORWARD_SCHEDULER] Deleted message ${messageId} from ${chatId}`)
+    } catch (error) {
+      console.error(`[FORWARD_SCHEDULER] Failed to delete message ${messageId}:`, error)
+    }
+  }, delayMs)
+}
+
+/**
+ * Send broadcast message to destination chat
+ */
+async function sendBroadcastMessage(
+  bot: any, 
+  chatId: string, 
+  message: string, 
+  parseMode?: string,
+  deleteAfter?: boolean,
+  deleteInterval?: number,
+  deleteUnit?: number
+) {
+  try {
+    const sentMessage = await bot.telegram.sendMessage(chatId, message, {
+      parse_mode: parseMode as any,
+    })
+    console.log(`[FORWARD_SCHEDULER] Sent broadcast message to ${chatId}`)
+    
+    // Schedule deletion if enabled
+    if (deleteAfter && deleteInterval && deleteUnit !== 5) {
+      scheduleMessageDeletion(bot, chatId, sentMessage.message_id, deleteInterval, deleteUnit)
+    }
+  } catch (error) {
+    console.error(`[FORWARD_SCHEDULER] Failed to send broadcast message:`, error)
   }
 }
 

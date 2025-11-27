@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter, useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,13 +19,25 @@ export default function EditForwardRulePage() {
   const router = useRouter()
   const params = useParams()
   const ruleId = params.id as string
+  const queryClient = useQueryClient()
 
   const [name, setName] = useState('')
   const [isActive, setIsActive] = useState(true)
 
   // Scheduling
   const [scheduleMode, setScheduleMode] = useState(0)
-  const [intervalMinutes, setIntervalMinutes] = useState(30)
+  const [batchSize, setBatchSize] = useState(1)
+  const [postInterval, setPostInterval] = useState(30)
+  const [postIntervalUnit, setPostIntervalUnit] = useState(1)
+  const [deleteAfterEnabled, setDeleteAfterEnabled] = useState(false)
+  const [deleteInterval, setDeleteInterval] = useState(1)
+  const [deleteIntervalUnit, setDeleteIntervalUnit] = useState(2)
+  const [broadcastEnabled, setBroadcastEnabled] = useState(false)
+  const [broadcastMessage, setBroadcastMessage] = useState('')
+  const [broadcastParseMode, setBroadcastParseMode] = useState('')
+  const [broadcastDeleteAfter, setBroadcastDeleteAfter] = useState(false)
+  const [broadcastDeleteInterval, setBroadcastDeleteInterval] = useState(1)
+  const [broadcastDeleteUnit, setBroadcastDeleteUnit] = useState(2)
   const [startFromMessageId, setStartFromMessageId] = useState('')
   const [endAtMessageId, setEndAtMessageId] = useState('')
   const [shuffle, setShuffle] = useState(false)
@@ -60,7 +72,18 @@ export default function EditForwardRulePage() {
       setName(r.name || '')
       setIsActive(r.isActive ?? true)
       setScheduleMode(r.scheduleMode ?? 0)
-      setIntervalMinutes(r.intervalMinutes ?? 30)
+      setBatchSize(r.batchSize ?? 1)
+      setPostInterval(r.postInterval ?? 30)
+      setPostIntervalUnit(r.postIntervalUnit ?? 1)
+      setDeleteAfterEnabled(r.deleteAfterEnabled ?? false)
+      setDeleteInterval(r.deleteInterval ?? 1)
+      setDeleteIntervalUnit(r.deleteIntervalUnit ?? 2)
+      setBroadcastEnabled(r.broadcastEnabled ?? false)
+      setBroadcastMessage(r.broadcastMessage || '')
+      setBroadcastParseMode(r.broadcastParseMode || '')
+      setBroadcastDeleteAfter(r.broadcastDeleteAfter ?? false)
+      setBroadcastDeleteInterval(r.broadcastDeleteInterval ?? 1)
+      setBroadcastDeleteUnit(r.broadcastDeleteUnit ?? 2)
       setStartFromMessageId(r.startFromMessageId?.toString() || '')
       setEndAtMessageId(r.endAtMessageId?.toString() || '')
       setShuffle(r.shuffle ?? false)
@@ -83,7 +106,18 @@ export default function EditForwardRulePage() {
       name,
       isActive,
       scheduleMode,
-      intervalMinutes,
+      batchSize,
+      postInterval,
+      postIntervalUnit,
+      deleteAfterEnabled,
+      deleteInterval: deleteAfterEnabled && deleteIntervalUnit !== 5 ? deleteInterval : null,
+      deleteIntervalUnit: deleteAfterEnabled ? deleteIntervalUnit : null,
+      broadcastEnabled,
+      broadcastMessage: broadcastEnabled ? broadcastMessage : null,
+      broadcastParseMode: broadcastEnabled && broadcastParseMode ? broadcastParseMode : null,
+      broadcastDeleteAfter: broadcastEnabled ? broadcastDeleteAfter : null,
+      broadcastDeleteInterval: broadcastEnabled && broadcastDeleteAfter && broadcastDeleteUnit !== 5 ? broadcastDeleteInterval : null,
+      broadcastDeleteUnit: broadcastEnabled && broadcastDeleteAfter ? broadcastDeleteUnit : null,
       startFromMessageId: startFromMessageId ? parseInt(startFromMessageId) : null,
       endAtMessageId: endAtMessageId ? parseInt(endAtMessageId) : null,
       shuffle,
@@ -98,8 +132,11 @@ export default function EditForwardRulePage() {
       includeKeywords: includeKeywords ? includeKeywords.split(',').map(k => k.trim()) : [],
       excludeKeywords: excludeKeywords ? excludeKeywords.split(',').map(k => k.trim()) : [],
     }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success('Forward rule updated')
+      // Invalidate queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['forward-rule', ruleId] })
+      queryClient.invalidateQueries({ queryKey: ['forward-rules'] })
       router.push('/forward-rules' as any)
     },
     onError: (error: any) => {
@@ -216,19 +253,158 @@ export default function EditForwardRulePage() {
           {scheduleMode === 1 && (
             <>
               <div>
-                <Label htmlFor="interval" className="text-xs">Interval (minutes)</Label>
+                <Label htmlFor="batchSize" className="text-xs">Batch Size</Label>
                 <Input
-                  id="interval"
+                  id="batchSize"
                   type="number"
                   min={1}
-                  max={1440}
-                  value={intervalMinutes}
-                  onChange={(e) => setIntervalMinutes(parseInt(e.target.value) || 30)}
+                  max={100}
+                  value={batchSize}
+                  onChange={(e) => setBatchSize(parseInt(e.target.value) || 1)}
                   className="mt-1"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Time between each forwarded message
+                  Number of posts to forward in a single batch
                 </p>
+              </div>
+
+              <div>
+                <Label htmlFor="postInterval" className="text-xs">Post Interval</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="postInterval"
+                    type="number"
+                    min={1}
+                    value={postInterval}
+                    onChange={(e) => setPostInterval(parseInt(e.target.value) || 1)}
+                    className="flex-1"
+                  />
+                  <select
+                    value={postIntervalUnit}
+                    onChange={(e) => setPostIntervalUnit(parseInt(e.target.value))}
+                    className="w-32 h-9 px-3 rounded-md border border-input bg-background text-sm"
+                  >
+                    <option value={0}>Seconds</option>
+                    <option value={1}>Minutes</option>
+                    <option value={2}>Hours</option>
+                    <option value={3}>Days</option>
+                    <option value={4}>Months</option>
+                  </select>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Time between each batch of forwarded messages
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="deleteAfter" className="text-xs">Auto-Delete Messages</Label>
+                  <Switch
+                    id="deleteAfter"
+                    checked={deleteAfterEnabled}
+                    onCheckedChange={setDeleteAfterEnabled}
+                  />
+                </div>
+                {deleteAfterEnabled && (
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={deleteInterval}
+                      onChange={(e) => setDeleteInterval(parseInt(e.target.value) || 1)}
+                      className="flex-1"
+                      disabled={deleteIntervalUnit === 5}
+                    />
+                    <select
+                      value={deleteIntervalUnit}
+                      onChange={(e) => setDeleteIntervalUnit(parseInt(e.target.value))}
+                      className="w-32 h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value={0}>Seconds</option>
+                      <option value={1}>Minutes</option>
+                      <option value={2}>Hours</option>
+                      <option value={3}>Days</option>
+                      <option value={4}>Months</option>
+                      <option value={5}>Never</option>
+                    </select>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Automatically delete forwarded messages after specified time
+                </p>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <Label htmlFor="broadcast" className="text-xs">Broadcast Message</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Send message after each batch completes
+                    </p>
+                  </div>
+                  <Switch
+                    id="broadcast"
+                    checked={broadcastEnabled}
+                    onCheckedChange={setBroadcastEnabled}
+                  />
+                </div>
+                {broadcastEnabled && (
+                  <>
+                    <Textarea
+                      placeholder="Message to send after batch completion..."
+                      value={broadcastMessage}
+                      onChange={(e) => setBroadcastMessage(e.target.value)}
+                      className="mt-2 h-20"
+                    />
+                    <select
+                      value={broadcastParseMode}
+                      onChange={(e) => setBroadcastParseMode(e.target.value)}
+                      className="mt-2 w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value="">Plain Text</option>
+                      <option value="HTML">HTML</option>
+                      <option value="Markdown">Markdown</option>
+                    </select>
+                    
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label htmlFor="broadcastDelete" className="text-xs">Auto-Delete Broadcast</Label>
+                        <Switch
+                          id="broadcastDelete"
+                          checked={broadcastDeleteAfter}
+                          onCheckedChange={setBroadcastDeleteAfter}
+                        />
+                      </div>
+                      {broadcastDeleteAfter && (
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={broadcastDeleteInterval}
+                            onChange={(e) => setBroadcastDeleteInterval(parseInt(e.target.value) || 1)}
+                            className="flex-1"
+                            disabled={broadcastDeleteUnit === 5}
+                          />
+                          <select
+                            value={broadcastDeleteUnit}
+                            onChange={(e) => setBroadcastDeleteUnit(parseInt(e.target.value))}
+                            className="w-32 h-9 px-3 rounded-md border border-input bg-background text-sm"
+                          >
+                            <option value={0}>Seconds</option>
+                            <option value={1}>Minutes</option>
+                            <option value={2}>Hours</option>
+                            <option value={3}>Days</option>
+                            <option value={4}>Months</option>
+                            <option value={5}>Never</option>
+                          </select>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Automatically delete broadcast message after specified time
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

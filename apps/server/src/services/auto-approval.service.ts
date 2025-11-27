@@ -5,12 +5,44 @@ import { AutomationFeatureType, TransactionType, TransactionStatus } from '@supe
 import { getBot } from '../bot/bot-manager'
 import tokenService from './token.service'
 
+/**
+ * Calculate delay in milliseconds based on interval and unit
+ * @param interval - The interval value
+ * @param unit - 0=seconds, 1=minutes, 2=hours, 3=days, 4=months
+ */
+function calculateDelayInMs(interval: number, unit: number): number {
+  switch (unit) {
+    case 0: // seconds
+      return interval * 1000
+    case 1: // minutes
+      return interval * 60 * 1000
+    case 2: // hours
+      return interval * 60 * 60 * 1000
+    case 3: // days
+      return interval * 24 * 60 * 60 * 1000
+    case 4: // months
+      return interval * 30 * 24 * 60 * 60 * 1000 // Approximate
+    default:
+      return interval * 1000
+  }
+}
+
+/**
+ * Format delay text for display
+ */
+function formatDelayText(interval: number, unit: number): string {
+  const units = ['second', 'minute', 'hour', 'day', 'month']
+  const unitName = units[unit] || 'second'
+  return `${interval} ${unitName}${interval !== 1 ? 's' : ''}`
+}
+
 interface CreateAutoApprovalData {
   botId: string
   telegramEntityId: string
   name: string
   approvalMode?: number
-  delaySeconds?: number
+  delayInterval?: number
+  delayUnit?: number
   requirePremium?: boolean
   requireUsername?: boolean
   minAccountAge?: number
@@ -23,7 +55,8 @@ interface UpdateAutoApprovalData {
   name?: string
   isActive?: boolean
   approvalMode?: number
-  delaySeconds?: number
+  delayInterval?: number
+  delayUnit?: number
   requirePremium?: boolean
   requireUsername?: boolean
   minAccountAge?: number | null
@@ -214,7 +247,8 @@ const create = async (ctx: RequestContext, data: CreateAutoApprovalData) => {
         telegramEntityId: data.telegramEntityId,
         name: data.name,
         approvalMode: data.approvalMode ?? 0,
-        delaySeconds: data.delaySeconds ?? 0,
+        delayInterval: data.delayInterval ?? 0,
+        delayUnit: data.delayUnit ?? 0,
         requirePremium: data.requirePremium ?? false,
         requireUsername: data.requireUsername ?? false,
         minAccountAge: data.minAccountAge,
@@ -267,7 +301,8 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateAutoAppro
       name: data.name,
       isActive: data.isActive,
       approvalMode: data.approvalMode,
-      delaySeconds: data.delaySeconds,
+      delayInterval: data.delayInterval,
+      delayUnit: data.delayUnit,
       requirePremium: data.requirePremium,
       requireUsername: data.requireUsername,
       minAccountAge: data.minAccountAge,
@@ -430,6 +465,9 @@ const processJoinRequest = async (
     }
   } else if (rule.approvalMode === 1) {
     // Delayed approval - schedule for later
+    const delayMs = calculateDelayInMs(rule.delayInterval, rule.delayUnit)
+    const delayText = formatDelayText(rule.delayInterval, rule.delayUnit)
+    
     setTimeout(async () => {
       try {
         await bot.telegram.approveChatJoinRequest(chatId, userId)
@@ -451,9 +489,9 @@ const processJoinRequest = async (
       } catch (error) {
         console.error('[AUTO_APPROVAL] Delayed approval failed:', error)
       }
-    }, rule.delaySeconds * 1000)
+    }, delayMs)
 
-    return { action: 'scheduled', reason: `Approval scheduled in ${rule.delaySeconds}s` }
+    return { action: 'scheduled', reason: `Approval scheduled in ${delayText}` }
   }
 
   return { action: 'none', reason: 'Unknown approval mode' }
