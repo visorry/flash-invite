@@ -3,7 +3,7 @@
 import { useSession } from '@/hooks/use-session'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { User, Mail, Shield, LogOut, Palette } from 'lucide-react'
+import { User, Mail, Shield, LogOut, Palette, Phone } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
 
@@ -55,6 +55,14 @@ export default function ProfilePage() {
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-muted-foreground">Email</p>
                 <p className="text-sm truncate">{user.email}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-muted-foreground">Phone Number</p>
+                <p className="text-sm truncate">{(user as any)?.phoneNumber || 'Not provided'}</p>
               </div>
             </div>
 

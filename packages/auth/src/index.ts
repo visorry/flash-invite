@@ -24,6 +24,11 @@ export const auth: Auth = betterAuth({
 				defaultValue: false,
 				input: false, // Don't allow setting via registration
 			},
+			phoneNumber: {
+				type: "string",
+				required: false,
+				input: false, // Don't allow setting via registration
+			},
 		},
 	},
 	session: {

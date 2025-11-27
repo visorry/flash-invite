@@ -7,6 +7,8 @@ import broadcastService from '../services/broadcast.service'
 import { getRequestContext } from '../helper/context'
 import { z } from 'zod'
 import { DurationUnit, AutomationFeatureType } from '@super-invite/db'
+import db from '@super-invite/db'
+import { BadRequestError } from '../errors/http-exception'
 
 const router = Router()
 
@@ -220,6 +222,8 @@ router.put(
     validation: UpdateConfigSchema,
   }
 )
+
+
 
 // Token pricing configuration
 router.get(
@@ -520,6 +524,245 @@ router.post(
   },
   {
     validation: TemplateParamsSchema,
+  }
+)
+
+// ============ Token Bundles Admin Routes ============
+import tokenBundleAdminService from '../services/admin/token-bundle-admin.service'
+import {
+  CreateBundleSchema,
+  UpdateBundleSchema,
+  BundleParamsSchema
+} from '../validation/token-bundle.validation'
+
+// Get all bundles (including inactive)
+router.get(
+  '/token-bundles',
+  async (_req: Request) => {
+    return tokenBundleAdminService.getAllBundles()
+  }
+)
+
+// Create new bundle
+router.post(
+  '/token-bundles',
+  async (req: Request) => {
+    const data = req.validatedBody
+    return tokenBundleAdminService.createBundle(data)
+  },
+  {
+    validation: CreateBundleSchema,
+  }
+)
+
+// Update bundle
+router.put(
+  '/token-bundles/:id',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    const data = req.validatedBody
+    return tokenBundleAdminService.updateBundle(id, data)
+  },
+  {
+    validation: [BundleParamsSchema, UpdateBundleSchema],
+  }
+)
+
+// Delete bundle (soft delete)
+router.delete(
+  '/token-bundles/:id',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return tokenBundleAdminService.deleteBundle(id)
+  },
+  {
+    validation: BundleParamsSchema,
+  }
+)
+
+// Toggle active status
+router.patch(
+  '/token-bundles/:id/toggle',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return tokenBundleAdminService.toggleActive(id)
+  },
+  {
+    validation: BundleParamsSchema,
+  }
+)
+
+// Seed default token bundles
+import { DEFAULT_TOKEN_BUNDLES } from '../config/default-token-bundles'
+
+router.post(
+  '/seed/token-bundles',
+  async (_req: Request) => {
+    console.log('[ADMIN] Starting token bundles seed...')
+    const results = {
+      created: 0,
+      skipped: 0,
+      errors: [] as string[],
+    }
+
+    for (const bundleData of DEFAULT_TOKEN_BUNDLES) {
+      try {
+        // Check if bundle exists by name (including soft deleted ones)
+        const existing = await db.tokenBundle.findFirst({
+          where: { name: bundleData.name }
+        })
+
+        if (existing) {
+          results.skipped++
+          continue
+        }
+
+        await db.tokenBundle.create({
+          data: bundleData,
+        })
+        results.created++
+        console.log(`[ADMIN] Created token bundle "${bundleData.name}"`)
+      } catch (error: any) {
+        results.errors.push(`${bundleData.name}: ${error.message}`)
+        console.error(`[ADMIN] Error creating token bundle "${bundleData.name}":`, error)
+      }
+    }
+
+    console.log('[ADMIN] Token bundles seed completed:', results)
+    return results
+  }
+)
+
+// ============ User Migration Routes ============
+import userOnboardingService from '../services/user-onboarding.service'
+
+// Assign free tier to all users without subscriptions
+router.post(
+  '/migrate/assign-free-tier',
+  async (_req: Request) => {
+    console.log('[ADMIN] Starting free tier migration...')
+
+    // Get all users
+    const users = await db.user.findMany({
+      select: { id: true, email: true },
+    })
+
+    const results = {
+      total: users.length,
+      assigned: 0,
+      skipped: 0,
+      errors: [] as string[],
+    }
+
+    for (const user of users) {
+      try {
+        const subscription = await userOnboardingService.assignFreeTier(user.id)
+        if (subscription) {
+          results.assigned++
+          console.log(`[ADMIN] Assigned free tier to ${user.email}`)
+        } else {
+          results.skipped++
+          console.log(`[ADMIN] Skipped ${user.email} (already has subscription or no free plan)`)
+        }
+      } catch (error: any) {
+        results.errors.push(`${user.email}: ${error.message}`)
+        console.error(`[ADMIN] Error assigning free tier to ${user.email}:`, error)
+      }
+    }
+
+    console.log('[ADMIN] Free tier migration completed:', results)
+    return results
+  }
+)
+
+// Seed default plans
+import { DEFAULT_PLANS } from '../config/default-plans'
+
+router.post(
+  '/seed/plans',
+  async (_req: Request) => {
+    console.log('[ADMIN] Starting plans seed...')
+
+    const results = {
+      created: 0,
+      skipped: 0,
+      errors: [] as string[],
+    }
+
+    for (const planData of DEFAULT_PLANS) {
+      try {
+        // Check if plan with same name already exists
+        const existing = await db.plan.findFirst({
+          where: { name: planData.name },
+        })
+
+        if (existing) {
+          results.skipped++
+          console.log(`[ADMIN] Plan "${planData.name}" already exists, skipping`)
+          continue
+        }
+
+        // Create the plan
+        await db.plan.create({
+          data: planData,
+        })
+
+        results.created++
+        console.log(`[ADMIN] Created plan "${planData.name}"`)
+      } catch (error: any) {
+        results.errors.push(`${planData.name}: ${error.message}`)
+        console.error(`[ADMIN] Error creating plan "${planData.name}":`, error)
+      }
+    }
+
+    console.log('[ADMIN] Plans seed completed:', results)
+    return results
+  }
+)
+
+// Reset plans (delete all and recreate from seed)
+router.post(
+  '/reset/plans',
+  async (_req: Request) => {
+    console.log('[ADMIN] Starting plans reset...')
+
+    try {
+      // Check for existing subscriptions
+      const subscriptionCount = await db.subscription.count()
+      if (subscriptionCount > 0) {
+        throw new BadRequestError(`Cannot reset plans: There are ${subscriptionCount} subscriptions linked to existing plans. Please delete them first.`)
+      }
+
+      // Delete all existing plans
+      const deleted = await db.plan.deleteMany({})
+      console.log(`[ADMIN] Deleted ${deleted.count} existing plans`)
+
+      // Create default plans
+      const results = {
+        deleted: deleted.count,
+        created: 0,
+        errors: [] as string[],
+      }
+
+      for (const planData of DEFAULT_PLANS) {
+        try {
+          await db.plan.create({
+            data: planData,
+          })
+          results.created++
+          console.log(`[ADMIN] Created plan "${planData.name}"`)
+        } catch (error: any) {
+          results.errors.push(`${planData.name}: ${error.message}`)
+          console.error(`[ADMIN] Error creating plan "${planData.name}":`, error)
+        }
+      }
+
+      console.log('[ADMIN] Plans reset completed:', results)
+      return results
+    } catch (error: any) {
+      console.error('[ADMIN] Plans reset failed:', error)
+      throw error
+    }
   }
 )
 

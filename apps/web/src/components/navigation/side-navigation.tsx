@@ -21,14 +21,11 @@ export function SideNavigation() {
     { to: "/auto-approval", label: "Auto Approval", icon: UserCheck },
     { to: "/members", label: "Members", icon: Users },
     { to: "/tokens", label: "Tokens", icon: Coins },
+    { to: "/subscription", label: "Subscription", icon: Zap },
     { to: "/profile", label: "Profile", icon: User },
   ] as const
 
   const isAdmin = (user as any)?.isAdmin === true
-  
-  // Debug: log user object
-  console.log('SideNav - User object:', user)
-  console.log('SideNav - isAdmin:', isAdmin)
 
   return (
     <aside className="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 hidden sm:block">

@@ -13,9 +13,15 @@ import * as botRoute from './bot.route'
 import * as authRoute from './auth.route'
 import * as forwardRulesRoute from './forward-rules.route'
 import * as autoApprovalRoute from './auto-approval.route'
+import * as paymentsRoute from './payments.route'
+import * as paymentsWebhookRoute from './payments-webhook.route'
+import * as tokenBundlesRoute from './token-bundles.route'
+import * as subscriptionsRoute from './subscriptions.route'
+import * as userRoute from './user.route'
 
 const publicAPIs = Promise.resolve({
   auth: authRoute,
+  'payments-webhook': paymentsWebhookRoute,
 })
 
 const v1APIs = Promise.resolve({
@@ -28,6 +34,10 @@ const v1APIs = Promise.resolve({
   bot: botRoute,
   'forward-rules': forwardRulesRoute,
   'auto-approval': autoApprovalRoute,
+  payments: paymentsRoute,
+  'token-bundles': tokenBundlesRoute,
+  subscriptions: subscriptionsRoute,
+  user: userRoute,
 })
 
 const adminAPIs = Promise.resolve({

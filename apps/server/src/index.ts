@@ -14,9 +14,16 @@ const app = express()
 // Middleware
 app.use(cors({
   origin: config.CORS_ORIGINS,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
+}))
+
+// Capture raw body for webhook signature verification
+app.use('/api/v1/payments-webhook/webhook', express.json({
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf.toString('utf8')
+  }
 }))
 
 app.use(express.json())
@@ -26,7 +33,7 @@ app.use(express.urlencoded({ extended: true }))
 app.get('/healthcheck', (_req, res) => {
   const schedulerStatus = (global as any).schedulerIntervals ? 'running' : 'not initialized'
   const botStats = botManager.getStats()
-  
+
   res.json({
     success: true,
     data: {
@@ -72,12 +79,12 @@ async function startServer() {
   app.listen(config.PORT, async () => {
     console.log(`🚀 Super Invite API is running on port ${config.PORT}`)
     console.log(`🔗 Health check: http://localhost:${config.PORT}/healthcheck`)
-    
+
     // Initialize Telegram bots
     console.log('Starting bot initialization...')
     await initializeBots()
     console.log('Bot initialization completed')
-    
+
     // Initialize background jobs
     console.log('Starting scheduler initialization...')
     try {
@@ -90,7 +97,7 @@ async function startServer() {
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     console.log(`\n${signal} received. Shutting down gracefully...`)
-    
+
     // Stop scheduler
     const intervals = (global as any).schedulerIntervals
     if (intervals) {
@@ -99,10 +106,10 @@ async function startServer() {
       clearInterval(intervals.warning)
       clearInterval(intervals.cleanup)
     }
-    
+
     // Stop bots
     await botManager.stop()
-    
+
     process.exit(0)
   }
 

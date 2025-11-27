@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Coins, UserCircle } from "lucide-react"
+import { Coins, UserCircle, Crown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function AccountPage() {
@@ -21,6 +21,12 @@ export default function AccountPage() {
       label: "Profile",
       icon: UserCircle,
       description: "View and edit your account settings"
+    },
+    {
+      to: "/subscription",
+      label: "Subscription",
+      icon: Crown,
+      description: "Manage your plan and billing"
     },
   ]
 

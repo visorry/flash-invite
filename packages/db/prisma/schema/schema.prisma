@@ -1,8 +1,8 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated"
+  provider     = "prisma-client"
+  output       = "../generated"
   moduleFormat = "esm"
-  runtime = "bun"
+  runtime      = "bun"
 }
 
 datasource db {
@@ -13,20 +13,21 @@ datasource db {
 // ============ AUTH MODELS ============
 
 model User {
-  id               String    @id @map("_id")
+  id               String   @id @map("_id")
   name             String
   email            String
   emailVerified    Boolean
   image            String?
-  isAdmin          Boolean   @default(false) @map("is_admin")
-  telegramId       String?   @unique @map("telegram_id")
-  telegramUsername String?   @map("telegram_username")
+  isAdmin          Boolean  @default(false) @map("is_admin")
+  telegramId       String?  @unique @map("telegram_id")
+  telegramUsername String?  @map("telegram_username")
+  phoneNumber      String?  @map("phone_number")
   createdAt        DateTime
   updatedAt        DateTime
 
   // Auth relations
-  sessions      Session[]
-  accounts      Account[]
+  sessions Session[]
+  accounts Account[]
 
   // App relations
   subscriptions     Subscription[]
@@ -35,6 +36,7 @@ model User {
   telegramEntities  TelegramEntity[]
   inviteLinks       InviteLink[]
   bots              Bot[]
+  paymentOrders     PaymentOrder[]
 
   @@unique([email])
   @@map("user")
@@ -89,21 +91,21 @@ model Verification {
 
 // Plans
 model Plan {
-  id                String   @id @default(uuid())
-  name              String
-  description       String?
-  type              Int      // PlanType enum
-  interval          Int      // PlanInterval enum
-  price             Float
-  tokensIncluded    Int      @map("tokens_included")
-  features          Json?
-  isActive          Boolean  @default(true) @map("is_active")
-  maxGroups         Int?     @map("max_groups") // null means unlimited
-  maxInvitesPerDay  Int?     @map("max_invites_per_day")
-  metadata          Json?
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(3)
+  id               String    @id @default(uuid())
+  name             String
+  description      String?
+  type             Int // PlanType enum
+  interval         Int // PlanInterval enum
+  price            Float
+  tokensIncluded   Int       @map("tokens_included")
+  features         Json?
+  isActive         Boolean   @default(true) @map("is_active")
+  maxGroups        Int?      @map("max_groups") // null means unlimited
+  maxInvitesPerDay Int?      @map("max_invites_per_day")
+  metadata         Json?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   subscriptions Subscription[]
 
@@ -153,13 +155,13 @@ model TokenTransaction {
   id           String    @id @default(uuid())
   userId       String    @map("user_id")
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type         Int       // TransactionType enum
+  type         Int // TransactionType enum
   status       Int       @default(0) // TransactionStatus enum
-  amount       Int       // Positive for credit, negative for debit
+  amount       Int // Positive for credit, negative for debit
   balanceAfter Int       @map("balance_after")
   description  String?
-  reference    String?   // External reference like payment ID, invite link ID, etc.
-  metadata     Json?     // Store additional info
+  reference    String? // External reference like payment ID, invite link ID, etc.
+  metadata     Json? // Store additional info
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
@@ -189,14 +191,14 @@ model TokenCostConfig {
 
 // Bot Cost Configuration - pricing for creating additional bots
 model BotCostConfig {
-  id              String    @id @default(uuid())
-  costPerBot      Int       @map("cost_per_bot") // tokens required for additional bot
-  freeBotsAllowed Int       @default(1) @map("free_bots_allowed") // number of free bots per user
+  id              String   @id @default(uuid())
+  costPerBot      Int      @map("cost_per_bot") // tokens required for additional bot
+  freeBotsAllowed Int      @default(1) @map("free_bots_allowed") // number of free bots per user
   description     String?
-  isActive        Boolean   @default(true) @map("is_active")
+  isActive        Boolean  @default(true) @map("is_active")
   metadata        Json?
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("bot_cost_config")
 }
@@ -222,8 +224,8 @@ model Bot {
   id              String    @id @default(uuid())
   userId          String    @map("user_id")
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token           String    // Bot token (should be encrypted in production)
-  username        String    // Bot username without @
+  token           String // Bot token (should be encrypted in production)
+  username        String // Bot username without @
   firstName       String    @map("first_name") // Bot display name
   botId           String    @unique @map("bot_id") // Telegram bot ID
   status          Int       @default(0) // BotStatus enum: 0=active, 1=inactive, 2=error
@@ -251,18 +253,18 @@ model Bot {
 
 // Bot-TelegramEntity Junction Table (Many-to-Many)
 model BotTelegramEntity {
-  id               String    @id @default(uuid())
-  botId            String    @map("bot_id")
-  bot              Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
-  telegramEntityId String    @map("telegram_entity_id")
+  id               String         @id @default(uuid())
+  botId            String         @map("bot_id")
+  bot              Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
+  telegramEntityId String         @map("telegram_entity_id")
   telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
-  isAdmin          Boolean   @default(false) @map("is_admin")
-  adminPermissions Json?     @map("admin_permissions") // Store bot's admin rights in this chat
-  isPrimary        Boolean   @default(false) @map("is_primary") // Primary bot for invite links
-  syncedAt         DateTime? @map("synced_at") @db.Timestamptz(3)
+  isAdmin          Boolean        @default(false) @map("is_admin")
+  adminPermissions Json?          @map("admin_permissions") // Store bot's admin rights in this chat
+  isPrimary        Boolean        @default(false) @map("is_primary") // Primary bot for invite links
+  syncedAt         DateTime?      @map("synced_at") @db.Timestamptz(3)
   metadata         Json?
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([botId, telegramEntityId])
   @@index([botId])
@@ -273,29 +275,29 @@ model BotTelegramEntity {
 
 // Telegram Groups/Channels
 model TelegramEntity {
-  id           String    @id @default(uuid())
-  userId       String    @map("user_id")
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  telegramId   String    @map("telegram_id") // Telegram's chat ID
-  type         Int       // TelegramEntityType enum
-  title        String
-  username     String?   // @username if available
-  description  String?
-  memberCount  Int?      @map("member_count")
-  isActive     Boolean   @default(true) @map("is_active")
-  metadata     Json?     // Store additional telegram data
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(3)
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramId  String    @map("telegram_id") // Telegram's chat ID
+  type        Int // TelegramEntityType enum
+  title       String
+  username    String? // @username if available
+  description String?
+  memberCount Int?      @map("member_count")
+  isActive    Boolean   @default(true) @map("is_active")
+  metadata    Json? // Store additional telegram data
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  botLinks              BotTelegramEntity[]
-  inviteLinks           InviteLink[]
-  groupMembers          GroupMember[]
-  joinLogs              JoinLog[]
-  forwardRulesAsSource  ForwardRule[]      @relation("ForwardSource")
-  forwardRulesAsDest    ForwardRule[]      @relation("ForwardDestination")
-  autoApprovalRules     AutoApprovalRule[]
-  welcomeConfigs        WelcomeConfig[]
+  botLinks             BotTelegramEntity[]
+  inviteLinks          InviteLink[]
+  groupMembers         GroupMember[]
+  joinLogs             JoinLog[]
+  forwardRulesAsSource ForwardRule[]       @relation("ForwardSource")
+  forwardRulesAsDest   ForwardRule[]       @relation("ForwardDestination")
+  autoApprovalRules    AutoApprovalRule[]
+  welcomeConfigs       WelcomeConfig[]
 
   @@unique([telegramId, userId]) // Same group can exist for different users
   @@index([userId])
@@ -306,27 +308,27 @@ model TelegramEntity {
 
 // Invite Links
 model InviteLink {
-  id               String    @id @default(uuid())
-  telegramEntityId String    @map("telegram_entity_id")
+  id               String         @id @default(uuid())
+  telegramEntityId String         @map("telegram_entity_id")
   telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
-  userId           String    @map("user_id")
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  botId            String    @map("bot_id")
-  bot              Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
-  botStartLink     String    @unique @map("bot_start_link") // Bot start link: https://t.me/bot?start=TOKEN
-  token            String    @unique // Unique token for this invite (extracted for fast queries)
-  durationType     Int       @map("duration_type") // TokenAction enum
-  durationSeconds  Int       @map("duration_seconds") // How long member can stay AFTER joining
-  memberLimit      Int?      @map("member_limit") // Max uses for this link
-  currentUses      Int       @default(0) @map("current_uses")
-  status           Int       @default(0) // InviteLinkStatus enum
-  linkExpiresAt    DateTime? @map("link_expires_at") @db.Timestamptz(3) // When the bot link expires
-  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
-  tokensCost       Int       @map("tokens_cost")
-  metadata         Json?     // Store additional info
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+  userId           String         @map("user_id")
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  botId            String         @map("bot_id")
+  bot              Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
+  botStartLink     String         @unique @map("bot_start_link") // Bot start link: https://t.me/bot?start=TOKEN
+  token            String         @unique // Unique token for this invite (extracted for fast queries)
+  durationType     Int            @map("duration_type") // TokenAction enum
+  durationSeconds  Int            @map("duration_seconds") // How long member can stay AFTER joining
+  memberLimit      Int?           @map("member_limit") // Max uses for this link
+  currentUses      Int            @default(0) @map("current_uses")
+  status           Int            @default(0) // InviteLinkStatus enum
+  linkExpiresAt    DateTime?      @map("link_expires_at") @db.Timestamptz(3) // When the bot link expires
+  revokedAt        DateTime?      @map("revoked_at") @db.Timestamptz(3)
+  tokensCost       Int            @map("tokens_cost")
+  metadata         Json? // Store additional info
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime?      @map("deleted_at") @db.Timestamptz(3)
 
   @@index([userId])
   @@index([telegramEntityId])
@@ -351,20 +353,20 @@ model Config {
 
 // Group Members (users who joined via invites)
 model GroupMember {
-  id                String         @id @default(uuid())
-  telegramUserId    String         @map("telegram_user_id")
-  telegramEntityId  String         @map("telegram_entity_id")
-  telegramEntity    TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
-  username          String?
-  fullName          String?        @map("full_name")
-  telegramInviteLink String        @map("telegram_invite_link") // Actual Telegram group link: https://t.me/+ABC123
-  joinedAt          DateTime       @default(now()) @map("joined_at") @db.Timestamptz(3)
-  memberExpiresAt   DateTime       @map("member_expires_at") @db.Timestamptz(3) // When member access expires and gets kicked
-  kickedAt          DateTime?      @map("kicked_at") @db.Timestamptz(3)
-  isActive          Boolean        @default(true) @map("is_active")
-  metadata          Json?
-  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  id                 String         @id @default(uuid())
+  telegramUserId     String         @map("telegram_user_id")
+  telegramEntityId   String         @map("telegram_entity_id")
+  telegramEntity     TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
+  username           String?
+  fullName           String?        @map("full_name")
+  telegramInviteLink String         @map("telegram_invite_link") // Actual Telegram group link: https://t.me/+ABC123
+  joinedAt           DateTime       @default(now()) @map("joined_at") @db.Timestamptz(3)
+  memberExpiresAt    DateTime       @map("member_expires_at") @db.Timestamptz(3) // When member access expires and gets kicked
+  kickedAt           DateTime?      @map("kicked_at") @db.Timestamptz(3)
+  isActive           Boolean        @default(true) @map("is_active")
+  metadata           Json?
+  createdAt          DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([telegramUserId, telegramEntityId], name: "telegramUserId_telegramEntityId")
   @@index([telegramEntityId])
@@ -375,20 +377,20 @@ model GroupMember {
 
 // Bot Member - Track all Telegram users who interact with a bot via /start
 model BotMember {
-  id             String    @id @default(uuid())
-  botId          String    @map("bot_id")
-  bot            Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
-  telegramUserId String    @map("telegram_user_id")
+  id             String   @id @default(uuid())
+  botId          String   @map("bot_id")
+  bot            Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
+  telegramUserId String   @map("telegram_user_id")
   username       String?
-  firstName      String?   @map("first_name")
-  lastName       String?   @map("last_name")
-  languageCode   String?   @map("language_code")
-  isPremium      Boolean   @default(false) @map("is_premium")
-  isBot          Boolean   @default(false) @map("is_bot")
-  lastActiveAt   DateTime  @default(now()) @map("last_active_at") @db.Timestamptz(3)
+  firstName      String?  @map("first_name")
+  lastName       String?  @map("last_name")
+  languageCode   String?  @map("language_code")
+  isPremium      Boolean  @default(false) @map("is_premium")
+  isBot          Boolean  @default(false) @map("is_bot")
+  lastActiveAt   DateTime @default(now()) @map("last_active_at") @db.Timestamptz(3)
   metadata       Json?
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([botId, telegramUserId]) // Same user can interact with different bots
   @@index([botId])
@@ -400,21 +402,21 @@ model BotMember {
 
 // Join Log - Track every join/renewal for analytics
 model JoinLog {
-  id               String         @id @default(uuid())
-  telegramUserId   String         @map("telegram_user_id")
-  telegramEntityId String         @map("telegram_entity_id")
-  telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
-  inviteLinkId     String         @map("invite_link_id")
-  username         String?
-  fullName         String?        @map("full_name")
-  durationType     Int            @map("duration_type") // TokenAction enum
-  durationSeconds  Int            @map("duration_seconds")
-  tokensCost       Int            @map("tokens_cost")
-  isRenewal        Boolean        @default(false) @map("is_renewal")
-  previousExpiresAt DateTime?     @map("previous_expires_at") @db.Timestamptz(3)
-  newExpiresAt     DateTime       @map("new_expires_at") @db.Timestamptz(3)
-  metadata         Json?
-  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  id                String         @id @default(uuid())
+  telegramUserId    String         @map("telegram_user_id")
+  telegramEntityId  String         @map("telegram_entity_id")
+  telegramEntity    TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
+  inviteLinkId      String         @map("invite_link_id")
+  username          String?
+  fullName          String?        @map("full_name")
+  durationType      Int            @map("duration_type") // TokenAction enum
+  durationSeconds   Int            @map("duration_seconds")
+  tokensCost        Int            @map("tokens_cost")
+  isRenewal         Boolean        @default(false) @map("is_renewal")
+  previousExpiresAt DateTime?      @map("previous_expires_at") @db.Timestamptz(3)
+  newExpiresAt      DateTime       @map("new_expires_at") @db.Timestamptz(3)
+  metadata          Json?
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([telegramUserId])
   @@index([telegramEntityId])
@@ -425,18 +427,18 @@ model JoinLog {
 
 // Broadcast Template - Saved message templates for broadcasting
 model BroadcastTemplate {
-  id          String    @id @default(uuid())
-  name        String
-  content     String    @db.Text // Message content with optional placeholders
-  parseMode   String?   @map("parse_mode") // HTML, Markdown, or null
-  buttons     Json?     // Inline keyboard buttons: [[{text, url}, {text, url}], [{text, url}]]
-  isActive    Boolean   @default(true) @map("is_active")
-  metadata    Json?
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+  id        String    @id @default(uuid())
+  name      String
+  content   String    @db.Text // Message content with optional placeholders
+  parseMode String?   @map("parse_mode") // HTML, Markdown, or null
+  buttons   Json? // Inline keyboard buttons: [[{text, url}, {text, url}], [{text, url}]]
+  isActive  Boolean   @default(true) @map("is_active")
+  metadata  Json?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  broadcasts  Broadcast[]
+  broadcasts Broadcast[]
 
   @@index([name])
   @@index([isActive])
@@ -452,7 +454,7 @@ model Broadcast {
   template        BroadcastTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   content         String             @db.Text // Actual message sent (in case template was modified)
   parseMode       String?            @map("parse_mode")
-  buttons         Json?              // Inline keyboard buttons used
+  buttons         Json? // Inline keyboard buttons used
   status          Int                @default(0) // BroadcastStatus enum: 0=pending, 1=in_progress, 2=completed, 3=failed, 4=cancelled
   totalRecipients Int                @default(0) @map("total_recipients")
   sentCount       Int                @default(0) @map("sent_count")
@@ -473,13 +475,13 @@ model Broadcast {
 
 // Telegram Login Token - Temporary tokens for Telegram login flow
 model TelegramLoginToken {
-  id             String    @id @default(uuid())
-  token          String    @unique
-  telegramUserId String?   @map("telegram_user_id")
+  id             String   @id @default(uuid())
+  token          String   @unique
+  telegramUserId String?  @map("telegram_user_id")
   username       String?
-  fullName       String?   @map("full_name")
-  expiresAt      DateTime  @map("expires_at") @db.Timestamptz(3)
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  fullName       String?  @map("full_name")
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([token])
   @@index([expiresAt])
@@ -496,7 +498,7 @@ model ForwardRule {
   sourceEntity        TelegramEntity @relation("ForwardSource", fields: [sourceEntityId], references: [id], onDelete: Cascade)
   destinationEntityId String         @map("destination_entity_id")
   destinationEntity   TelegramEntity @relation("ForwardDestination", fields: [destinationEntityId], references: [id], onDelete: Cascade)
-  name                String         // User-friendly name for the rule
+  name                String // User-friendly name for the rule
   isActive            Boolean        @default(true) @map("is_active")
 
   // Scheduling mode: 0=realtime, 1=scheduled
@@ -523,44 +525,44 @@ model ForwardRule {
   broadcastDeleteUnit Int?           @map("broadcast_delete_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
 
   // Range selection for scheduled mode
-  startFromMessageId  Int?           @map("start_from_message_id") // Starting message ID
-  endAtMessageId      Int?           @map("end_at_message_id") // Ending message ID (null = no end)
+  startFromMessageId Int? @map("start_from_message_id") // Starting message ID
+  endAtMessageId     Int? @map("end_at_message_id") // Ending message ID (null = no end)
 
   // Behavior options
-  shuffle             Boolean        @default(false) // Randomize post order
-  repeatWhenDone      Boolean        @default(false) @map("repeat_when_done") // Loop when finished
+  shuffle        Boolean @default(false) // Randomize post order
+  repeatWhenDone Boolean @default(false) @map("repeat_when_done") // Loop when finished
 
   // Progress tracking
-  lastProcessedMsgId  Int?           @map("last_processed_msg_id") // Track progress
-  nextRunAt           DateTime?      @map("next_run_at") @db.Timestamptz(3) // Next scheduled run
-  messageQueue        Int[]          @map("message_queue") // Queue of message IDs to process
+  lastProcessedMsgId Int?      @map("last_processed_msg_id") // Track progress
+  nextRunAt          DateTime? @map("next_run_at") @db.Timestamptz(3) // Next scheduled run
+  messageQueue       Int[]     @map("message_queue") // Queue of message IDs to process
 
   // Schedule status: 0=idle, 1=running, 2=paused, 3=completed
-  scheduleStatus      Int            @default(0) @map("schedule_status")
+  scheduleStatus Int @default(0) @map("schedule_status")
 
   // Content filters
-  forwardMedia        Boolean        @default(true) @map("forward_media") // Forward photos, videos, etc.
-  forwardText         Boolean        @default(true) @map("forward_text")
-  forwardDocuments    Boolean        @default(true) @map("forward_documents")
-  forwardStickers     Boolean        @default(false) @map("forward_stickers")
-  forwardPolls        Boolean        @default(true) @map("forward_polls")
+  forwardMedia     Boolean @default(true) @map("forward_media") // Forward photos, videos, etc.
+  forwardText      Boolean @default(true) @map("forward_text")
+  forwardDocuments Boolean @default(true) @map("forward_documents")
+  forwardStickers  Boolean @default(false) @map("forward_stickers")
+  forwardPolls     Boolean @default(true) @map("forward_polls")
 
   // Text modifications
-  removeLinks         Boolean        @default(false) @map("remove_links") // Strip URLs from text
-  addWatermark        String?        @map("add_watermark") // Text to append to forwarded messages
+  removeLinks  Boolean @default(false) @map("remove_links") // Strip URLs from text
+  addWatermark String? @map("add_watermark") // Text to append to forwarded messages
 
   // Keyword filters (JSON arrays)
-  includeKeywords     String[]       @map("include_keywords") // Only forward if contains these
-  excludeKeywords     String[]       @map("exclude_keywords") // Don't forward if contains these
+  includeKeywords String[] @map("include_keywords") // Only forward if contains these
+  excludeKeywords String[] @map("exclude_keywords") // Don't forward if contains these
 
   // Stats
-  forwardedCount      Int            @default(0) @map("forwarded_count")
-  lastForwardedAt     DateTime?      @map("last_forwarded_at") @db.Timestamptz(3)
+  forwardedCount  Int       @default(0) @map("forwarded_count")
+  lastForwardedAt DateTime? @map("last_forwarded_at") @db.Timestamptz(3)
 
-  metadata            Json?
-  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt           DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  metadata  Json?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   @@unique([botId, sourceEntityId, destinationEntityId]) // One rule per source-dest pair per bot
   @@index([userId])
@@ -581,7 +583,7 @@ model AutoApprovalRule {
   bot              Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
   telegramEntityId String         @map("telegram_entity_id")
   telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
-  name             String         // User-friendly name
+  name             String // User-friendly name
   isActive         Boolean        @default(true) @map("is_active")
 
   // Approval mode: 0=instant, 1=delayed, 2=captcha
@@ -590,23 +592,23 @@ model AutoApprovalRule {
   delayUnit        Int            @default(0) @map("delay_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months
 
   // Filters
-  requirePremium   Boolean        @default(false) @map("require_premium")
-  requireUsername  Boolean        @default(false) @map("require_username")
-  minAccountAge    Int?           @map("min_account_age") // Days
-  blockedCountries String[]       @map("blocked_countries") // ISO country codes
+  requirePremium   Boolean  @default(false) @map("require_premium")
+  requireUsername  Boolean  @default(false) @map("require_username")
+  minAccountAge    Int?     @map("min_account_age") // Days
+  blockedCountries String[] @map("blocked_countries") // ISO country codes
 
   // Actions after approval
-  sendWelcomeMsg   Boolean        @default(false) @map("send_welcome_msg")
-  welcomeMessage   String?        @map("welcome_message") @db.Text
+  sendWelcomeMsg Boolean @default(false) @map("send_welcome_msg")
+  welcomeMessage String? @map("welcome_message") @db.Text
 
   // Stats
-  approvedCount    Int            @default(0) @map("approved_count")
-  rejectedCount    Int            @default(0) @map("rejected_count")
-  lastApprovedAt   DateTime?      @map("last_approved_at") @db.Timestamptz(3)
+  approvedCount  Int       @default(0) @map("approved_count")
+  rejectedCount  Int       @default(0) @map("rejected_count")
+  lastApprovedAt DateTime? @map("last_approved_at") @db.Timestamptz(3)
 
-  metadata         Json?
-  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([botId, telegramEntityId]) // One rule per entity per bot
   @@index([userId])
@@ -626,27 +628,66 @@ model WelcomeConfig {
   telegramEntity   TelegramEntity @relation(fields: [telegramEntityId], references: [id], onDelete: Cascade)
 
   // Welcome settings
-  welcomeEnabled   Boolean        @default(false) @map("welcome_enabled")
-  welcomeMessage   String?        @map("welcome_message") @db.Text
-  welcomeParseMode String?        @map("welcome_parse_mode") // HTML, Markdown
-  welcomeButtons   Json?          @map("welcome_buttons") // Inline keyboard
+  welcomeEnabled   Boolean @default(false) @map("welcome_enabled")
+  welcomeMessage   String? @map("welcome_message") @db.Text
+  welcomeParseMode String? @map("welcome_parse_mode") // HTML, Markdown
+  welcomeButtons   Json?   @map("welcome_buttons") // Inline keyboard
 
   // Goodbye settings
-  goodbyeEnabled   Boolean        @default(false) @map("goodbye_enabled")
-  goodbyeMessage   String?        @map("goodbye_message") @db.Text
-  goodbyeParseMode String?        @map("goodbye_parse_mode")
+  goodbyeEnabled   Boolean @default(false) @map("goodbye_enabled")
+  goodbyeMessage   String? @map("goodbye_message") @db.Text
+  goodbyeParseMode String? @map("goodbye_parse_mode")
 
   // Options
-  deleteAfterSecs  Int?           @map("delete_after_secs") // Auto-delete welcome after X seconds
-  mentionUser      Boolean        @default(true) @map("mention_user")
+  deleteAfterSecs Int?    @map("delete_after_secs") // Auto-delete welcome after X seconds
+  mentionUser     Boolean @default(true) @map("mention_user")
 
-  metadata         Json?
-  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([botId, telegramEntityId])
   @@index([userId])
   @@index([botId])
   @@index([telegramEntityId])
   @@map("welcome_config")
+}
+
+// ============ PAYMENT MODELS ============
+
+model PaymentOrder {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId          String   @unique @map("order_id") // Cashfree order ID
+  amount           Float
+  currency         String   @default("INR")
+  status           Int // PaymentStatus enum
+  type             Int // PaymentType enum: 0=SUBSCRIPTION, 1=TOKEN_BUNDLE
+  referenceId      String?  @map("reference_id") // Plan ID or TokenBundle ID
+  paymentSessionId String?  @map("payment_session_id")
+  metadata         Json?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@index([status])
+  @@index([orderId])
+  @@map("payment_order")
+}
+
+model TokenBundle {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  tokens      Int
+  price       Float
+  currency    String    @default("INR")
+  isActive    Boolean   @default(true) @map("is_active")
+  metadata    Json?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("token_bundle")
 }

@@ -7,6 +7,9 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 // Duration unit labels
 const DURATION_UNITS = [
@@ -17,9 +20,19 @@ const DURATION_UNITS = [
   { value: 4, label: 'Year' },
 ]
 
+import { Crown } from 'lucide-react'
+
 export default function TokensPage() {
   const { user, isLoading } = useSession()
   const [showPricing, setShowPricing] = useState(false)
+
+  // Fetch active subscription
+  const { data: activeSub } = useQuery({
+    queryKey: ['subscription', 'active'],
+    queryFn: async () => {
+      return api.subscriptions.getActive()
+    },
+  })
 
   // Fetch balance
   const { data: balance } = useQuery({
@@ -128,10 +141,18 @@ export default function TokensPage() {
       {/* Balance Card */}
       <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white">
         <CardHeader>
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Coins className="h-5 w-5" />
-            Current Balance
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Coins className="h-5 w-5" />
+              Current Balance
+            </CardTitle>
+            {(activeSub as any) && (
+              <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" onClick={() => window.location.href = '/subscription'}>
+                <Crown className="h-3 w-3" />
+                <span>{(activeSub as any).plan.name}</span>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="text-4xl font-bold mb-4">
@@ -147,8 +168,44 @@ export default function TokensPage() {
               <p className="font-semibold">{((balance as any)?.totalSpent || 0).toLocaleString()}</p>
             </div>
           </div>
+
+          {(activeSub as any) ? (
+            <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-between text-xs">
+              <div>
+                <p className="text-white/70">Plan Expires</p>
+                <p className="font-medium">
+                  {new Date((activeSub as any).endDate).toLocaleDateString()}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 text-xs bg-white text-amber-600 hover:bg-white/90"
+                onClick={() => window.location.href = '/subscription'}
+              >
+                Manage Plan
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full h-8 text-xs bg-white text-amber-600 hover:bg-white/90"
+                onClick={() => window.location.href = '/subscription'}
+              >
+                Upgrade to Premium
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Purchase Tokens */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Purchase Tokens</h2>
+        <TokenBundles />
+      </div>
 
       {/* Transaction History */}
       <Card>
@@ -201,5 +258,203 @@ export default function TokensPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function TokenBundles() {
+  const { data: bundles, isLoading } = useQuery({
+    queryKey: ['token-bundles'],
+    queryFn: async () => {
+      return api.tokenBundles.getBundles()
+    }
+  })
+
+  if (isLoading) {
+    return <div className="flex justify-center p-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div></div>
+  }
+
+  if (!bundles || (bundles as any).length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          No token bundles available at the moment.
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      {(bundles as any).map((bundle: any) => (
+        <Card key={bundle.id} className="overflow-hidden">
+          {/* Desktop View */}
+          <div className="hidden md:flex flex-col h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{bundle.name}</CardTitle>
+              <p className="text-xs text-muted-foreground">{bundle.description}</p>
+            </CardHeader>
+            <CardContent className="flex-1 pb-2">
+              <div className="flex items-center justify-center py-4">
+                <Coins className="h-8 w-8 text-yellow-500 mr-2" />
+                <div className="text-2xl font-bold">{bundle.tokens}</div>
+              </div>
+              <div className="text-center text-xl font-bold">
+                ₹{bundle.price}
+              </div>
+            </CardContent>
+            <div className="p-4 pt-0 mt-auto">
+              <PaymentButton
+                referenceId={bundle.id}
+                type={1}
+                amount={bundle.price}
+                label="Buy Now"
+              />
+            </div>
+          </div>
+
+          {/* Mobile View - Horizontal Compact Card */}
+          <div className="flex md:hidden items-center justify-between p-3">
+            <div className="flex items-center gap-3">
+              <div className="bg-yellow-100 dark:bg-yellow-900/20 p-2 rounded-lg flex-shrink-0">
+                <Coins className="h-5 w-5 text-yellow-600 dark:text-yellow-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm leading-none mb-1">{bundle.name}</h3>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{bundle.tokens}</span> tokens
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="font-bold text-sm">₹{bundle.price}</div>
+              <PaymentButton
+                referenceId={bundle.id}
+                type={1}
+                amount={bundle.price}
+                label="Buy"
+                size="sm"
+                className="h-8 px-4"
+              />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+import { toast } from 'sonner'
+
+function PaymentButton({
+  referenceId,
+  type,
+  amount,
+  label,
+  className,
+  size = "default"
+}: {
+  referenceId: string,
+  type: number,
+  amount: number,
+  label: string,
+  className?: string,
+  size?: "default" | "sm" | "lg" | "icon"
+}) {
+  const { user } = useSession()
+  const [loading, setLoading] = useState(false)
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState('')
+
+  const handleInitialClick = async () => {
+    setLoading(true)
+    try {
+      // Fetch fresh user profile to check phone number
+      const profile = await api.user.getProfile()
+      if (profile?.phoneNumber) {
+        processPayment()
+      } else {
+        setShowPhoneDialog(true)
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error)
+      setShowPhoneDialog(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const processPayment = async (phone?: string) => {
+    setLoading(true)
+    try {
+      // If phone number is provided, update it in the database first
+      if (phone) {
+        await api.user.updatePhone(phone)
+      }
+
+      const { paymentSessionId } = await api.payments.createOrder({
+        referenceId,
+        type,
+        phoneNumber: phone
+      })
+
+      const { load } = await import('@cashfreepayments/cashfree-js')
+      const cashfree = await load({
+        mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox',
+      })
+
+      await cashfree.checkout({
+        paymentSessionId,
+        redirectTarget: '_self',
+      })
+
+    } catch (error) {
+      console.error(error)
+      toast.error('Payment initialization failed')
+    } finally {
+      setLoading(false)
+      setShowPhoneDialog(false)
+    }
+  }
+
+  return (
+    <>
+      <Button
+        onClick={handleInitialClick}
+        disabled={loading}
+        className={className || "w-full"}
+        size={size}
+      >
+        {loading ? '...' : label}
+      </Button>
+
+      <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Phone Number</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <Input
+                placeholder="9876543210"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                type="tel"
+              />
+              <p className="text-xs text-muted-foreground">
+                Required for payment processing. We'll save this for future purchases.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPhoneDialog(false)}>Cancel</Button>
+            <Button onClick={() => processPayment(phoneNumber)} disabled={!phoneNumber || phoneNumber.length < 10}>
+              Proceed to Pay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
