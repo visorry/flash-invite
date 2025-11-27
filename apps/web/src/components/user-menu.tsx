@@ -36,7 +36,7 @@ export function UserMenu() {
           </Button>
         </Link>
       )}
-      <Link href={"/profile" as any}>
+      <Link href={"/dashboard/profile" as any}>
         <Button variant="ghost" size="sm">
           <User className="h-4 w-4 mr-2" />
           {user.name}

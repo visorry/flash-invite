@@ -18,10 +18,13 @@ import * as paymentsWebhookRoute from './payments-webhook.route'
 import * as tokenBundlesRoute from './token-bundles.route'
 import * as subscriptionsRoute from './subscriptions.route'
 import * as userRoute from './user.route'
+import * as telegramRoute from './telegram.route'
+import * as botAdminRoute from './admin/bot-admin.route'
 
 const publicAPIs = Promise.resolve({
   auth: authRoute,
   'payments-webhook': paymentsWebhookRoute,
+  telegram: telegramRoute,
 })
 
 const v1APIs = Promise.resolve({
@@ -42,6 +45,7 @@ const v1APIs = Promise.resolve({
 
 const adminAPIs = Promise.resolve({
   admin: adminRoute,
+  'bot-admin': botAdminRoute,
 })
 
 export const setupRoutes = (app: Express) => {

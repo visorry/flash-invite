@@ -52,7 +52,7 @@ export function TopNavigation() {
         {/* Right side - Token balance and avatar */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Token Balance */}
-          <Link href="/tokens">
+          <Link href="/dashboard/tokens">
             <Button
               variant="outline"
               size="sm"
@@ -89,7 +89,7 @@ export function TopNavigation() {
                 </>
               )}
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="cursor-pointer">
+                <Link href="/dashboard/profile" className="cursor-pointer">
                   <User className="h-4 w-4 mr-2" />
                   Profile
                 </Link>

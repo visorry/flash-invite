@@ -14,13 +14,13 @@ async function initializeBots() {
   const allBots = getAllBots()
 
   if (allBots.length > 0) {
-    // Set up periodic health checks
+    // Set up periodic health checks every 1 hour
     setInterval(
       async () => {
         await healthCheck()
       },
-      5 * 60 * 1000
-    ) // 5 minutes
+      60 * 60 * 1000
+    ) // 1 hour
 
     console.log('Bot system initialized successfully')
     console.log('Bot stats:', getStats())

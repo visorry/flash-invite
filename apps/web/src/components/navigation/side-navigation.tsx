@@ -13,16 +13,16 @@ export function SideNavigation() {
   const { user, logout } = useSession()
 
   const links = [
-    { to: "/", label: "Dashboard", icon: Home },
-    { to: "/bots", label: "My Bots", icon: Cpu },
-    { to: "/groups", label: "Groups", icon: Bot },
-    { to: "/invites", label: "Invites", icon: LinkIcon },
-    { to: "/forward-rules", label: "Forwarding", icon: Forward },
-    { to: "/auto-approval", label: "Auto Approval", icon: UserCheck },
-    { to: "/members", label: "Members", icon: Users },
-    { to: "/tokens", label: "Tokens", icon: Coins },
-    { to: "/subscription", label: "Subscription", icon: Zap },
-    { to: "/profile", label: "Profile", icon: User },
+    { to: "/dashboard", label: "Dashboard", icon: Home },
+    { to: "/dashboard/bots", label: "My Bots", icon: Cpu },
+    { to: "/dashboard/groups", label: "Groups", icon: Bot },
+    { to: "/dashboard/invites", label: "Invites", icon: LinkIcon },
+    { to: "/dashboard/forward-rules", label: "Forwarding", icon: Forward },
+    { to: "/dashboard/auto-approval", label: "Auto Approval", icon: UserCheck },
+    { to: "/dashboard/members", label: "Members", icon: Users },
+    { to: "/dashboard/tokens", label: "Tokens", icon: Coins },
+    { to: "/dashboard/subscription", label: "Subscription", icon: Zap },
+    { to: "/dashboard/profile", label: "Profile", icon: User },
   ] as const
 
   const isAdmin = (user as any)?.isAdmin === true
@@ -39,7 +39,7 @@ export function SideNavigation() {
         {/* Navigation Links */}
         <nav className="space-y-1">
           {links.map(({ to, label, icon: Icon }) => {
-            const isActive = pathname === to || (to !== "/" && pathname.startsWith(to))
+            const isActive = pathname === to || (to !== "/dashboard" && pathname.startsWith(to))
             return (
               <Link
                 key={to}

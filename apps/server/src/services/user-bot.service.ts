@@ -122,7 +122,7 @@ const create = async (ctx: RequestContext, token: string) => {
   }
 
   // Create bot in database and deduct tokens if needed
-  return withTransaction(ctx, async (tx) => {
+  const bot = await withTransaction(ctx, async (tx) => {
     // Deduct tokens if required
     if (tokensCost > 0) {
       const userBalance = await tx.tokenBalance.findUnique({
@@ -169,18 +169,21 @@ const create = async (ctx: RequestContext, token: string) => {
       },
     })
 
-    // Add bot to manager (starts the bot)
-    await addBot({
-      dbBotId: bot.id,
-      token,
-      userId: ctx.user!.id,
-    }).catch((error) => {
-      console.error('Failed to start bot:', error)
-      // Bot created but failed to start - will be retried on health check
-    })
-
     return bot
   })
+
+  // Start the bot asynchronously in the background (don't await)
+  // This prevents the HTTP request from waiting for the bot to fully launch
+  addBot({
+    dbBotId: bot.id,
+    token,
+    userId: ctx.user!.id,
+  }).catch((error) => {
+    console.error('Failed to start bot in background:', error)
+    // Bot created but failed to start - will be retried on health check or server restart
+  })
+
+  return bot
 }
 
 // Delete a bot

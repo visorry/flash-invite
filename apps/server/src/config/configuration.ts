@@ -17,7 +17,7 @@ export const config = {
 
   // Authentication
   JWT_SECRET: process.env.JWT_SECRET || 'your-jwt-secret-here',
-  
+
   // CORS Origins
   CORS_ORIGINS: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : [
     'http://localhost:3001',
@@ -27,8 +27,13 @@ export const config = {
   // Telegram Bot
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN || '',
 
+  // Telegram Webhook Configuration (Webhook mode only - required)
+  TELEGRAM_WEBHOOK_DOMAIN: process.env.TELEGRAM_WEBHOOK_DOMAIN || '',
+  TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET || '',
+
   // API Version
   API_VERSION: '1.0.0',
 } as const
 
 export type Config = typeof config
+

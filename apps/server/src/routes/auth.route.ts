@@ -204,8 +204,9 @@ router.get(
         domain: isProduction ? cookieDomain : undefined,
       })
 
-      // Redirect to web app
-      res.redirect(process.env.WEB_APP_URL || 'http://localhost:3001')
+      // Redirect to web app dashboard
+      const webAppUrl = process.env.WEB_APP_URL || 'http://localhost:3001'
+      res.redirect(`${webAppUrl}/dashboard`)
     } catch (error) {
       console.error('Telegram complete error:', error)
       res.redirect(`${process.env.WEB_APP_URL || 'http://localhost:3001'}/login?error=Login failed`)

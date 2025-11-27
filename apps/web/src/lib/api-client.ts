@@ -256,6 +256,33 @@ export const api = {
       delete: (id: string) => apiClient.delete(`/api/v1/admin/token-bundles/${id}`),
       toggle: (id: string) => apiClient.patch(`/api/v1/admin/token-bundles/${id}/toggle`),
     },
+    // Bot Management
+    botAdmin: {
+      list: (params?: {
+        userId?: string;
+        healthStatus?: 'healthy' | 'unhealthy' | 'checking';
+        mode?: 'polling' | 'webhook';
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
+      }) => {
+        const queryParams = new URLSearchParams()
+        if (params?.userId) queryParams.append('userId', params.userId)
+        if (params?.healthStatus) queryParams.append('healthStatus', params.healthStatus)
+        if (params?.mode) queryParams.append('mode', params.mode)
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy)
+        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder)
+        const queryString = queryParams.toString()
+        return apiClient.get(`/api/v1/bot-admin${queryString ? `?${queryString}` : ''}`)
+      },
+      getById: (botId: string) => apiClient.get(`/api/v1/bot-admin/${botId}`),
+      healthCheck: () => apiClient.post('/api/v1/bot-admin/health-check'),
+      restartBot: (botId: string) => apiClient.post(`/api/v1/bot-admin/${botId}/restart`),
+      restartMultiple: (botIds: string[]) => apiClient.post('/api/v1/bot-admin/restart-multiple', { botIds }),
+      restartUnhealthy: () => apiClient.post('/api/v1/bot-admin/restart-unhealthy'),
+      resyncAll: () => apiClient.post('/api/v1/bot-admin/resync-all'),
+      getByGroups: () => apiClient.get('/api/v1/bot-admin/by-groups/list'),
+      getStats: () => apiClient.get('/api/v1/bot-admin/stats/summary'),
+    },
   },
   autoApproval: {
     list: (params?: { botId?: string }) => {

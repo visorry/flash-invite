@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, Bot, Link as LinkIcon, Settings, Home, DollarSign, ArrowLeft, LogOut, MessageCircle, Send } from "lucide-react"
+import { Users, Bot, Link as LinkIcon, Settings, Home, DollarSign, ArrowLeft, LogOut, MessageCircle, Send, Server } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,7 @@ const navSections = [
     items: [
       { href: "/admin/users", label: "Users", icon: <Users className="h-5 w-5" /> },
       { href: "/admin/bot", label: "Bot Users", icon: <MessageCircle className="h-5 w-5" /> },
+      { href: "/admin/bots", label: "Bots", icon: <Server className="h-5 w-5" /> },
     ]
   },
   {
@@ -33,7 +34,7 @@ const navSections = [
     label: "Settings",
     items: [
       { href: "/admin/subscriptions", label: "Subscriptions", icon: <DollarSign className="h-5 w-5" /> },
-      { href: "/admin/settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
+      { href: "/admin/settings-config", label: "Platform Config", icon: <Settings className="h-5 w-5" /> },
     ]
   },
 ]
@@ -57,7 +58,7 @@ export function AdminSidebar() {
               </p>
               {section.items.map((item) => {
                 const isActive = pathname === item.href ||
-                                (item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
+                  (item.href !== "/admin/dashboard" && pathname.startsWith(item.href))
 
                 return (
                   <Link
@@ -83,7 +84,7 @@ export function AdminSidebar() {
         <div className="border-t border-border p-3 space-y-2">
           {/* Back to Dashboard */}
           <Link
-            href={"/" as any}
+            href={"/dashboard" as any}
             className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <ArrowLeft className="h-5 w-5" />

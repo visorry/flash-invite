@@ -13,10 +13,10 @@ import { cn } from "@/lib/utils"
 
 const tabs = [
   { to: "/admin/dashboard", label: "Home", icon: Home },
-  { to: "/admin/users-hub", label: "Users", icon: Users, matches: ["/admin/users", "/admin/bot"] },
+  { to: "/admin/users-hub", label: "Users", icon: Users, matches: ["/admin/users", "/admin/bot", "/admin/bots"] },
   { to: "/admin/content", label: "Content", icon: FolderOpen, matches: ["/admin/groups", "/admin/invites", "/admin/broadcast"] },
-  { to: "/admin/settings", label: "Settings", icon: Settings, matches: ["/admin/subscriptions"] },
-  { to: "/", label: "Exit", icon: ArrowLeft },
+  { to: "/admin/settings", label: "Settings", icon: Settings, matches: ["/admin/subscriptions", "/admin/settings-config"] },
+  { to: "/dashboard", label: "Exit", icon: ArrowLeft },
 ] as const
 
 export function AdminBottomNav() {
@@ -28,8 +28,8 @@ export function AdminBottomNav() {
         {tabs.map(({ to, label, icon: Icon, ...rest }) => {
           const matches = 'matches' in rest ? rest.matches : []
           const isActive = pathname === to ||
-                          pathname.startsWith(to + "/") ||
-                          matches.some(m => pathname.startsWith(m))
+            pathname.startsWith(to + "/") ||
+            matches.some(m => pathname.startsWith(m))
 
           return (
             <Link

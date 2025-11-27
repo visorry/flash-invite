@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Users, MessageCircle } from "lucide-react"
+import { Users, MessageCircle, Server } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function UsersHubPage() {
@@ -21,6 +21,12 @@ export default function UsersHubPage() {
       label: "Bot Users",
       icon: MessageCircle,
       description: "View Telegram bot interactions"
+    },
+    {
+      to: "/admin/bots",
+      label: "Bots",
+      icon: Server,
+      description: "Manage and monitor Telegram bots"
     },
   ]
 

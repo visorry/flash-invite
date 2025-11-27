@@ -452,20 +452,7 @@ const updateConfig = async (_ctx: RequestContext, data: any) => {
       },
     })
 
-    // Start the bot
-    try {
-      await addBot({
-        dbBotId: systemBot.id,
-        token: data.botToken,
-        userId: _ctx.user!.id,
-      })
-    } catch (error: any) {
-      // Clean up if bot failed to start
-      await db.bot.delete({ where: { id: systemBot.id } })
-      throw new BadRequestError(`Failed to start bot: ${error.message}`)
-    }
-
-    // Store config
+    // Store config first
     await db.config.upsert({
       where: { key: 'botToken' },
       update: { value: data.botToken },
@@ -482,6 +469,20 @@ const updateConfig = async (_ctx: RequestContext, data: any) => {
       where: { key: 'systemBotId' },
       update: { value: systemBot.id },
       create: { key: 'systemBotId', value: systemBot.id },
+    })
+
+    // Start the bot asynchronously in the background (don't await)
+    // This prevents the HTTP request from waiting for the bot to fully launch
+    addBot({
+      dbBotId: systemBot.id,
+      token: data.botToken,
+      userId: _ctx.user!.id,
+    }).catch(async (error: any) => {
+      console.error('Failed to start system bot in background:', error)
+      // Clean up bot record if failed to start
+      await db.bot.delete({ where: { id: systemBot.id } }).catch(() => {})
+      // Clean up config
+      await db.config.delete({ where: { key: 'systemBotId' } }).catch(() => {})
     })
   }
 
