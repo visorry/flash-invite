@@ -366,11 +366,21 @@ function PaymentButton({
   const [showPhoneDialog, setShowPhoneDialog] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState('')
 
-  const handleInitialClick = () => {
-    if ((user as any)?.phoneNumber) {
-      processPayment()
-    } else {
+  const handleInitialClick = async () => {
+    setLoading(true)
+    try {
+      // Fetch fresh user profile to check phone number
+      const profile = await api.user.getProfile()
+      if (profile?.phoneNumber) {
+        processPayment()
+      } else {
+        setShowPhoneDialog(true)
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile:', error)
       setShowPhoneDialog(true)
+    } finally {
+      setLoading(false)
     }
   }
 

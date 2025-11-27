@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Check, Zap } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api-client'
 import { useSearchParams, useRouter } from 'next/navigation'
@@ -23,7 +23,7 @@ interface Plan {
     tokensIncluded: number
 }
 
-export default function SubscriptionPage() {
+function SubscriptionPageContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const orderId = searchParams.get('order_id')
@@ -149,17 +149,39 @@ export default function SubscriptionPage() {
     )
 }
 
+export default function SubscriptionPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        }>
+            <SubscriptionPageContent />
+        </Suspense>
+    )
+}
+
 function PaymentButton({ referenceId, type, amount, label }: { referenceId: string, type: number, amount: number, label: string }) {
     const { user } = useSession()
     const [loading, setLoading] = useState(false)
     const [showPhoneDialog, setShowPhoneDialog] = useState(false)
     const [phoneNumber, setPhoneNumber] = useState('')
 
-    const handleInitialClick = () => {
-        if ((user as any)?.phoneNumber) {
-            handlePayment()
-        } else {
+    const handleInitialClick = async () => {
+        setLoading(true)
+        try {
+            // Fetch fresh user profile to check phone number
+            const profile = await api.user.getProfile()
+            if (profile?.phoneNumber) {
+                handlePayment()
+            } else {
+                setShowPhoneDialog(true)
+            }
+        } catch (error) {
+            console.error('Failed to fetch profile:', error)
             setShowPhoneDialog(true)
+        } finally {
+            setLoading(false)
         }
     }
 
