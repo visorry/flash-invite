@@ -9,7 +9,8 @@ import { withTransaction } from '../helper/db/transaction'
 const createOrder = async (
     ctx: RequestContext,
     referenceId: string,
-    type: PaymentType
+    type: PaymentType,
+    phoneNumber?: string
 ) => {
     if (!ctx.user) {
         throw new BadRequestError('User not authenticated')
@@ -55,7 +56,6 @@ const createOrder = async (
     })
 
     // Create Cashfree order
-    // Create Cashfree order
     // If this fails, it will bubble up and be handled by global error handler
     // We might want to handle cleanup of the local order if we want to be strict,
     // but for now we'll let it fail.
@@ -65,7 +65,7 @@ const createOrder = async (
         currency: 'INR',
         customerId: ctx.user.id,
         customerEmail: ctx.user.email,
-        customerPhone: '9999999999', // Placeholder, should be collected if mandatory
+        customerPhone: phoneNumber || (ctx.user as any).phoneNumber || '9999999999',
         returnUrl,
     })
 
@@ -250,6 +250,46 @@ const verifyPayment = async (orderId: string) => {
                                 }
                             }
                         })
+
+                        // Credit tokens for renewal
+                        if (plan.tokensIncluded > 0) {
+                            let balance = await tx.tokenBalance.findUnique({
+                                where: { userId: paymentOrder.userId },
+                            })
+
+                            if (!balance) {
+                                balance = await tx.tokenBalance.create({
+                                    data: {
+                                        userId: paymentOrder.userId,
+                                        balance: 0,
+                                        totalEarned: 0,
+                                        totalSpent: 0,
+                                    },
+                                })
+                            }
+
+                            const newBalance = balance.balance + plan.tokensIncluded
+
+                            await tx.tokenBalance.update({
+                                where: { userId: paymentOrder.userId },
+                                data: {
+                                    balance: newBalance,
+                                    totalEarned: { increment: plan.tokensIncluded },
+                                },
+                            })
+
+                            await tx.tokenTransaction.create({
+                                data: {
+                                    userId: paymentOrder.userId,
+                                    type: TransactionType.SUBSCRIPTION,
+                                    status: 1, // COMPLETED
+                                    amount: plan.tokensIncluded,
+                                    balanceAfter: newBalance,
+                                    description: `Tokens from ${plan.name} renewal`,
+                                    reference: paymentOrder.orderId,
+                                },
+                            })
+                        }
 
                         console.log(`Extended subscription ${activeSub.id} to ${endDate}`)
 

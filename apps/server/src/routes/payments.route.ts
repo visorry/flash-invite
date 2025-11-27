@@ -12,8 +12,8 @@ router.post(
     '/create-order',
     async (req: Request) => {
         const ctx = getRequestContext(req)
-        const { referenceId, type } = req.validatedBody
-        return paymentService.createOrder(ctx, referenceId, type)
+        const { referenceId, type, phoneNumber } = req.validatedBody
+        return paymentService.createOrder(ctx, referenceId, type, phoneNumber)
     },
     {
         validation: CreateOrderSchema,

@@ -349,7 +349,7 @@ export const api = {
     reset: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/reset`),
   },
   payments: {
-    createOrder: (data: { referenceId: string; type: number }) =>
+    createOrder: (data: { referenceId: string; type: number; phoneNumber?: string }) =>
       apiClient.post<{ paymentSessionId: string; orderId: string }>('/api/v1/payments/create-order', data),
     verify: (orderId: string) => apiClient.post<{ status: string; orderId: string }>('/api/v1/payments/verify', { orderId }),
     getPlans: () => apiClient.get('/api/v1/payments/plans'),
@@ -363,5 +363,9 @@ export const api = {
     getActive: () => apiClient.get('/api/v1/subscriptions/active'),
     cancel: (subscriptionId: string) => apiClient.post(`/api/v1/subscriptions/${subscriptionId}/cancel`),
     getHistory: () => apiClient.get('/api/v1/subscriptions/history'),
+  },
+  user: {
+    updatePhone: (phoneNumber: string) =>
+      apiClient.patch<{ success: boolean; phoneNumber: string }>('/api/v1/user/phone', { phoneNumber }),
   },
 }

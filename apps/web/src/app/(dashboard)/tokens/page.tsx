@@ -7,6 +7,9 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 // Duration unit labels
 const DURATION_UNITS = [
@@ -16,6 +19,8 @@ const DURATION_UNITS = [
   { value: 3, label: 'Month' },
   { value: 4, label: 'Year' },
 ]
+
+import { Crown } from 'lucide-react'
 
 export default function TokensPage() {
   const { user, isLoading } = useSession()
@@ -29,23 +34,123 @@ export default function TokensPage() {
     },
   })
 
-    // ... (existing queries)
+  // Fetch balance
+  const { data: balance } = useQuery({
+    queryKey: ['tokens', 'balance'],
+    queryFn: async () => {
+      return api.tokens.getBalance()
+    },
+  })
 
-    // ...
+  // Fetch transactions
+  const { data: transactions, isLoading: transactionsLoading } = useQuery({
+    queryKey: ['tokens', 'transactions'],
+    queryFn: async () => {
+      return api.tokens.getTransactions()
+    },
+  })
 
-    // Balance Card
-    < Card className = "bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white" >
+  // Fetch token pricing
+  const { data: pricing } = useQuery({
+    queryKey: ['tokens', 'costs'],
+    queryFn: async () => {
+      return api.tokens.getCosts()
+    },
+  })
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
+  return (
+    <div className="flex-1 space-y-6 p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">Token Balance</h1>
+          <p className="text-xs text-muted-foreground">
+            Manage your tokens and view transaction history
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setShowPricing(true)}
+          className="h-9 w-9"
+        >
+          <Info className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Pricing Modal */}
+      {showPricing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowPricing(false)}>
+          <Card className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Coins className="h-4 w-4 text-amber-500" />
+                  Token Pricing
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setShowPricing(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {(pricing as any)?.length > 0 ? (
+                <div className="space-y-2">
+                  {(pricing as any).map((config: any) => {
+                    const unitLabel = DURATION_UNITS.find(u => u.value === config.durationUnit)?.label || 'Unknown'
+                    return (
+                      <div
+                        key={config.id}
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                      >
+                        <span className="text-sm font-medium">Per {unitLabel}</span>
+                        <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                          {config.costPerUnit} tokens
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No pricing configured. Invites are free!
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Balance Card */}
+      <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Coins className="h-5 w-5" />
-                Current Balance
+              <Coins className="h-5 w-5" />
+              Current Balance
             </CardTitle>
             {(activeSub as any) && (
-                <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" onClick={() => window.location.href = '/subscription'}>
-                    <Crown className="h-3 w-3" />
-                    <span>{(activeSub as any).plan.name}</span>
-                </div>
+              <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors" onClick={() => window.location.href = '/subscription'}>
+                <Crown className="h-3 w-3" />
+                <span>{(activeSub as any).plan.name}</span>
+              </div>
             )}
           </div>
         </CardHeader>
@@ -63,47 +168,47 @@ export default function TokensPage() {
               <p className="font-semibold">{((balance as any)?.totalSpent || 0).toLocaleString()}</p>
             </div>
           </div>
-          
+
           {(activeSub as any) ? (
             <div className="mt-4 pt-4 border-t border-white/20 flex items-center justify-between text-xs">
-                <div>
-                    <p className="text-white/70">Plan Expires</p>
-                    <p className="font-medium">
-                        {new Date((activeSub as any).endDate).toLocaleDateString()}
-                    </p>
-                </div>
-                <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    className="h-7 text-xs bg-white text-amber-600 hover:bg-white/90"
-                    onClick={() => window.location.href = '/subscription'}
-                >
-                    Manage Plan
-                </Button>
+              <div>
+                <p className="text-white/70">Plan Expires</p>
+                <p className="font-medium">
+                  {new Date((activeSub as any).endDate).toLocaleDateString()}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 text-xs bg-white text-amber-600 hover:bg-white/90"
+                onClick={() => window.location.href = '/subscription'}
+              >
+                Manage Plan
+              </Button>
             </div>
           ) : (
-             <div className="mt-4 pt-4 border-t border-white/20">
-                <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    className="w-full h-8 text-xs bg-white text-amber-600 hover:bg-white/90"
-                    onClick={() => window.location.href = '/subscription'}
-                >
-                    Upgrade to Premium
-                </Button>
-             </div>
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full h-8 text-xs bg-white text-amber-600 hover:bg-white/90"
+                onClick={() => window.location.href = '/subscription'}
+              >
+                Upgrade to Premium
+              </Button>
+            </div>
           )}
         </CardContent>
-      </Card >
+      </Card>
 
-    {/* Purchase Tokens */ }
-    < div className = "space-y-4" >
+      {/* Purchase Tokens */}
+      <div className="space-y-4">
         <h2 className="text-lg font-semibold">Purchase Tokens</h2>
         <TokenBundles />
-      </div >
+      </div>
 
-    {/* Transaction History */ }
-    < Card >
+      {/* Transaction History */}
+      <Card>
         <CardHeader>
           <CardTitle className="text-lg">Transaction History</CardTitle>
         </CardHeader>
@@ -151,8 +256,8 @@ export default function TokensPage() {
             </div>
           )}
         </CardContent>
-      </Card >
-    </div >
+      </Card>
+    </div>
   )
 }
 
@@ -256,14 +361,31 @@ function PaymentButton({
   className?: string,
   size?: "default" | "sm" | "lg" | "icon"
 }) {
+  const { user } = useSession()
   const [loading, setLoading] = useState(false)
+  const [showPhoneDialog, setShowPhoneDialog] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState('')
 
-  const handleClick = async () => {
+  const handleInitialClick = () => {
+    if ((user as any)?.phoneNumber) {
+      processPayment()
+    } else {
+      setShowPhoneDialog(true)
+    }
+  }
+
+  const processPayment = async (phone?: string) => {
     setLoading(true)
     try {
+      // If phone number is provided, update it in the database first
+      if (phone) {
+        await api.user.updatePhone(phone)
+      }
+
       const { paymentSessionId } = await api.payments.createOrder({
         referenceId,
-        type
+        type,
+        phoneNumber: phone
       })
 
       const { load } = await import('@cashfreepayments/cashfree-js')
@@ -281,17 +403,48 @@ function PaymentButton({
       toast.error('Payment initialization failed')
     } finally {
       setLoading(false)
+      setShowPhoneDialog(false)
     }
   }
 
   return (
-    <Button
-      onClick={handleClick}
-      disabled={loading}
-      className={className || "w-full"}
-      size={size}
-    >
-      {loading ? '...' : label}
-    </Button>
+    <>
+      <Button
+        onClick={handleInitialClick}
+        disabled={loading}
+        className={className || "w-full"}
+        size={size}
+      >
+        {loading ? '...' : label}
+      </Button>
+
+      <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Phone Number</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <Input
+                placeholder="9876543210"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                type="tel"
+              />
+              <p className="text-xs text-muted-foreground">
+                Required for payment processing. We'll save this for future purchases.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPhoneDialog(false)}>Cancel</Button>
+            <Button onClick={() => processPayment(phoneNumber)} disabled={!phoneNumber || phoneNumber.length < 10}>
+              Proceed to Pay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

@@ -5,6 +5,10 @@ export const UpdateProfileSchema = z.object({
   email: z.string().email().optional(),
 })
 
+export const UpdatePhoneSchema = z.object({
+  phoneNumber: z.string().min(10).max(15),
+})
+
 export const UserParamsSchema = z.object({
   id: z.string().uuid('Invalid user ID'),
 })

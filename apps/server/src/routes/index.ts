@@ -17,6 +17,7 @@ import * as paymentsRoute from './payments.route'
 import * as paymentsWebhookRoute from './payments-webhook.route'
 import * as tokenBundlesRoute from './token-bundles.route'
 import * as subscriptionsRoute from './subscriptions.route'
+import * as userRoute from './user.route'
 
 const publicAPIs = Promise.resolve({
   auth: authRoute,
@@ -36,6 +37,7 @@ const v1APIs = Promise.resolve({
   payments: paymentsRoute,
   'token-bundles': tokenBundlesRoute,
   subscriptions: subscriptionsRoute,
+  user: userRoute,
 })
 
 const adminAPIs = Promise.resolve({

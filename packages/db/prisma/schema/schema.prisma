@@ -21,6 +21,7 @@ model User {
   isAdmin          Boolean  @default(false) @map("is_admin")
   telegramId       String?  @unique @map("telegram_id")
   telegramUsername String?  @map("telegram_username")
+  phoneNumber      String?  @map("phone_number")
   createdAt        DateTime
   updatedAt        DateTime
 

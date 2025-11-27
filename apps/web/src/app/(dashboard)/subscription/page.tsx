@@ -8,6 +8,10 @@ import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api-client'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useSession } from "@/hooks/use-session"
 
 interface Plan {
     id: string
@@ -146,15 +150,32 @@ export default function SubscriptionPage() {
 }
 
 function PaymentButton({ referenceId, type, amount, label }: { referenceId: string, type: number, amount: number, label: string }) {
+    const { user } = useSession()
     const [loading, setLoading] = useState(false)
+    const [showPhoneDialog, setShowPhoneDialog] = useState(false)
+    const [phoneNumber, setPhoneNumber] = useState('')
 
-    const handlePayment = async () => {
+    const handleInitialClick = () => {
+        if ((user as any)?.phoneNumber) {
+            handlePayment()
+        } else {
+            setShowPhoneDialog(true)
+        }
+    }
+
+    const handlePayment = async (phone?: string) => {
         setLoading(true)
 
         const promise = async () => {
+            // If phone number is provided, update it in the database first
+            if (phone) {
+                await api.user.updatePhone(phone)
+            }
+
             const { paymentSessionId } = await api.payments.createOrder({
                 referenceId,
-                type
+                type,
+                phoneNumber: phone
             })
 
             const { load } = await import('@cashfreepayments/cashfree-js')
@@ -173,14 +194,45 @@ function PaymentButton({ referenceId, type, amount, label }: { referenceId: stri
             success: 'Redirecting to payment gateway...',
             error: (err) => {
                 setLoading(false)
+                setShowPhoneDialog(false)
                 return err.message || 'Failed to initialize payment'
             }
         })
     }
 
     return (
-        <Button onClick={handlePayment} disabled={loading} className="w-full">
-            {loading ? 'Processing...' : label}
-        </Button>
+        <>
+            <Button onClick={handleInitialClick} disabled={loading} className="w-full">
+                {loading ? 'Processing...' : label}
+            </Button>
+
+            <Dialog open={showPhoneDialog} onOpenChange={setShowPhoneDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Enter Phone Number</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Phone Number</Label>
+                            <Input
+                                placeholder="9876543210"
+                                value={phoneNumber}
+                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                type="tel"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Required for payment processing. We'll save this for future purchases.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setShowPhoneDialog(false)}>Cancel</Button>
+                        <Button onClick={() => handlePayment(phoneNumber)} disabled={!phoneNumber || phoneNumber.length < 10}>
+                            Proceed to Pay
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </>
     )
 }
