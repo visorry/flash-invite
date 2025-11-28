@@ -11,6 +11,8 @@
 html,
 body {
   @apply bg-background;
+  overflow-x: hidden;
+  max-width: 100vw;
   @media (prefers-color-scheme: dark) {
     color-scheme: dark;
   }
@@ -162,6 +164,19 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+  #__next {
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 

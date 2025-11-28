@@ -7,8 +7,11 @@ export function HeroSection() {
           <br />
           Simple pricing.
         </h1>
-        <p className={'mt-6 text-[18px] leading-[27px] md:text-[20px] md:leading-[30px]'}>
+        <p className={'mt-6 text-[18px] leading-[27px] md:text-[20px] md:leading-[30px] text-muted-foreground'}>
           Manage your Telegram communities with time-limited invites — from small groups to enterprise.
+        </p>
+        <p className={'mt-4 text-[16px] leading-[24px] md:text-[18px] md:leading-[27px] font-semibold text-blue-600 dark:text-blue-400'}>
+          Fully Automate your Telegram Groups
         </p>
       </div>
     </section>

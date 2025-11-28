@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck } from "lucide-react"
+import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard } from "lucide-react"
 import { ModeToggle } from "../mode-toggle"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,8 @@ export function SideNavigation() {
   const { user, logout } = useSession()
 
   const links = [
-    { to: "/dashboard", label: "Dashboard", icon: Home },
+    { to: "/", label: "Home", icon: Home },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/dashboard/bots", label: "My Bots", icon: Cpu },
     { to: "/dashboard/groups", label: "Groups", icon: Bot },
     { to: "/dashboard/invites", label: "Invites", icon: LinkIcon },
@@ -39,7 +40,9 @@ export function SideNavigation() {
         {/* Navigation Links */}
         <nav className="space-y-1">
           {links.map(({ to, label, icon: Icon }) => {
-            const isActive = pathname === to || (to !== "/dashboard" && pathname.startsWith(to))
+            const isActive = to === "/" 
+              ? pathname === "/" 
+              : pathname === to || (to !== "/dashboard" && to !== "/" && pathname.startsWith(to))
             return (
               <Link
                 key={to}
