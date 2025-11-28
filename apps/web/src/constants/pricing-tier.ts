@@ -16,7 +16,7 @@ export const PricingTier: Tier[] = [
     description: 'Perfect for small communities just getting started.',
     features: ['Up to 5 groups', '100 invites per month', 'Basic analytics', '7-day auto-kick'],
     featured: false,
-    priceId: { month: 'pri_01hsxyh9txq4rzbrhbyngkhy46', year: 'pri_01hsxyh9txq4rzbrhbyngkhy46' },
+    priceId: { month: 'pri_01hsxyh9txq4rzbrhbyngkhy46', year: 'pri_starter_year' },
   },
   {
     name: 'Pro',

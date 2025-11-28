@@ -3,13 +3,13 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Settings2, Zap, User } from "lucide-react"
+import { LayoutDashboard, Settings2, Zap, User } from "lucide-react"
 
 export function BottomNavigation() {
   const pathname = usePathname()
 
   const tabs = [
-    { to: "/dashboard", label: "Home", icon: Home },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/dashboard/manage", label: "Manage", icon: Settings2 },
     { to: "/dashboard/automate", label: "Automate", icon: Zap },
     { to: "/dashboard/account", label: "Account", icon: User },
@@ -19,7 +19,9 @@ export function BottomNavigation() {
     <div className="fixed bottom-0 left-2 right-2 z-50 bg-[oklch(0.145_0_0)] border border-white/10 rounded-t-2xl sm:hidden shadow-lg pb-[env(safe-area-inset-bottom)]">
       <nav className="flex items-center justify-around h-16 px-2">
         {tabs.map(({ to, label, icon: Icon }) => {
-          const isActive = pathname === to || (to !== "/dashboard" && pathname.startsWith(to))
+          const isActive = to === "/dashboard" 
+            ? pathname === "/dashboard" 
+            : pathname === to || (to !== "/dashboard" && pathname.startsWith(to))
           return (
             <Link
               key={to}
