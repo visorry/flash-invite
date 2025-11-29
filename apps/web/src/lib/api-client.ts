@@ -140,6 +140,9 @@ export const api = {
     getCosts: () => apiClient.get('/api/v1/tokens/costs'),
     calculateCost: (durationSeconds: number) =>
       apiClient.get(`/api/v1/tokens/calculate-cost?durationSeconds=${durationSeconds}`),
+    claimDaily: () => apiClient.post('/api/v1/tokens/claim-daily'),
+    getClaimStatus: () => apiClient.get('/api/v1/tokens/claim-status'),
+    getClaimHistory: (limit?: number) => apiClient.get(`/api/v1/tokens/claim-history${limit ? `?limit=${limit}` : ''}`),
   },
   dashboard: {
     getStats: () => apiClient.get('/api/v1/dashboard/stats'),

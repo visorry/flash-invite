@@ -144,7 +144,8 @@ export async function kickExpiredMembers() {
             (errorMessage.includes('user not found') ||
               errorMessage.includes('user_not_participant') ||
               errorMessage.includes('USER_NOT_PARTICIPANT') ||
-              errorMessage.includes('chat not found'))
+              errorMessage.includes('chat not found') ||
+              errorMessage.includes("can't remove chat owner"))
 
           const isBotPermissionIssue =
             errorCode === 403 &&
@@ -153,24 +154,32 @@ export async function kickExpiredMembers() {
               errorMessage.includes('not enough rights'))
 
           if (isPermanentFailure) {
+            let kickErrorReason = 'User already left or group not found'
+            
             if (errorMessage.includes('chat not found')) {
               console.log(
                 `[KICK_JOB] ⚠️ Group ${member.telegramEntity.title} no longer exists or bot was removed`
               )
+              kickErrorReason = 'Group not found'
+            } else if (errorMessage.includes("can't remove chat owner")) {
+              console.log(
+                `[KICK_JOB] ⚠️ User ${member.telegramUserId} is the chat owner of ${member.telegramEntity.title} - cannot kick`
+              )
+              kickErrorReason = 'Cannot kick chat owner'
             } else {
               console.log(
                 `[KICK_JOB] ⚠️ User ${member.telegramUserId} already left ${member.telegramEntity.title}`
               )
             }
 
-            // Mark as kicked in DB since they're already gone
+            // Mark as kicked in DB since they're already gone or cannot be kicked
             await db.groupMember.update({
               where: { id: member.id },
               data: {
                 isActive: false,
                 kickedAt: new Date(),
                 metadata: {
-                  kickError: 'User already left or group not found',
+                  kickError: kickErrorReason,
                 },
               },
             })

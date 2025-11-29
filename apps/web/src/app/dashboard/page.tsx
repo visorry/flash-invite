@@ -60,7 +60,10 @@ export default function DashboardPage() {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-2 gap-2">
-        <Card className="hover:shadow-md transition-shadow">
+        <Card 
+          className="hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push('/dashboard/groups' as any)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total<br />Groups
@@ -78,7 +81,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
+        <Card 
+          className="hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push('/dashboard/invites' as any)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Active<br />Invites
@@ -96,7 +102,10 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow">
+        <Card 
+          className="hover:shadow-md transition-shadow cursor-pointer"
+          onClick={() => router.push('/dashboard/members' as any)}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total<br />Members

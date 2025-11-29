@@ -710,6 +710,188 @@ export async function getBotDetails(dbBotId: string): Promise<{
   }
 }
 
+// Sync existing chats using getUpdates (for discovering chats added before bot configuration)
+export async function syncBotChats(dbBotId: string): Promise<{
+  success: boolean
+  synced: number
+  error?: string
+}> {
+  console.log(`[SYNC_CHATS] Starting chat sync for bot ${dbBotId}...`)
+
+  const instance = bots.get(dbBotId)
+  if (!instance) {
+    return { success: false, synced: 0, error: 'Bot not found or not running' }
+  }
+
+  const bot = await db.bot.findUnique({ where: { id: dbBotId } })
+  if (!bot) {
+    return { success: false, synced: 0, error: 'Bot not found in database' }
+  }
+
+  // Temporarily delete webhook to enable getUpdates
+  console.log(`[SYNC_CHATS] Temporarily removing webhook...`)
+  await instance.bot.telegram.deleteWebhook({ drop_pending_updates: false })
+
+  // Wait a moment for webhook deletion to take effect
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  // Fetch updates (limit to 100 to avoid overwhelming the system)
+  console.log(`[SYNC_CHATS] Fetching updates...`)
+  const updates = await instance.bot.telegram.getUpdates({
+    limit: 100,
+    allowed_updates: ['my_chat_member', 'chat_member']
+  })
+
+  console.log(`[SYNC_CHATS] Retrieved ${updates.length} updates`)
+
+  let syncedCount = 0
+  const processedChats = new Set<string>()
+
+  // Process my_chat_member updates to discover chats
+  for (const update of updates) {
+    if (update.my_chat_member) {
+      const myChatMember = update.my_chat_member
+      const chat = myChatMember.chat
+      const newStatus = myChatMember.new_chat_member.status
+
+      // Skip if not a group/channel or bot is not member/admin
+      if (
+        (chat.type !== 'channel' && chat.type !== 'supergroup' && chat.type !== 'group') ||
+        (newStatus !== 'administrator' && newStatus !== 'member')
+      ) {
+        continue
+      }
+
+      const chatId = chat.id.toString()
+
+      // Skip if already processed in this sync
+      if (processedChats.has(chatId)) {
+        continue
+      }
+      processedChats.add(chatId)
+
+      // Determine entity type
+      let entityType: number
+      if (chat.type === 'channel') {
+        entityType = 0 // TelegramEntityType.CHANNEL
+      } else if (chat.type === 'supergroup') {
+        entityType = 1 // TelegramEntityType.SUPERGROUP
+      } else {
+        entityType = 2 // TelegramEntityType.GROUP
+      }
+
+      const chatTitle = (chat as any).title || 'Unknown'
+      const chatUsername = (chat as any).username || null
+
+      // Find or create TelegramEntity
+      let entity = await db.telegramEntity.findFirst({
+        where: {
+          telegramId: chatId,
+          userId: bot.userId,
+        },
+      })
+
+      if (!entity) {
+        entity = await db.telegramEntity.create({
+          data: {
+            userId: bot.userId,
+            telegramId: chatId,
+            type: entityType,
+            title: chatTitle,
+            username: chatUsername,
+            isActive: true,
+          },
+        })
+        console.log(`[SYNC_CHATS] Created entity for ${chatTitle}`)
+      } else {
+        await db.telegramEntity.update({
+          where: { id: entity.id },
+          data: {
+            title: chatTitle,
+            username: chatUsername,
+            type: entityType,
+            isActive: true,
+          },
+        })
+      }
+
+      // Create or update BotTelegramEntity link
+      const isAdmin = newStatus === 'administrator'
+      const adminPermissions = isAdmin ? myChatMember.new_chat_member : null
+
+      const existingLink = await db.botTelegramEntity.findUnique({
+        where: {
+          botId_telegramEntityId: {
+            botId: dbBotId,
+            telegramEntityId: entity.id,
+          },
+        },
+      })
+
+      // Check if this should be primary
+      const otherLinks = await db.botTelegramEntity.count({
+        where: {
+          telegramEntityId: entity.id,
+          isPrimary: true,
+        },
+      })
+      const shouldBePrimary = otherLinks === 0
+
+      if (existingLink) {
+        await db.botTelegramEntity.update({
+          where: { id: existingLink.id },
+          data: {
+            isAdmin,
+            adminPermissions: adminPermissions as any,
+            syncedAt: new Date(),
+            isPrimary: existingLink.isPrimary || shouldBePrimary,
+          },
+        })
+      } else {
+        await db.botTelegramEntity.create({
+          data: {
+            botId: dbBotId,
+            telegramEntityId: entity.id,
+            isAdmin,
+            adminPermissions: adminPermissions as any,
+            isPrimary: shouldBePrimary,
+            syncedAt: new Date(),
+          },
+        })
+        syncedCount++
+      }
+
+      console.log(`[SYNC_CHATS] Synced ${chatTitle} (admin: ${isAdmin})`)
+    }
+  }
+
+  // Clear the update queue by calling getUpdates one more time with an offset
+  if (updates.length > 0) {
+    const lastUpdateId = updates[updates.length - 1].update_id
+    await instance.bot.telegram.getUpdates({
+      offset: lastUpdateId + 1,
+      limit: 1
+    })
+  }
+
+  // Restore webhook
+  console.log(`[SYNC_CHATS] Restoring webhook...`)
+  const webhookUrl = `${config.TELEGRAM_WEBHOOK_DOMAIN}/api/v1/telegram/webhook/${dbBotId}`
+  await instance.bot.telegram.setWebhook(webhookUrl, {
+    secret_token: config.TELEGRAM_WEBHOOK_SECRET,
+    allowed_updates: [
+      'message',
+      'chat_member',
+      'my_chat_member',
+      'channel_post',
+      'chat_join_request',
+    ],
+  })
+
+  console.log(`[SYNC_CHATS] ✅ Sync completed - ${syncedCount} new chats synced`)
+  return { success: true, synced: syncedCount }
+}
+
 // Legacy export for backward compatibility
 export const botManager = {
   initializeAllBots,
@@ -730,5 +912,6 @@ export const botManager = {
   resyncAllBots,
   getBotsFiltered,
   getBotDetails,
+  syncBotChats,
 }
 

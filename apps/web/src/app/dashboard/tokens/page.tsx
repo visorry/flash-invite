@@ -21,6 +21,7 @@ const DURATION_UNITS = [
 ]
 
 import { Crown } from 'lucide-react'
+import { DailyTokenClaim } from '@/components/tokens/DailyTokenClaim'
 
 export default function TokensPage() {
   const { user, isLoading } = useSession()
@@ -137,6 +138,9 @@ export default function TokensPage() {
           </Card>
         </div>
       )}
+
+      {/* Daily Token Claim */}
+      <DailyTokenClaim />
 
       {/* Balance Card */}
       <Card className="bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-600 text-white">

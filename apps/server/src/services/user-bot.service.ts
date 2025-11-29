@@ -291,26 +291,28 @@ const syncChats = async (ctx: RequestContext, botId: string) => {
     throw new NotFoundError('Bot not found')
   }
 
-  // Import bot manager to get the bot instance
-  const { getBot } = await import('../bot/bot-manager')
-  const telegrafBot = getBot(botId)
+  // Import bot manager to sync chats
+  const { syncBotChats } = await import('../bot/bot-manager')
+  const result = await syncBotChats(botId)
 
-  if (!telegrafBot) {
-    throw new BadRequestError('Bot is not running')
+  if (!result.success) {
+    throw new BadRequestError(result.error || 'Failed to sync chats')
   }
 
-  // Note: Telegram Bot API doesn't have a direct method to get all chats
-  // The bot needs to track chats as it receives updates
-  // For now, we return existing entity links
-
+  // Return updated entity links
   const entityLinks = await db.botTelegramEntity.findMany({
     where: { botId },
     include: {
       telegramEntity: true,
     },
+    orderBy: { createdAt: 'desc' },
   })
 
-  return entityLinks
+  return {
+    synced: result.synced,
+    total: entityLinks.length,
+    chats: entityLinks,
+  }
 }
 
 // Get chats for a bot

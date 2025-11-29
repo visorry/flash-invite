@@ -8,6 +8,39 @@ const router = Router()
 export const name = 'telegram'
 
 /**
+ * Telegram Webhook Verification Endpoint
+ * Telegram sends GET requests to verify the webhook is accessible
+ */
+router.get('/webhook/:botId', async (req: Request, res: Response) => {
+    const { botId } = req.params
+
+    if (!botId) {
+        return res.status(400).json({
+            success: false,
+            error: { message: 'Bot ID is required', status: 400, path: req.path, method: req.method },
+            data: null,
+        })
+    }
+
+    // Verify bot exists
+    const botInstance = getBotInstance(botId)
+    if (!botInstance) {
+        return res.status(404).json({
+            success: false,
+            error: { message: 'Bot not found', status: 404, path: req.path, method: req.method },
+            data: null,
+        })
+    }
+
+    // Return success for webhook verification
+    res.status(200).json({
+        success: true,
+        data: { botId, status: 'ready' },
+        error: null,
+    })
+})
+
+/**
  * Telegram Webhook Endpoint
  * Receives updates from Telegram for a specific bot
  */

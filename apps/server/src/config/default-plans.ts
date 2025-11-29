@@ -5,29 +5,13 @@
 
 export const DEFAULT_PLANS = [
     {
-        name: 'Free',
-        description: 'Perfect for getting started',
-        type: 0, // SUBSCRIPTION
-        interval: 2, // LIFETIME
-        price: 0,
-        tokensIncluded: 100,
-        maxGroups: 2,
-        maxInvitesPerDay: 50,
-        isActive: true,
-        features: [
-            'Up to 2 groups',
-            '50 invites per day',
-            '100 tokens included',
-            'Basic analytics',
-        ],
-    },
-    {
         name: 'Starter',
-        description: 'Great for small teams',
+        description: 'Perfect for getting started',
         type: 0, // SUBSCRIPTION
         interval: 0, // MONTHLY
         price: 499,
         tokensIncluded: 500,
+        dailyTokens: 10,
         maxGroups: 5,
         maxInvitesPerDay: 200,
         isActive: true,
@@ -35,6 +19,7 @@ export const DEFAULT_PLANS = [
             'Up to 5 groups',
             '200 invites per day',
             '500 tokens included',
+            '10 daily tokens on login',
             'Advanced analytics',
             'Priority support',
         ],
@@ -46,6 +31,7 @@ export const DEFAULT_PLANS = [
         interval: 0, // MONTHLY
         price: 999,
         tokensIncluded: 1500,
+        dailyTokens: 30,
         maxGroups: 15,
         maxInvitesPerDay: 500,
         isActive: true,
@@ -53,6 +39,7 @@ export const DEFAULT_PLANS = [
             'Up to 15 groups',
             '500 invites per day',
             '1500 tokens included',
+            '30 daily tokens on login',
             'Advanced analytics',
             'Priority support',
             'Custom branding',
@@ -65,6 +52,7 @@ export const DEFAULT_PLANS = [
         interval: 0, // MONTHLY
         price: 2499,
         tokensIncluded: 5000,
+        dailyTokens: 100,
         maxGroups: null, // Unlimited
         maxInvitesPerDay: null, // Unlimited
         isActive: true,
@@ -72,31 +60,12 @@ export const DEFAULT_PLANS = [
             'Unlimited groups',
             'Unlimited invites',
             '5000 tokens included',
+            '100 daily tokens on login',
             'Advanced analytics',
             'Priority support',
             'Custom branding',
             'Dedicated account manager',
             'API access',
-        ],
-    },
-    {
-        name: 'Pro Yearly',
-        description: 'Save 20% with annual billing',
-        type: 0, // SUBSCRIPTION
-        interval: 1, // YEARLY
-        price: 9590, // ~799/month (20% discount)
-        tokensIncluded: 18000,
-        maxGroups: 15,
-        maxInvitesPerDay: 500,
-        isActive: true,
-        features: [
-            'Up to 15 groups',
-            '500 invites per day',
-            '18000 tokens included',
-            'Advanced analytics',
-            'Priority support',
-            'Custom branding',
-            'Save 20% vs monthly',
         ],
     },
 ]

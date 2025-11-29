@@ -48,4 +48,41 @@ router.get(
   }
 )
 
+// ============ Daily Token Claim ============
+
+// POST /tokens/claim-daily - Claim daily tokens
+router.post(
+  '/claim-daily',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return tokenService.claimDailyTokens(ctx)
+  }
+)
+
+// GET /tokens/claim-status - Get daily claim status
+router.get(
+  '/claim-status',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return tokenService.getDailyClaimStatus(ctx)
+  }
+)
+
+// GET /tokens/claim-history - Get claim history
+const ClaimHistorySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).optional().default(30),
+})
+
+router.get(
+  '/claim-history',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const { limit } = req.validatedQuery
+    return tokenService.getClaimHistory(ctx, limit)
+  },
+  {
+    validation: ClaimHistorySchema,
+  }
+)
+
 export { router }

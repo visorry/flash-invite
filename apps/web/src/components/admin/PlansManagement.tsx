@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { useState } from 'react'
-import { Plus, Edit, Trash2, DollarSign } from 'lucide-react'
+import { Plus, Edit, Trash2, DollarSign, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 const INTERVAL_LABELS = {
@@ -210,6 +210,10 @@ export default function PlansManagement() {
                                 <span className="font-medium">{plan.tokensIncluded}</span>
                             </div>
                             <div className="flex items-center justify-between text-xs md:text-sm">
+                                <span className="text-muted-foreground">Daily Tokens</span>
+                                <span className="font-medium">{plan.dailyTokens || 0}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs md:text-sm">
                                 <span className="text-muted-foreground">Status</span>
                                 <Badge variant={plan.isActive ? 'default' : 'secondary'} className="text-xs">
                                     {plan.isActive ? 'Active' : 'Inactive'}
@@ -219,6 +223,19 @@ export default function PlansManagement() {
                                 <p className="text-xs text-muted-foreground pt-2 border-t line-clamp-2">
                                     {plan.description}
                                 </p>
+                            )}
+                            {plan.features && Array.isArray(plan.features) && plan.features.length > 0 && (
+                                <div className="pt-2 border-t space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">Features:</p>
+                                    <ul className="text-xs space-y-0.5">
+                                        {plan.features.slice(0, 3).map((feature: string, idx: number) => (
+                                            <li key={idx} className="text-muted-foreground">• {feature}</li>
+                                        ))}
+                                        {plan.features.length > 3 && (
+                                            <li className="text-muted-foreground">+ {plan.features.length - 3} more</li>
+                                        )}
+                                    </ul>
+                                </div>
                             )}
                             <div className="flex gap-2 pt-2">
                                 <Dialog open={editingPlan?.id === plan.id} onOpenChange={(open) => !open && setEditingPlan(null)}>
@@ -332,10 +349,25 @@ function PlanForm({ initialData, onSubmit }: { initialData?: any; onSubmit: (dat
         interval: initialData?.interval || 0,
         price: initialData?.price || 0,
         tokensIncluded: initialData?.tokensIncluded || 0,
+        dailyTokens: initialData?.dailyTokens || 0,
         maxGroups: initialData?.maxGroups || null,
         maxInvitesPerDay: initialData?.maxInvitesPerDay || null,
+        features: initialData?.features || [],
         isActive: initialData?.isActive ?? true,
     })
+
+    const [newFeature, setNewFeature] = useState('')
+
+    const addFeature = () => {
+        if (newFeature.trim()) {
+            setFormData({ ...formData, features: [...formData.features, newFeature.trim()] })
+            setNewFeature('')
+        }
+    }
+
+    const removeFeature = (index: number) => {
+        setFormData({ ...formData, features: formData.features.filter((_: any, i: number) => i !== index) })
+    }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -408,6 +440,21 @@ function PlanForm({ initialData, onSubmit }: { initialData?: any; onSubmit: (dat
                 </div>
             </div>
 
+            <div className="space-y-2">
+                <Label htmlFor="dailyTokens">Daily Tokens (on login)</Label>
+                <Input
+                    id="dailyTokens"
+                    type="number"
+                    min="0"
+                    value={formData.dailyTokens}
+                    onChange={(e) => setFormData({ ...formData, dailyTokens: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground">
+                    Tokens users can claim daily when they log in (0 to disable)
+                </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="maxGroups">Max Groups (optional)</Label>
@@ -429,6 +476,44 @@ function PlanForm({ initialData, onSubmit }: { initialData?: any; onSubmit: (dat
                         onChange={(e) => setFormData({ ...formData, maxInvitesPerDay: e.target.value ? parseInt(e.target.value) : null })}
                     />
                 </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label>Features</Label>
+                <div className="flex gap-2">
+                    <Input
+                        value={newFeature}
+                        onChange={(e) => setNewFeature(e.target.value)}
+                        onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault()
+                                addFeature()
+                            }
+                        }}
+                        placeholder="Add a feature (press Enter)"
+                    />
+                    <Button type="button" onClick={addFeature} variant="outline" size="sm">
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </div>
+                {formData.features.length > 0 && (
+                    <div className="space-y-1 mt-2">
+                        {formData.features.map((feature: string, index: number) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-muted rounded text-sm">
+                                <span>{feature}</span>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeFeature(index)}
+                                    className="h-6 w-6 p-0"
+                                >
+                                    <X className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center gap-2">

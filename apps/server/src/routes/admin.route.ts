@@ -148,8 +148,10 @@ const CreatePlanSchema = z.object({
   interval: z.number().int(),
   price: z.number(),
   tokensIncluded: z.number().int().positive(),
+  dailyTokens: z.number().int().min(0).optional().default(0),
   maxGroups: z.number().int().positive().nullable().optional(),
   maxInvitesPerDay: z.number().int().positive().nullable().optional(),
+  features: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
 })
 

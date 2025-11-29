@@ -37,6 +37,7 @@ model User {
   inviteLinks       InviteLink[]
   bots              Bot[]
   paymentOrders     PaymentOrder[]
+  dailyTokenClaims  DailyTokenClaim[]
 
   @@unique([email])
   @@map("user")
@@ -98,6 +99,7 @@ model Plan {
   interval         Int // PlanInterval enum
   price            Float
   tokensIncluded   Int       @map("tokens_included")
+  dailyTokens      Int       @default(0) @map("daily_tokens") // Daily tokens for active subscribers
   features         Json?
   isActive         Boolean   @default(true) @map("is_active")
   maxGroups        Int?      @map("max_groups") // null means unlimited
@@ -128,6 +130,8 @@ model Subscription {
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  dailyTokenClaims DailyTokenClaim[]
 
   @@index([userId])
   @@index([planId])
@@ -691,4 +695,22 @@ model TokenBundle {
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
 
   @@map("token_bundle")
+}
+
+// Daily Token Claims - Track daily token claims for subscribers
+model DailyTokenClaim {
+  id             String       @id @default(uuid())
+  userId         String       @map("user_id")
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionId String       @map("subscription_id")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  tokensGranted  Int          @map("tokens_granted")
+  claimDate      DateTime     @map("claim_date") @db.Date // Just the date, not time
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([userId, claimDate])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([claimDate])
+  @@map("daily_token_claim")
 }

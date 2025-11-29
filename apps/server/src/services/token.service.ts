@@ -355,6 +355,228 @@ const deleteAutomationCostConfig = async (featureType: AutomationFeatureType) =>
   })
 }
 
+// ============ Daily Token Claim ============
+
+const claimDailyTokens = async (ctx: RequestContext) => {
+  if (!ctx.user) {
+    throw new BadRequestError('User not authenticated')
+  }
+
+  // Get active subscription
+  const subscription = await db.subscription.findFirst({
+    where: {
+      userId: ctx.user.id,
+      status: 0, // ACTIVE
+      deletedAt: null,
+    },
+    include: {
+      plan: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  })
+
+  if (!subscription) {
+    throw new BadRequestError('No active subscription found')
+  }
+
+  // Check if subscription has expired
+  if (subscription.endDate && subscription.endDate < new Date()) {
+    throw new BadRequestError('Your subscription has expired')
+  }
+
+  const dailyTokens = subscription.plan.dailyTokens
+  if (dailyTokens <= 0) {
+    throw new BadRequestError('Your plan does not include daily tokens')
+  }
+
+  // Check if already claimed today
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const existingClaim = await db.dailyTokenClaim.findUnique({
+    where: {
+      userId_claimDate: {
+        userId: ctx.user.id,
+        claimDate: today,
+      },
+    },
+  })
+
+  if (existingClaim) {
+    throw new BadRequestError('You have already claimed your daily tokens today')
+  }
+
+  // Grant tokens
+  return withTransaction(ctx, async (tx) => {
+    // Get or create balance
+    let balance = await tx.tokenBalance.findUnique({
+      where: { userId: ctx.user!.id },
+    })
+
+    if (!balance) {
+      balance = await tx.tokenBalance.create({
+        data: {
+          userId: ctx.user!.id,
+          balance: 0,
+          totalEarned: 0,
+          totalSpent: 0,
+        },
+      })
+    }
+
+    const newBalance = balance.balance + dailyTokens
+
+    // Update balance
+    await tx.tokenBalance.update({
+      where: { userId: ctx.user!.id },
+      data: {
+        balance: newBalance,
+        totalEarned: { increment: dailyTokens },
+      },
+    })
+
+    // Create transaction record
+    await tx.tokenTransaction.create({
+      data: {
+        userId: ctx.user!.id,
+        type: TransactionType.DAILY_CLAIM,
+        status: TransactionStatus.COMPLETED,
+        amount: dailyTokens,
+        balanceAfter: newBalance,
+        description: `Daily token claim (${subscription.plan.name})`,
+        reference: subscription.id,
+      },
+    })
+
+    // Create claim record
+    await tx.dailyTokenClaim.create({
+      data: {
+        userId: ctx.user!.id,
+        subscriptionId: subscription.id,
+        tokensGranted: dailyTokens,
+        claimDate: today,
+      },
+    })
+
+    // Calculate next claim time (tomorrow at 00:00)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    return {
+      success: true,
+      tokensGranted: dailyTokens,
+      newBalance,
+      canClaimAgain: tomorrow,
+    }
+  })
+}
+
+const getDailyClaimStatus = async (ctx: RequestContext) => {
+  if (!ctx.user) {
+    throw new BadRequestError('User not authenticated')
+  }
+
+  // Get active subscription
+  const subscription = await db.subscription.findFirst({
+    where: {
+      userId: ctx.user.id,
+      status: 0, // ACTIVE
+      deletedAt: null,
+    },
+    include: {
+      plan: true,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  })
+
+  if (!subscription) {
+    return {
+      canClaim: false,
+      reason: 'No active subscription',
+      dailyTokens: 0,
+    }
+  }
+
+  // Check if subscription has expired
+  if (subscription.endDate && subscription.endDate < new Date()) {
+    return {
+      canClaim: false,
+      reason: 'Subscription expired',
+      dailyTokens: 0,
+    }
+  }
+
+  const dailyTokens = subscription.plan.dailyTokens
+  if (dailyTokens <= 0) {
+    return {
+      canClaim: false,
+      reason: 'Plan does not include daily tokens',
+      dailyTokens: 0,
+    }
+  }
+
+  // Check if already claimed today
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const existingClaim = await db.dailyTokenClaim.findUnique({
+    where: {
+      userId_claimDate: {
+        userId: ctx.user.id,
+        claimDate: today,
+      },
+    },
+  })
+
+  if (existingClaim) {
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    return {
+      canClaim: false,
+      reason: 'Already claimed today',
+      dailyTokens,
+      lastClaimDate: existingClaim.claimDate,
+      nextClaimDate: tomorrow,
+    }
+  }
+
+  return {
+    canClaim: true,
+    dailyTokens,
+    planName: subscription.plan.name,
+  }
+}
+
+const getClaimHistory = async (ctx: RequestContext, limit: number = 30) => {
+  if (!ctx.user) {
+    throw new BadRequestError('User not authenticated')
+  }
+
+  const claims = await db.dailyTokenClaim.findMany({
+    where: {
+      userId: ctx.user.id,
+    },
+    include: {
+      subscription: {
+        include: {
+          plan: true,
+        },
+      },
+    },
+    orderBy: {
+      claimDate: 'desc',
+    },
+    take: limit,
+  })
+
+  return claims
+}
+
 export default {
   getBalance,
   getTransactions,
@@ -370,4 +592,8 @@ export default {
   calculateAutomationCost,
   upsertAutomationCostConfig,
   deleteAutomationCostConfig,
+  // Daily token claim
+  claimDailyTokens,
+  getDailyClaimStatus,
+  getClaimHistory,
 }
