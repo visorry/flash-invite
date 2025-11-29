@@ -32,7 +32,7 @@ const purchaseBundle = async (ctx: RequestContext, bundleId: string) => {
 
     // Create local payment order
     const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substring(7)}`
-    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/tokens?order_id={order_id}`
+    const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/tokens?order_id={order_id}`
 
     const paymentOrder = await db.paymentOrder.create({
         data: {

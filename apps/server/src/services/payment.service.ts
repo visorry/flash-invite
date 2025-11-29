@@ -28,7 +28,7 @@ const createOrder = async (
         if (!plan) throw new NotFoundError('Plan not found')
         amount = plan.price
         description = `Subscription: ${plan.name}`
-        returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/subscription?order_id={order_id}`
+        returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/subscription?order_id={order_id}`
     } else if (type === PaymentType.TOKEN_BUNDLE) {
         const bundle = await db.tokenBundle.findUnique({
             where: { id: referenceId },
@@ -36,7 +36,7 @@ const createOrder = async (
         if (!bundle) throw new NotFoundError('Token bundle not found')
         amount = bundle.price
         description = `Token Bundle: ${bundle.name}`
-        returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/tokens?order_id={order_id}`
+        returnUrl = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/tokens?order_id={order_id}`
     } else {
         throw new BadRequestError('Invalid payment type')
     }

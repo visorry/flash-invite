@@ -81,11 +81,13 @@ router.get(
   '/telegram-complete',
   async (req: Request, res: Response) => {
     try {
-      const { token } = req.query
+      const { token, redirect } = req.query
 
       if (!token || typeof token !== 'string') {
         return res.redirect(`${process.env.WEB_APP_URL || 'http://localhost:3001'}/login?error=Token is required`)
       }
+
+      const redirectPath = typeof redirect === 'string' ? redirect : '/dashboard'
 
       // Find the completed login token
       const loginRecord = await db.telegramLoginToken.findFirst({
@@ -204,9 +206,9 @@ router.get(
         domain: isProduction ? cookieDomain : undefined,
       })
 
-      // Redirect to web app dashboard
+      // Redirect to web app with the specified redirect path
       const webAppUrl = process.env.WEB_APP_URL || 'http://localhost:3001'
-      res.redirect(`${webAppUrl}/dashboard`)
+      res.redirect(`${webAppUrl}${redirectPath}`)
     } catch (error) {
       console.error('Telegram complete error:', error)
       res.redirect(`${process.env.WEB_APP_URL || 'http://localhost:3001'}/login?error=Login failed`)

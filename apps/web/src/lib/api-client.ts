@@ -420,4 +420,7 @@ export const api = {
       apiClient.patch<{ success: boolean; phoneNumber: string }>('/api/v1/user/phone', { phoneNumber }),
     getProfile: () => apiClient.get<{ id: string; name: string; email: string; phoneNumber?: string }>('/api/v1/user/profile'),
   },
+  plans: {
+    list: () => apiClient.get('/api/v1/plans'),
+  },
 }

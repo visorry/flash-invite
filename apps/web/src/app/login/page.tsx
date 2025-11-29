@@ -1,15 +1,53 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { signIn } from '@/lib/auth-client'
+import { useSession } from '@/hooks/use-session'
 
 export default function LoginPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isTelegramLoading, setIsTelegramLoading] = useState(false)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user, isLoading } = useSession()
+
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push(redirectTo)
+    }
+  }, [user, isLoading, router, redirectTo])
+
+  // Show loading while checking auth status
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If user is logged in, show redirecting message
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Redirecting...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
@@ -17,7 +55,7 @@ export default function LoginPage() {
     try {
       await signIn.social({
         provider: "google",
-        callbackURL: `${window.location.origin}/dashboard`,
+        callbackURL: `${window.location.origin}${redirectTo}`,
       })
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in with Google')
@@ -71,7 +109,10 @@ export default function LoginPage() {
 
         if (data.success && data.data?.completed) {
           // Redirect to API server to complete login and set cookie
-          window.location.href = `${apiUrl}/api/v1/auth/telegram-complete?token=${token}`
+          const completeUrl = new URL(`${apiUrl}/api/v1/auth/telegram-complete`)
+          completeUrl.searchParams.set('token', token)
+          completeUrl.searchParams.set('redirect', redirectTo)
+          window.location.href = completeUrl.toString()
         } else {
           attempts++
           if (attempts < maxAttempts) {
