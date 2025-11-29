@@ -11,7 +11,7 @@ export default function Header({ user }: Props) {
       <div className="mx-auto max-w-7xl relative px-[32px] py-[18px] flex items-center justify-between">
         <div className="flex flex-1 items-center justify-start">
           <Link className="flex items-center" href={'/'}>
-            <h2 className="text-2xl font-bold text-primary">FlashInvite</h2>
+            <h2 className="text-2xl font-bold text-primary">Flash Invite</h2>
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end">

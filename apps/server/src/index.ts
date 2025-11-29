@@ -37,7 +37,7 @@ app.get('/healthcheck', (_req, res) => {
   res.json({
     success: true,
     data: {
-      message: 'Super Invite API - OK',
+      message: 'Flash Invite API - OK',
       version: config.API_VERSION,
       timestamp: new Date().toISOString(),
       scheduler: schedulerStatus,
@@ -72,12 +72,12 @@ async function startServer() {
     })
   })
 
-  console.log(`🤖 Super Invite API starting...`)
+  console.log(`🤖 Flash Invite API starting...`)
   console.log(`📍 Environment: ${config.NODE_ENV}`)
   console.log(`🌐 Port: ${config.PORT}`)
 
   app.listen(config.PORT, async () => {
-    console.log(`🚀 Super Invite API is running on port ${config.PORT}`)
+    console.log(`🚀 Flash Invite API is running on port ${config.PORT}`)
     console.log(`🔗 Health check: http://localhost:${config.PORT}/healthcheck`)
 
     // Initialize Telegram bots

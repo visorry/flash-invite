@@ -34,7 +34,7 @@ export function SideNavigation() {
         {/* Logo */}
         <div className="flex items-center gap-2 mb-6 px-3">
           <Bot className="h-6 w-6 text-primary" />
-          <span className="font-semibold text-lg">Super Invite</span>
+          <span className="font-semibold text-lg">Flash Invite</span>
         </div>
 
         {/* Navigation Links */}
