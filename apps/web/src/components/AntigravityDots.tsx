@@ -27,7 +27,12 @@ const AntigravityDots = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    // Use alpha: true for better compositing on macOS
+    const ctx = canvas.getContext('2d', { 
+      alpha: true,
+      desynchronized: true, // Better performance on macOS
+      willReadFrequently: false
+    });
     if (!ctx) return;
 
     let animationFrameId: number;
@@ -45,12 +50,18 @@ const AntigravityDots = () => {
     };
 
     const handleResize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      mouse.x = canvas.width / 2;
-      mouse.y = canvas.height / 2;
-      mouse.targetX = canvas.width / 2;
-      mouse.targetY = canvas.height / 2;
+      // Use device pixel ratio for sharper rendering on Retina displays
+      const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap at 2x for performance
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      ctx.scale(dpr, dpr);
+      
+      mouse.x = window.innerWidth / 2;
+      mouse.y = window.innerHeight / 2;
+      mouse.targetX = window.innerWidth / 2;
+      mouse.targetY = window.innerHeight / 2;
       initParticles();
     };
 
@@ -72,13 +83,29 @@ const AntigravityDots = () => {
 
     const initParticles = () => {
       particles = [];
-      // Detect mobile devices
+      // Detect device type and OS
       const isMobile = window.innerWidth < 768;
+      const isMacOS = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+      const isRetina = window.devicePixelRatio > 1;
       
-      // Reduce particle count on mobile for better performance
-      const numberOfParticles = isMobile ? 150 : 400;
-      const closeOvals = isMobile ? 50 : 150;
-      const midRangeOvals = isMobile ? 75 : 200;
+      // Optimize particle count based on device
+      // macOS with Retina displays need fewer particles for smooth performance
+      let numberOfParticles, closeOvals, midRangeOvals;
+      
+      if (isMobile) {
+        numberOfParticles = 150;
+        closeOvals = 50;
+        midRangeOvals = 75;
+      } else if (isMacOS && isRetina) {
+        // Reduce particles on macOS Retina displays (more pixels to render)
+        numberOfParticles = 250;
+        closeOvals = 100;
+        midRangeOvals = 125;
+      } else {
+        numberOfParticles = 400;
+        closeOvals = 150;
+        midRangeOvals = 200;
+      }
 
       // Regular ovals (outer range)
       for (let i = 0; i < numberOfParticles; i++) {
@@ -153,7 +180,8 @@ const AntigravityDots = () => {
     const animate = () => {
       if (!ctx || !canvas) return;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Use willReadFrequently hint for better performance
+      ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
       // Check if mouse is idle (no movement for 2 seconds)
       if (Date.now() - mouse.lastMoveTime > 2000) {
@@ -249,26 +277,30 @@ const AntigravityDots = () => {
         const opacity = baseOpacity * distanceFade * depthOpacity; // Apply all fade effects
 
         // Draw oval with glow effect
-        ctx.save();
-        
-        // Glow effect - varies with size, distance, and depth
-        ctx.shadowBlur = (8 + p.size * 3) * distanceFade * depthScale;
-        ctx.shadowColor = `rgba(37, 99, 235, ${0.6 * distanceFade * depthOpacity})`;
-        
-        // Wavey motion - oscillate the oval's rotation angle
-        const waveyAngle = p.angle + Math.sin(time * 2 + i * 0.3) * 0.5;
-        
-        // Draw varied oval (ellipse) with depth scaling
-        const radiusX = pulseSize * 2 * depthScale; // Horizontal radius with depth
-        const radiusY = pulseSize * depthScale; // Vertical radius with depth
-        
-        ctx.fillStyle = `rgba(37, 99, 235, ${opacity})`;
-        ctx.beginPath();
-        ctx.ellipse(p.currentX, p.currentY, radiusX, radiusY, waveyAngle, 0, Math.PI * 2); // Use currentX/Y for smooth traveling
-        ctx.closePath();
-        ctx.fill();
-        
-        ctx.restore();
+        // Only render particles that are visible (optimization)
+        if (opacity > 0.01 && p.currentX >= -50 && p.currentX <= window.innerWidth + 50 && 
+            p.currentY >= -50 && p.currentY <= window.innerHeight + 50) {
+          ctx.save();
+          
+          // Glow effect - varies with size, distance, and depth
+          ctx.shadowBlur = (8 + p.size * 3) * distanceFade * depthScale;
+          ctx.shadowColor = `rgba(37, 99, 235, ${0.6 * distanceFade * depthOpacity})`;
+          
+          // Wavey motion - oscillate the oval's rotation angle
+          const waveyAngle = p.angle + Math.sin(time * 2 + i * 0.3) * 0.5;
+          
+          // Draw varied oval (ellipse) with depth scaling
+          const radiusX = pulseSize * 2 * depthScale; // Horizontal radius with depth
+          const radiusY = pulseSize * depthScale; // Vertical radius with depth
+          
+          ctx.fillStyle = `rgba(37, 99, 235, ${opacity})`;
+          ctx.beginPath();
+          ctx.ellipse(p.currentX, p.currentY, radiusX, radiusY, waveyAngle, 0, Math.PI * 2);
+          ctx.closePath();
+          ctx.fill();
+          
+          ctx.restore();
+        }
       }
 
       animationFrameId = requestAnimationFrame(animate);
