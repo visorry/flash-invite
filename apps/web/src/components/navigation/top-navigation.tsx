@@ -1,7 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import { Coins, User, LogOut, Feather } from "lucide-react"
+import Image from "next/image"
+import { Coins, User, LogOut } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 import { Button } from "@/components/ui/button"
@@ -15,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { PWAInstallButton } from "@/components/pwa-install-button"
 
 export function TopNavigation() {
   const { user, logout } = useSession()
@@ -43,14 +45,23 @@ export function TopNavigation() {
       <div className="flex h-14 items-center justify-between px-4">
         {/* Logo - visible on mobile */}
         <div className="flex items-center gap-2 sm:hidden">
-          <Feather className="h-6 w-6 text-amber-500 fill-amber-500/40" />
+          <Image
+            src="/favicon/icon-96x96.png"
+            alt="Flash Invite Logo"
+            width={32}
+            height={32}
+            className="rounded-lg"
+          />
         </div>
 
         {/* Empty space for desktop (logo is in sidebar) */}
         <div className="hidden sm:block" />
 
-        {/* Right side - Token balance and avatar */}
+        {/* Right side - Install button, Token balance and avatar */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* PWA Install Button */}
+          <PWAInstallButton />
+
           {/* Token Balance */}
           <Link href="/dashboard/tokens">
             <Button

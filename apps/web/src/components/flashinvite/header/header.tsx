@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 
 interface Props {
@@ -10,8 +11,15 @@ export default function Header({ user }: Props) {
     <nav>
       <div className="mx-auto max-w-7xl relative px-[32px] py-[18px] flex items-center justify-between">
         <div className="flex flex-1 items-center justify-start">
-          <Link className="flex items-center" href={'/'}>
-            <span className="text-2xl font-bold text-primary">Flash Invite</span>
+          <Link className="flex items-center gap-2 sm:gap-3" href={'/'}>
+            <Image
+              src="/favicon/icon-96x96.png"
+              alt="Flash Invite Logo"
+              width={32}
+              height={32}
+              className="rounded-lg sm:w-10 sm:h-10"
+            />
+            <span className="text-lg sm:text-2xl font-bold">Flash Invite</span>
           </Link>
         </div>
         <div className="flex flex-1 items-center justify-end">
