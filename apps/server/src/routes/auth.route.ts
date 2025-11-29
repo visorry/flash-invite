@@ -27,7 +27,7 @@ async function getSystemBotUsername(): Promise<string> {
 // Initiate Telegram login
 router.post(
   '/telegram-login',
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       // Get bot username from database
       const botUsername = await getSystemBotUsername()
@@ -45,11 +45,18 @@ router.post(
       // Generate a unique token for telegram login
       const loginToken = randomBytes(8).toString('hex')
 
-      // Store the token in database with expiry (5 minutes)
+      // Get redirect path from request body (optional)
+      const { redirect } = req.body || {}
+      const redirectPath = redirect || '/dashboard'
+
+      // Store the token in database with expiry (5 minutes) and redirect path
       await db.telegramLoginToken.create({
         data: {
           token: loginToken,
           expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+          metadata: {
+            redirect: redirectPath
+          }
         },
       })
 
@@ -81,13 +88,11 @@ router.get(
   '/telegram-complete',
   async (req: Request, res: Response) => {
     try {
-      const { token, redirect } = req.query
+      const { token } = req.query
 
       if (!token || typeof token !== 'string') {
         return res.redirect(`${process.env.WEB_APP_URL || 'http://localhost:3001'}/login?error=Token is required`)
       }
-
-      const redirectPath = typeof redirect === 'string' ? redirect : '/dashboard'
 
       // Find the completed login token
       const loginRecord = await db.telegramLoginToken.findFirst({
@@ -97,6 +102,9 @@ router.get(
           expiresAt: { gt: new Date() },
         },
       })
+
+      // Get redirect path from metadata or default to /dashboard
+      const redirectPath = (loginRecord?.metadata as any)?.redirect || '/dashboard'
 
       if (!loginRecord || !loginRecord.telegramUserId) {
         return res.redirect(`${process.env.WEB_APP_URL || 'http://localhost:3001'}/login?error=Invalid or expired token`)

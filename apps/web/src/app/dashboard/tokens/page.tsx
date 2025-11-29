@@ -369,11 +369,21 @@ function PaymentButton({
   const handleInitialClick = async () => {
     setLoading(true)
     try {
-      // Fetch fresh user profile to check phone number
+      // Try to get phone number from localStorage first
+      const localPhone = localStorage.getItem('phoneNumber')
+      if (localPhone) {
+        processPayment(localPhone)
+        return
+      }
+
+      // If not in localStorage, try to fetch from user profile
       const profile = await api.user.getProfile()
       if (profile?.phoneNumber) {
-        processPayment()
+        // Save to localStorage for future use
+        localStorage.setItem('phoneNumber', profile.phoneNumber)
+        processPayment(profile.phoneNumber)
       } else {
+        // No phone number found, show dialog
         setShowPhoneDialog(true)
       }
     } catch (error) {
@@ -387,9 +397,10 @@ function PaymentButton({
   const processPayment = async (phone?: string) => {
     setLoading(true)
     try {
-      // If phone number is provided, update it in the database first
+      // If phone number is provided, update it in the database and localStorage
       if (phone) {
         await api.user.updatePhone(phone)
+        localStorage.setItem('phoneNumber', phone)
       }
 
       const { paymentSessionId } = await api.payments.createOrder({

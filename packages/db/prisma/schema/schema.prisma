@@ -482,6 +482,7 @@ model TelegramLoginToken {
   fullName       String?  @map("full_name")
   expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  metadata       Json?
 
   @@index([token])
   @@index([expiresAt])

@@ -170,11 +170,21 @@ function PaymentButton({ referenceId, type, amount, label }: { referenceId: stri
     const handleInitialClick = async () => {
         setLoading(true)
         try {
-            // Fetch fresh user profile to check phone number
+            // Try to get phone number from localStorage first
+            const localPhone = localStorage.getItem('phoneNumber')
+            if (localPhone) {
+                handlePayment(localPhone)
+                return
+            }
+
+            // If not in localStorage, try to fetch from user profile
             const profile = await api.user.getProfile()
             if (profile?.phoneNumber) {
-                handlePayment()
+                // Save to localStorage for future use
+                localStorage.setItem('phoneNumber', profile.phoneNumber)
+                handlePayment(profile.phoneNumber)
             } else {
+                // No phone number found, show dialog
                 setShowPhoneDialog(true)
             }
         } catch (error) {
@@ -189,9 +199,10 @@ function PaymentButton({ referenceId, type, amount, label }: { referenceId: stri
         setLoading(true)
 
         const promise = async () => {
-            // If phone number is provided, update it in the database first
+            // If phone number is provided, update it in the database and localStorage
             if (phone) {
                 await api.user.updatePhone(phone)
+                localStorage.setItem('phoneNumber', phone)
             }
 
             const { paymentSessionId } = await api.payments.createOrder({

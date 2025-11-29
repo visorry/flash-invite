@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import { signIn } from '@/lib/auth-client'
 import { useSession } from '@/hooks/use-session'
 
-export default function LoginPage() {
+function LoginPageContent() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [isTelegramLoading, setIsTelegramLoading] = useState(false)
   const router = useRouter()
@@ -74,17 +74,16 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
+        body: JSON.stringify({
+          redirect: redirectTo
+        })
       })
 
       const data = await response.json()
 
       if (data.success && data.data?.telegramLoginUrl) {
-        toast.info('Opening Telegram...')
-        window.open(data.data.telegramLoginUrl, '_blank')
-
-        // Start polling for login completion
-        const loginToken = data.data.loginToken
-        pollForLogin(loginToken)
+        // Redirect directly to Telegram login URL (opens in current tab)
+        window.location.href = data.data.telegramLoginUrl
       } else {
         toast.error(data.error?.message || 'Failed to initiate Telegram login')
         setIsTelegramLoading(false)
@@ -93,47 +92,6 @@ export default function LoginPage() {
       toast.error(error.message || 'Failed to start Telegram login')
       setIsTelegramLoading(false)
     }
-  }
-
-  const pollForLogin = async (token: string) => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
-    let attempts = 0
-    const maxAttempts = 60 // 5 minutes (5 second intervals)
-
-    const checkStatus = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/api/v1/auth/telegram-status/${token}`, {
-          credentials: 'include',
-        })
-        const data = await response.json()
-
-        if (data.success && data.data?.completed) {
-          // Redirect to API server to complete login and set cookie
-          const completeUrl = new URL(`${apiUrl}/api/v1/auth/telegram-complete`)
-          completeUrl.searchParams.set('token', token)
-          completeUrl.searchParams.set('redirect', redirectTo)
-          window.location.href = completeUrl.toString()
-        } else {
-          attempts++
-          if (attempts < maxAttempts) {
-            setTimeout(checkStatus, 5000) // Check every 5 seconds
-          } else {
-            toast.error('Login timed out. Please try again.')
-            setIsTelegramLoading(false)
-          }
-        }
-      } catch (error) {
-        console.error('Poll error:', error)
-        attempts++
-        if (attempts < maxAttempts) {
-          setTimeout(checkStatus, 5000)
-        } else {
-          setIsTelegramLoading(false)
-        }
-      }
-    }
-
-    checkStatus()
   }
 
   return (
@@ -221,5 +179,20 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center p-4 bg-muted/30">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }
