@@ -85,7 +85,7 @@ export default function AutoApprovalPage() {
         </div>
         <Button
           size="sm"
-          onClick={() => router.push('/auto-approval/create' as any)}
+          onClick={() => router.push('/dashboard/auto-approval/create' as any)}
         >
           <Plus className="w-4 h-4 mr-2" />
           New Rule
@@ -151,7 +151,7 @@ export default function AutoApprovalPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => router.push(`/auto-approval/${rule.id}/edit` as any)}
+                      onClick={() => router.push(`/dashboard/auto-approval/${rule.id}/edit` as any)}
                       title="Edit"
                     >
                       <Pencil className="h-4 w-4" />
@@ -188,7 +188,7 @@ export default function AutoApprovalPage() {
               </p>
               <Button
                 size="sm"
-                onClick={() => router.push('/auto-approval/create' as any)}
+                onClick={() => router.push('/dashboard/auto-approval/create' as any)}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create First Rule

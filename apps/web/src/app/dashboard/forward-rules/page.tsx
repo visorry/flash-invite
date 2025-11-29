@@ -124,7 +124,7 @@ export default function ForwardRulesPage() {
         </div>
         <Button
           size="sm"
-          onClick={() => router.push('/forward-rules/create' as any)}
+          onClick={() => router.push('/dashboard/forward-rules/create' as any)}
         >
           <Plus className="w-4 h-4 mr-2" />
           New Rule
@@ -253,7 +253,7 @@ export default function ForwardRulesPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => router.push(`/forward-rules/${rule.id}/edit` as any)}
+                      onClick={() => router.push(`/dashboard/forward-rules/${rule.id}/edit` as any)}
                       title="Edit"
                     >
                       <Pencil className="h-4 w-4" />
@@ -290,7 +290,7 @@ export default function ForwardRulesPage() {
               </p>
               <Button
                 size="sm"
-                onClick={() => router.push('/forward-rules/create' as any)}
+                onClick={() => router.push('/dashboard/forward-rules/create' as any)}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create First Rule

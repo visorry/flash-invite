@@ -66,7 +66,7 @@ export default function CreateAutoApprovalPage() {
     }),
     onSuccess: () => {
       toast.success('Auto-approval rule created')
-      router.push('/auto-approval' as any)
+      router.push('/dashboard/auto-approval' as any)
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to create rule')

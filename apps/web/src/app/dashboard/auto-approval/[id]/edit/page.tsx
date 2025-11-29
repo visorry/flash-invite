@@ -77,7 +77,7 @@ export default function EditAutoApprovalPage() {
     }),
     onSuccess: () => {
       toast.success('Auto-approval rule updated')
-      router.push('/auto-approval' as any)
+      router.push('/dashboard/auto-approval' as any)
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update rule')

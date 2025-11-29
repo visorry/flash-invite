@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Super Invite - Telegram Invite Management",
-	description: "Manage time-limited Telegram invite links with auto-kick functionality",
+	title: "FlashInvite - Telegram Bot Management",
+	description: "Auto-forward messages, manage Telegram bots, and automate join requests",
+	icons: {
+		icon: [
+			{ url: '/favicon/icon-48x48.png', sizes: '48x48', type: 'image/png' },
+			{ url: '/favicon/icon-96x96.png', sizes: '96x96', type: 'image/png' },
+			{ url: '/favicon/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+		],
+		apple: '/favicon/apple-touch-icon.png',
+	},
 };
 
 export const viewport: Viewport = {

@@ -137,7 +137,7 @@ export default function EditForwardRulePage() {
       // Invalidate queries to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['forward-rule', ruleId] })
       queryClient.invalidateQueries({ queryKey: ['forward-rules'] })
-      router.push('/forward-rules' as any)
+      router.push('/dashboard/forward-rules' as any)
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to update rule')
