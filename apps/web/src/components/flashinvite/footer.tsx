@@ -13,7 +13,7 @@ export function Footer() {
         }
       >
         <div className={'flex justify-center items-center gap-2'}>
-          <span className={'text-sm leading-[14px]'}>FlashInvite - Powered by Super Invite</span>
+          <span className={'text-sm leading-[14px]'}>Flash Invite</span>
         </div>
       </div>
     </>

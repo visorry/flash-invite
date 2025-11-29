@@ -22,7 +22,7 @@ class EmailService {
                 from: process.env.GMAIL_USER,
                 to: to,
                 subject: `Invoice for Order #${invoiceData.orderId}`,
-                text: `Dear Customer,\n\nPlease find attached the invoice for your recent purchase.\n\nOrder ID: ${invoiceData.orderId}\nAmount: ${invoiceData.currency} ${invoiceData.amount}\n\nThank you for your business!\n\nBest regards,\nSuper Invite Team`,
+                text: `Dear Customer,\n\nPlease find attached the invoice for your recent purchase.\n\nOrder ID: ${invoiceData.orderId}\nAmount: ${invoiceData.currency} ${invoiceData.amount}\n\nThank you for your business!\n\nBest regards,\nFlash Invite Team`,
                 attachments: [
                     {
                         filename: `invoice-${invoiceData.orderId}.pdf`,
@@ -65,7 +65,7 @@ class EmailService {
             doc.fillColor(primaryColor)
                 .fontSize(24)
                 .font('Helvetica-Bold')
-                .text('Super Invite', 50, 50)
+                .text('Flash Invite', 50, 50)
 
             doc.fillColor(grayColor)
                 .fontSize(10)
@@ -133,7 +133,7 @@ class EmailService {
 
             doc.fontSize(9).fillColor(grayColor).font('Helvetica')
                 .text('Thank you for your business!', 50, footerTop + 15, { align: 'center' })
-                .text('Super Invite Inc. | support@superinvite.com', 50, footerTop + 30, { align: 'center' })
+                .text('Flash Invite Inc. | support@flashinvite.com', 50, footerTop + 30, { align: 'center' })
 
             doc.end()
         })

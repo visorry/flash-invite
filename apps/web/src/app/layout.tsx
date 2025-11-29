@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "Super Invite - Telegram Invite Management",
+	title: "Flash Invite - Telegram Invite Management",
 	description: "Manage time-limited Telegram invite links with auto-kick functionality",
 };
 

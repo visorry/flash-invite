@@ -104,7 +104,7 @@ export default function LoginPage() {
               <Bot className="h-6 w-6 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome to Super Invite</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome to Flash Invite</CardTitle>
           <CardDescription>
             Sign in to your account to continue
           </CardDescription>
