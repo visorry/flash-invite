@@ -426,4 +426,7 @@ export const api = {
   plans: {
     list: () => apiClient.get('/api/v1/plans'),
   },
+  config: {
+    getPublic: () => apiClient.get<{ botUsername: string | null }>('/api/v1/config/public'),
+  },
 }

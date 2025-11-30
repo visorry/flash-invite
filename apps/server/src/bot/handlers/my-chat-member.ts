@@ -130,6 +130,49 @@ export async function handleMyChatMember(ctx: Context) {
     }
 
     console.log(`[MY_CHAT_MEMBER] Bot linked to ${chatTitle} (admin: ${isAdmin}, primary: ${shouldBePrimary})`)
+
+    // Send welcome message when bot is newly added as admin
+    if (!existingLink && isAdmin) {
+      try {
+        const chatTypeLabel = entityType === TelegramEntityType.CHANNEL ? 'Channel' :
+                              entityType === TelegramEntityType.SUPERGROUP ? 'Supergroup' : 'Group'
+
+        // Get member count if possible
+        let memberCount = 'N/A'
+        try {
+          const count = await ctx.telegram.getChatMembersCount(chatId)
+          memberCount = count.toString()
+        } catch (e) {
+          // Ignore if we can't get member count
+        }
+
+        const welcomeMessage = `🎉 *Welcome to ${chatTitle}!*
+
+📋 *Chat Information:*
+• Chat ID: \`${chatId}\`
+• Type: ${chatTypeLabel}
+• Members: ${memberCount}
+
+✨ *What's Next?*
+You can now manage this ${chatTypeLabel.toLowerCase()} from your dashboard:
+• 🔗 Create auto-expiring invite links
+• ⚡ Set up auto-approval rules
+• 📊 Track member analytics
+• 🔄 Configure forward rules
+• 📢 And much more!
+
+🌐 Visit your dashboard to get started and unlock all features!
+
+_Bot successfully connected and ready to use._`
+
+        await ctx.telegram.sendMessage(chatId, welcomeMessage, {
+          parse_mode: 'Markdown',
+        })
+        console.log(`[MY_CHAT_MEMBER] Welcome message sent to ${chatTitle}`)
+      } catch (messageError) {
+        console.error(`[MY_CHAT_MEMBER] Failed to send welcome message to ${chatTitle}:`, messageError)
+      }
+    }
   }
 
   // Bot was removed from chat

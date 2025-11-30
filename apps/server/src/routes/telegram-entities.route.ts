@@ -15,6 +15,7 @@ const CreateEntitySchema = z.object({
   title: z.string().min(1, 'Title is required'),
   username: z.string().optional(),
   description: z.string().optional(),
+  botId: z.string().optional(), // Optional: if not provided, use platform bot
 })
 
 const UpdateEntitySchema = z.object({

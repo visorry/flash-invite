@@ -72,6 +72,7 @@ const create = async (ctx: RequestContext, data: {
   title: string
   username?: string
   description?: string
+  botId?: string
 }) => {
   if (!ctx.user) {
     throw new BadRequestError('User not authenticated')
@@ -79,7 +80,7 @@ const create = async (ctx: RequestContext, data: {
 
   // Check if entity already exists
   const existing = await db.telegramEntity.findUnique({
-    where: { 
+    where: {
       telegramId_userId: {
         telegramId: data.telegramId,
         userId: ctx.user.id
@@ -91,17 +92,65 @@ const create = async (ctx: RequestContext, data: {
     throw new ConflictError('This Telegram group/channel is already registered')
   }
 
+  // Determine which bot to use for verification
+  let botToUse = telegramBot // Default to platform bot
+  let botIdToStore: string | null = null
+  let customBotInstance: any = null
+
+  if (data.botId && data.botId !== 'platform-bot') {
+    // User selected a custom bot, verify they own it
+    const userBot = await db.bot.findFirst({
+      where: {
+        id: data.botId,
+        userId: ctx.user.id,
+      },
+    })
+
+    if (!userBot) {
+      throw new BadRequestError('Invalid bot selected or you do not have permission to use this bot')
+    }
+
+    // Get the bot instance from bot manager
+    const { getBotInstance } = await import('../bot/bot-manager')
+    const botInstance = getBotInstance(userBot.id)
+
+    if (!botInstance) {
+      throw new BadRequestError('Selected bot is not running. Please start the bot first.')
+    }
+
+    customBotInstance = botInstance
+    botIdToStore = userBot.id
+  }
+
   // Verify bot has access to the chat
   try {
-    const chat = await telegramBot.getChat(data.telegramId)
-    const isAdmin = await telegramBot.isBotAdmin(data.telegramId)
+    let chat: any
+    let isAdmin: boolean
+    let memberCount: number
+
+    if (customBotInstance) {
+      // Using custom bot (Telegraf instance)
+      chat = await customBotInstance.bot.telegram.getChat(data.telegramId)
+
+      // Check if bot is admin - use the telegramBotId from BotInstance
+      const botMember = await customBotInstance.bot.telegram.getChatMember(
+        data.telegramId,
+        parseInt(customBotInstance.telegramBotId)
+      )
+      isAdmin = ['administrator', 'creator'].includes(botMember.status)
+
+      // Note: Telegraf uses getChatMembersCount (with 's')
+      memberCount = await customBotInstance.bot.telegram.getChatMembersCount(data.telegramId)
+    } else {
+      // Using platform bot (TelegramBotClient)
+      chat = await botToUse.getChat(data.telegramId)
+      isAdmin = await botToUse.isBotAdmin(data.telegramId)
+      memberCount = await botToUse.getChatMemberCount(data.telegramId)
+    }
 
     if (!isAdmin) {
       throw new BadRequestError('Bot must be an admin in the group/channel')
     }
-
-    // Get member count
-    const memberCount = await telegramBot.getChatMemberCount(data.telegramId)
 
     // Create entity
     const entity = await db.telegramEntity.create({
@@ -113,11 +162,57 @@ const create = async (ctx: RequestContext, data: {
         username: data.username || chat.username,
         description: data.description || chat.description,
         memberCount,
-        botAdded: true,
-        botAddedAt: new Date(),
         isActive: true,
       },
     })
+
+    // Create bot-entity link if a specific bot was used
+    if (botIdToStore) {
+      await db.botTelegramEntity.create({
+        data: {
+          botId: botIdToStore,
+          telegramEntityId: entity.id,
+          isAdmin: true,
+          isPrimary: true, // This is the primary bot for this entity
+        },
+      })
+    }
+
+    // Send welcome message to the group/channel
+    try {
+      const chatType = data.type === 0 ? 'Group' : data.type === 1 ? 'Supergroup' : 'Channel'
+      const welcomeMessage = `🎉 *Welcome to ${chat.title || data.title}!*
+
+📋 *Chat Information:*
+• Chat ID: \`${data.telegramId}\`
+• Type: ${chatType}
+• Members: ${memberCount}
+
+✨ *What's Next?*
+You can now manage this ${chatType.toLowerCase()} from your dashboard:
+• 🔗 Create auto-expiring invite links
+• ⚡ Set up auto-approval rules
+• 📊 Track member analytics
+• 🔄 Configure forward rules
+• 📢 And much more!
+
+🌐 Visit your dashboard to get started and unlock all features!
+
+_Bot successfully connected and ready to use._`
+
+      if (customBotInstance) {
+        // Send using custom bot
+        await customBotInstance.bot.telegram.sendMessage(data.telegramId, welcomeMessage, {
+          parse_mode: 'Markdown',
+        })
+      } else {
+        // Send using platform bot
+        await botToUse.sendMessage(data.telegramId, welcomeMessage)
+      }
+    } catch (messageError) {
+      // Don't fail if message sending fails, just log it
+      console.error('Failed to send welcome message:', messageError)
+    }
 
     return entity
   } catch (error: any) {

@@ -21,12 +21,14 @@ import * as userRoute from './user.route'
 import * as telegramRoute from './telegram.route'
 import * as botAdminRoute from './admin/bot-admin.route'
 import * as plansRoute from './plans.route'
+import * as configRoute from './config.route'
 
 const publicAPIs = Promise.resolve({
   auth: authRoute,
   'payments-webhook': paymentsWebhookRoute,
   telegram: telegramRoute,
   plans: plansRoute,
+  config: configRoute,
 })
 
 const v1APIs = Promise.resolve({

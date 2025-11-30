@@ -8,9 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { Bot, ArrowLeft, Info, MessageSquare } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { toast } from 'sonner'
+import { useQuery } from '@tanstack/react-query'
 
 export default function AddGroupPage() {
   const { user, isLoading } = useSession()
@@ -21,12 +24,29 @@ export default function AddGroupPage() {
     username: '',
     description: '',
     type: 0, // 0 = Group, 1 = Supergroup, 2 = Channel
+    botId: 'platform-bot', // Default to platform bot
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Fetch public bot configuration
+  const { data: botConfig } = useQuery({
+    queryKey: ['config', 'public'],
+    queryFn: async () => {
+      return api.config.getPublic()
+    },
+  })
+
+  // Fetch user's bots
+  const { data: userBots } = useQuery({
+    queryKey: ['bots'],
+    queryFn: async () => {
+      return api.bots.list()
+    },
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!formData.telegramId || !formData.title) {
       toast.error('Telegram ID and Title are required')
       return
@@ -34,6 +54,7 @@ export default function AddGroupPage() {
 
     setIsSubmitting(true)
     try {
+      // Send all form data including botId
       await api.telegramEntities.create(formData)
       toast.success('Group added successfully')
       router.push('/dashboard/groups' as any)
@@ -90,18 +111,26 @@ export default function AddGroupPage() {
             <li>
               Add{' '}
               <a
-                href={`https://t.me/${process.env.NEXT_PUBLIC_BOT_USERNAME || 'userinfobot'}`}
+                href={`https://t.me/${
+                  formData.botId === 'platform-bot'
+                    ? botConfig?.botUsername || 'userinfobot'
+                    : (userBots as any)?.find((b: any) => b.id === formData.botId)?.username || 'your bot'
+                }`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline font-medium"
               >
-                @{process.env.NEXT_PUBLIC_BOT_USERNAME || 'userinfobot'}
+                @{
+                  formData.botId === 'platform-bot'
+                    ? botConfig?.botUsername || 'userinfobot'
+                    : (userBots as any)?.find((b: any) => b.id === formData.botId)?.username || 'your bot'
+                }
               </a>{' '}
               to your group/channel
             </li>
             <li>The bot will send you the Chat ID</li>
             <li>Copy the ID (it usually starts with -100)</li>
-            <li>Make sure to add our bot as admin with necessary permissions</li>
+            <li>Make sure to add the bot as admin with necessary permissions</li>
           </ol>
         </CardContent>
       </Card>
@@ -119,6 +148,79 @@ export default function AddGroupPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Bot Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="bot">
+                Select Bot
+              </Label>
+              <Select
+                value={formData.botId}
+                onValueChange={(value) => setFormData({ ...formData, botId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {formData.botId === 'platform-bot' && botConfig?.botUsername ? (
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-4 w-4" />
+                        <span>@{botConfig.botUsername}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">Platform</Badge>
+                      </div>
+                    ) : formData.botId !== 'platform-bot' ? (
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-4 w-4" />
+                        <span>@{(userBots as any)?.find((b: any) => b.id === formData.botId)?.username || 'Select a bot'}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Select a bot</span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {/* Platform Bot */}
+                  {botConfig?.botUsername && (
+                    <SelectItem value="platform-bot">
+                      <div className="flex items-center gap-2 w-full">
+                        <Bot className="h-4 w-4" />
+                        <span>@{botConfig.botUsername}</span>
+                        <Badge variant="secondary" className="ml-auto text-xs">Platform</Badge>
+                      </div>
+                    </SelectItem>
+                  )}
+
+                  {/* User's Bots */}
+                  {(userBots as any)?.length > 0 && (
+                    <>
+                      {botConfig?.botUsername && (
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                          Your Bots
+                        </div>
+                      )}
+                      {(userBots as any).map((bot: any) => (
+                        <SelectItem key={bot.id} value={bot.id}>
+                          <div className="flex items-center gap-2">
+                            <Bot className="h-4 w-4" />
+                            <span>@{bot.username}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </>
+                  )}
+
+                  {/* No bots available */}
+                  {!botConfig?.botUsername && !(userBots as any)?.length && (
+                    <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                      No bots available
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {formData.botId === 'platform-bot'
+                  ? 'Using the default system bot configured by admin'
+                  : 'Using your custom bot'}
+              </p>
+            </div>
+
             {/* Telegram ID */}
             <div className="space-y-2">
               <Label htmlFor="telegramId">
