@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { useConfirm } from '@/hooks/use-confirm'
-import { Settings, Coins, Bot, Trash2, Zap } from 'lucide-react'
+import { Settings, Coins, Bot, Trash2, Zap, CreditCard } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { BotConfigDialog } from '@/components/admin/bot-config-dialog'
 import { toast } from 'sonner'
 
@@ -27,6 +28,12 @@ const DURATION_UNITS = [
 const AUTOMATION_FEATURES = [
   { value: 0, label: 'Auto Approval', description: 'Cost per auto-approval rule' },
   { value: 1, label: 'Forward Rule', description: 'Cost per forward rule' },
+]
+
+// Payment gateway enum values
+const PAYMENT_GATEWAYS = [
+  { value: 0, label: 'Cashfree', description: 'Indian payment gateway' },
+  { value: 1, label: 'PhonePe', description: 'Indian UPI & payment gateway' },
 ]
 
 export default function AdminSettingsPage() {
@@ -130,6 +137,56 @@ export default function AdminSettingsPage() {
     },
     onError: () => {
       toast.error('Failed to remove automation pricing')
+    },
+  })
+
+  // Payment gateways query
+  const { data: paymentGateways, isLoading: gatewaysLoading } = useQuery({
+    queryKey: ['admin', 'payment-gateways'],
+    queryFn: async () => {
+      return api.admin.paymentGateways.list()
+    },
+  })
+
+  // Toggle gateway mutation
+  const toggleGatewayMutation = useMutation({
+    mutationFn: (id: string) => api.admin.paymentGateways.toggle(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'payment-gateways'] })
+      toast.success('Payment gateway status updated')
+    },
+    onError: () => {
+      toast.error('Failed to update gateway status')
+    },
+  })
+
+  // Set default gateway mutation
+  const setDefaultGatewayMutation = useMutation({
+    mutationFn: (id: string) => api.admin.paymentGateways.setDefault(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'payment-gateways'] })
+      toast.success('Default payment gateway updated')
+    },
+    onError: () => {
+      toast.error('Failed to update default gateway')
+    },
+  })
+
+  // Configure gateway mutation (create initial config)
+  const configureGatewayMutation = useMutation({
+    mutationFn: (gateway: number) =>
+      api.admin.paymentGateways.upsert({
+        gateway,
+        isActive: false,
+        isDefault: false,
+        environment: 'SANDBOX',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'payment-gateways'] })
+      toast.success('Payment gateway configured successfully')
+    },
+    onError: () => {
+      toast.error('Failed to configure gateway')
     },
   })
 
@@ -404,6 +461,106 @@ export default function AdminSettingsPage() {
                       >
                         Save
                       </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Payment Gateway Configuration */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Payment Gateways
+        </h2>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Payment Gateway Settings</CardTitle>
+            <CardDescription>
+              Configure and toggle available payment gateways. Set a default gateway for processing payments.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {gatewaysLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {PAYMENT_GATEWAYS.map((gateway) => {
+                  const config = (paymentGateways as any[])?.find((p: any) => p.gateway === gateway.value)
+                  const isActive = config?.isActive ?? false
+                  const isDefault = config?.isDefault ?? false
+
+                  return (
+                    <div key={gateway.value} className="flex items-center justify-between border rounded-lg p-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Label className="text-base font-medium">{gateway.label}</Label>
+                          {isDefault && (
+                            <Badge variant="secondary" className="text-xs">
+                              Default
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{gateway.description}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          {config ? (
+                            <>
+                              <Badge variant={isActive ? 'default' : 'outline'}>
+                                {isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                              {config.environment && (
+                                <Badge variant="outline" className="text-xs font-mono">
+                                  {config.environment}
+                                </Badge>
+                              )}
+                            </>
+                          ) : (
+                            <Badge variant="secondary">Not Configured</Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        {!config ? (
+                          <Button
+                            size="sm"
+                            onClick={() => configureGatewayMutation.mutate(gateway.value)}
+                            disabled={configureGatewayMutation.isPending}
+                          >
+                            Configure
+                          </Button>
+                        ) : (
+                          <>
+                            <Switch
+                              id={`gateway-${gateway.value}`}
+                              checked={isActive}
+                              onCheckedChange={() => {
+                                if (config?.id) {
+                                  toggleGatewayMutation.mutate(config.id)
+                                }
+                              }}
+                              disabled={toggleGatewayMutation.isPending}
+                            />
+
+                            {isActive && !isDefault && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setDefaultGatewayMutation.mutate(config.id)}
+                                disabled={setDefaultGatewayMutation.isPending}
+                              >
+                                Set Default
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </div>
                   )
                 })}

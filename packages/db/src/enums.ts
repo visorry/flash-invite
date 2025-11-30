@@ -115,6 +115,12 @@ export enum PaymentType {
   TOKEN_BUNDLE = 1,
 }
 
+// Payment Gateway
+export enum PaymentGateway {
+  CASHFREE = 0,
+  PHONEPE = 1,
+}
+
 // Helper to get duration unit label
 export function getDurationUnitLabel(unit: DurationUnit): string {
   const labels: Record<DurationUnit, string> = {

@@ -1,7 +1,9 @@
 import { NotFoundError, BadRequestError } from '../errors/http-exception'
 import type { RequestContext } from '../types/app'
-import db, { PaymentStatus, PaymentType, TransactionType } from '@super-invite/db'
+import db, { PaymentStatus, PaymentType, TransactionType, PaymentGateway } from '@super-invite/db'
 import cashfreeService from './cashfree.service'
+import phonePeService from './phonepe.service'
+import paymentGatewayConfigService from './payment-gateway-config.service'
 import tokenService from './token.service'
 import emailService from './email.service'
 import { withTransaction } from '../helper/db/transaction'
@@ -41,6 +43,9 @@ const createOrder = async (
         throw new BadRequestError('Invalid payment type')
     }
 
+    // Get active payment gateway
+    const gatewayConfig = await paymentGatewayConfigService.getActiveGateway()
+
     // Create local payment order
     const orderId = `ORDER_${Date.now()}_${Math.random().toString(36).substring(7)}`
 
@@ -55,31 +60,55 @@ const createOrder = async (
         },
     })
 
-    // Create Cashfree order
-    // If this fails, it will bubble up and be handled by global error handler
-    // We might want to handle cleanup of the local order if we want to be strict,
-    // but for now we'll let it fail.
-    const cashfreeOrder = await cashfreeService.createOrder({
-        orderId,
-        amount,
-        currency: 'INR',
-        customerId: ctx.user.id,
-        customerEmail: ctx.user.email,
-        customerPhone: phoneNumber || (ctx.user as any).phoneNumber || '9999999999',
-        returnUrl,
-    })
+    let paymentSessionId: string | undefined
+    let redirectUrl: string | undefined
+
+    // Create order with appropriate gateway
+    if (gatewayConfig.gateway === PaymentGateway.PHONEPE) {
+        const phonePeOrder = await phonePeService.createOrder({
+            orderId,
+            amount,
+            customerId: ctx.user.id,
+            customerEmail: ctx.user.email,
+            customerPhone: phoneNumber || (ctx.user as any).phoneNumber || '9999999999',
+            returnUrl,
+            callbackUrl: `${process.env.NEXT_PUBLIC_API_URL}/api/v1/payments/webhook`,
+        })
+
+        if (phonePeOrder.success && phonePeOrder.data.instrumentResponse?.redirectInfo) {
+            redirectUrl = phonePeOrder.data.instrumentResponse.redirectInfo.url
+            paymentSessionId = phonePeOrder.data.merchantTransactionId
+        } else {
+            throw new BadRequestError('PhonePe order creation failed')
+        }
+    } else {
+        // Default to Cashfree
+        const cashfreeOrder = await cashfreeService.createOrder({
+            orderId,
+            amount,
+            currency: 'INR',
+            customerId: ctx.user.id,
+            customerEmail: ctx.user.email,
+            customerPhone: phoneNumber || (ctx.user as any).phoneNumber || '9999999999',
+            returnUrl,
+        })
+
+        paymentSessionId = cashfreeOrder.payment_session_id
+    }
 
     // Update payment session ID
     await db.paymentOrder.update({
         where: { id: paymentOrder.id },
         data: {
-            paymentSessionId: cashfreeOrder.payment_session_id,
+            paymentSessionId,
         },
     })
 
     return {
-        paymentSessionId: cashfreeOrder.payment_session_id,
+        paymentSessionId,
         orderId,
+        redirectUrl,
+        gateway: gatewayConfig.gateway,
     }
 }
 
@@ -105,10 +134,37 @@ const verifyPayment = async (orderId: string) => {
         return { status: 'FAILED', orderId }
     }
 
-    // Fetch status from Cashfree
-    const cfOrder = await cashfreeService.getOrder(orderId)
+    // Get active payment gateway to determine which service to use
+    const gatewayConfig = await paymentGatewayConfigService.getActiveGateway()
 
-    if (cfOrder.order_status === 'PAID') {
+    let paymentSuccess = false
+
+    // Fetch status from appropriate gateway
+    if (gatewayConfig.gateway === PaymentGateway.PHONEPE) {
+        const phonePeStatus = await phonePeService.getOrderStatus(orderId)
+        paymentSuccess = phonePeStatus.success && phonePeStatus.data.state === 'COMPLETED'
+
+        if (phonePeStatus.data.state === 'FAILED') {
+            await db.paymentOrder.update({
+                where: { id: paymentOrder.id },
+                data: { status: PaymentStatus.FAILED },
+            })
+            return { status: 'FAILED', orderId }
+        }
+    } else {
+        const cfOrder = await cashfreeService.getOrder(orderId)
+        paymentSuccess = cfOrder.order_status === 'PAID'
+
+        if (cfOrder.order_status === 'FAILED') {
+            await db.paymentOrder.update({
+                where: { id: paymentOrder.id },
+                data: { status: PaymentStatus.FAILED },
+            })
+            return { status: 'FAILED', orderId }
+        }
+    }
+
+    if (paymentSuccess) {
         // Process successful payment
         const txResult = await withTransaction({} as any, async (tx) => { // Using empty context for system action
             // 1. Update Payment Order
@@ -403,12 +459,6 @@ const verifyPayment = async (orderId: string) => {
         }
 
         return { status: 'SUCCESS', orderId }
-    } else if (cfOrder.order_status === 'FAILED') {
-        await db.paymentOrder.update({
-            where: { id: paymentOrder.id },
-            data: { status: PaymentStatus.FAILED },
-        })
-        return { status: 'FAILED', orderId }
     }
 
     return { status: 'PENDING', orderId }
@@ -435,9 +485,30 @@ const handleWebhook = async (payload: any, signature: string, timestamp: string,
     console.log('Timestamp:', timestamp)
     console.log('Raw Body:', rawBody)
 
-    // Cashfree webhook payload structure usually contains data.order.order_id
-    const orderId = payload?.data?.order?.order_id || payload?.orderId || payload?.data?.order_id
-    console.log('Extracted Order ID:', orderId)
+    let orderId: string | undefined
+
+    // Detect webhook source and extract order ID
+    if (payload?.response) {
+        // PhonePe webhook format - base64 encoded response
+        console.log('Detected PhonePe webhook')
+
+        // Verify signature
+        const isValid = phonePeService.verifyWebhookSignature(payload.response, signature)
+        if (!isValid) {
+            console.error('❌ PhonePe webhook signature verification failed')
+            throw new BadRequestError('Invalid webhook signature')
+        }
+
+        // Decode response
+        const decodedData = phonePeService.decodeWebhookResponse(payload.response)
+        orderId = decodedData?.data?.merchantTransactionId
+        console.log('Extracted Order ID from PhonePe:', orderId)
+    } else {
+        // Cashfree webhook format
+        console.log('Detected Cashfree webhook')
+        orderId = payload?.data?.order?.order_id || payload?.orderId || payload?.data?.order_id
+        console.log('Extracted Order ID from Cashfree:', orderId)
+    }
 
     if (!orderId) {
         console.error('❌ Webhook received without orderId', payload)

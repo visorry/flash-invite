@@ -355,6 +355,24 @@ model Config {
   @@map("config")
 }
 
+// Payment Gateway Configuration
+model PaymentGatewayConfig {
+  id                 String   @id @default(uuid())
+  gateway            Int      @default(0) // PaymentGateway enum: 0=CASHFREE, 1=PHONEPE
+  isActive           Boolean  @default(true) @map("is_active")
+  isDefault          Boolean  @default(false) @map("is_default")
+  merchantId         String?  @map("merchant_id")
+  saltKey            String?  @map("salt_key")
+  saltIndex          Int?     @map("salt_index")
+  environment        String   @default("SANDBOX") // SANDBOX or PRODUCTION
+  webhookSecret      String?  @map("webhook_secret")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("payment_gateway_config")
+}
+
 // Group Members (users who joined via invites)
 model GroupMember {
   id                 String         @id @default(uuid())

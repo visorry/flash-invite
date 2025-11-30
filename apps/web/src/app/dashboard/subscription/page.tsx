@@ -205,21 +205,36 @@ function PaymentButton({ referenceId, type, amount, label }: { referenceId: stri
                 localStorage.setItem('phoneNumber', phone)
             }
 
-            const { paymentSessionId } = await api.payments.createOrder({
+            const response = await api.payments.createOrder({
                 referenceId,
                 type,
                 phoneNumber: phone
-            })
+            }) as any
 
-            const { load } = await import('@cashfreepayments/cashfree-js')
-            const cashfree = await load({
-                mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox',
-            })
+            // Check which gateway is being used
+            if (response.gateway === 1) {
+                // PhonePe - Direct redirect
+                if (response.redirectUrl) {
+                    window.location.href = response.redirectUrl
+                } else {
+                    throw new Error('PhonePe redirect URL not provided')
+                }
+            } else {
+                // Cashfree - SDK checkout
+                if (!response.paymentSessionId) {
+                    throw new Error('Payment session ID not provided')
+                }
 
-            await cashfree.checkout({
-                paymentSessionId,
-                redirectTarget: '_self',
-            })
+                const { load } = await import('@cashfreepayments/cashfree-js')
+                const cashfree = await load({
+                    mode: process.env.NEXT_PUBLIC_CASHFREE_ENV === 'PRODUCTION' ? 'production' : 'sandbox',
+                })
+
+                await cashfree.checkout({
+                    paymentSessionId: response.paymentSessionId,
+                    redirectTarget: '_self',
+                })
+            }
         }
 
         toast.promise(promise(), {

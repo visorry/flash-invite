@@ -252,6 +252,24 @@ export const api = {
     reset: {
       plans: () => apiClient.post('/api/v1/admin/reset/plans'),
     },
+    paymentGateways: {
+      list: () => apiClient.get('/api/v1/admin/payment-gateways'),
+      getActive: () => apiClient.get('/api/v1/admin/payment-gateways/active'),
+      upsert: (data: {
+        gateway: number;
+        isActive?: boolean;
+        isDefault?: boolean;
+        merchantId?: string;
+        saltKey?: string;
+        saltIndex?: number;
+        environment?: 'SANDBOX' | 'PRODUCTION';
+        webhookSecret?: string;
+        metadata?: any;
+      }) => apiClient.post('/api/v1/admin/payment-gateways', data),
+      setDefault: (id: string) => apiClient.patch(`/api/v1/admin/payment-gateways/${id}/set-default`),
+      toggle: (id: string) => apiClient.patch(`/api/v1/admin/payment-gateways/${id}/toggle`),
+      delete: (id: string) => apiClient.delete(`/api/v1/admin/payment-gateways/${id}`),
+    },
     tokenBundles: {
       list: () => apiClient.get('/api/v1/admin/token-bundles'),
       create: (data: any) => apiClient.post('/api/v1/admin/token-bundles', data),

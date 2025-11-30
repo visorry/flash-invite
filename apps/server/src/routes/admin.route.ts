@@ -635,6 +635,93 @@ router.post(
   }
 )
 
+// ============ Payment Gateway Configuration Routes ============
+import paymentGatewayConfigService from '../services/payment-gateway-config.service'
+import { PaymentGateway } from '@super-invite/db'
+
+// Get all payment gateway configurations
+router.get(
+  '/payment-gateways',
+  async (_req: Request) => {
+    return paymentGatewayConfigService.getAllConfigs()
+  }
+)
+
+// Get active payment gateway
+router.get(
+  '/payment-gateways/active',
+  async (_req: Request) => {
+    return paymentGatewayConfigService.getActiveGateway()
+  }
+)
+
+// Create or update payment gateway configuration
+const UpsertPaymentGatewaySchema = z.object({
+  gateway: z.number().int().min(0).max(1), // PaymentGateway enum
+  isActive: z.boolean().optional(),
+  isDefault: z.boolean().optional(),
+  merchantId: z.string().optional(),
+  saltKey: z.string().optional(),
+  saltIndex: z.number().int().optional(),
+  environment: z.enum(['SANDBOX', 'PRODUCTION']).optional(),
+  webhookSecret: z.string().optional(),
+  metadata: z.any().optional(),
+})
+
+router.post(
+  '/payment-gateways',
+  async (req: Request) => {
+    const data = req.validatedBody
+    return paymentGatewayConfigService.upsertConfig({
+      ...data,
+      gateway: data.gateway as PaymentGateway,
+    })
+  },
+  {
+    validation: UpsertPaymentGatewaySchema,
+  }
+)
+
+// Set a gateway as default
+const PaymentGatewayParamsSchema = z.object({
+  id: z.string().uuid(),
+})
+
+router.patch(
+  '/payment-gateways/:id/set-default',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return paymentGatewayConfigService.setDefault(id)
+  },
+  {
+    validation: PaymentGatewayParamsSchema,
+  }
+)
+
+// Toggle active status
+router.patch(
+  '/payment-gateways/:id/toggle',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return paymentGatewayConfigService.toggleActive(id)
+  },
+  {
+    validation: PaymentGatewayParamsSchema,
+  }
+)
+
+// Delete payment gateway configuration
+router.delete(
+  '/payment-gateways/:id',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return paymentGatewayConfigService.deleteConfig(id)
+  },
+  {
+    validation: PaymentGatewayParamsSchema,
+  }
+)
+
 // ============ User Migration Routes ============
 import userOnboardingService from '../services/user-onboarding.service'
 
