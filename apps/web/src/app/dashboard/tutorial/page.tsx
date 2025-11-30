@@ -79,8 +79,8 @@ export default function TutorialPage() {
                 </div>
               </div>
 
-              <NextLink href="/dashboard/bots">
-                <Button className="w-full mt-4">
+              <NextLink href="/dashboard/bots" className="block mt-4">
+                <Button className="w-full">
                   <Bot className="h-4 w-4 mr-2" />
                   Go to My Bots
                 </Button>
@@ -161,7 +161,7 @@ export default function TutorialPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-4">
+              <div className="flex flex-col sm:flex-row gap-2 mt-4">
                 <NextLink href="/dashboard/bots" className="flex-1">
                   <Button className="w-full" variant="outline">
                     <Bot className="h-4 w-4 mr-2" />
@@ -239,8 +239,8 @@ export default function TutorialPage() {
                 </div>
               </div>
 
-              <NextLink href="/dashboard/invites">
-                <Button className="w-full mt-4">
+              <NextLink href="/dashboard/invites" className="block mt-4">
+                <Button className="w-full">
                   <Link className="h-4 w-4 mr-2" />
                   Go to Invites
                 </Button>
@@ -294,8 +294,8 @@ export default function TutorialPage() {
                 </div>
               </div>
 
-              <NextLink href="/dashboard/members">
-                <Button className="w-full mt-4">
+              <NextLink href="/dashboard/members" className="block mt-4">
+                <Button className="w-full">
                   <Eye className="h-4 w-4 mr-2" />
                   Go to Members
                 </Button>
@@ -383,8 +383,8 @@ export default function TutorialPage() {
                   </div>
                 </div>
 
-                <NextLink href="/dashboard/forward-rules">
-                  <Button className="w-full mt-4">
+                <NextLink href="/dashboard/forward-rules" className="block mt-4">
+                  <Button className="w-full">
                     <Forward className="h-4 w-4 mr-2" />
                     Go to Forwarding
                   </Button>
@@ -455,8 +455,8 @@ export default function TutorialPage() {
                   </div>
                 </div>
 
-                <NextLink href="/dashboard/auto-approval">
-                  <Button className="w-full mt-4">
+                <NextLink href="/dashboard/auto-approval" className="block mt-4">
+                  <Button className="w-full">
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Go to Auto Approval
                   </Button>

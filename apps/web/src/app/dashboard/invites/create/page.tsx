@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Link as LinkIcon, ArrowLeft, Clock, Users, Copy, Check, Share2, Coins } from 'lucide-react'
 import { api } from '@/lib/api-client'
 import { toast } from 'sonner'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 // Max duration: 2 years in seconds
@@ -36,6 +36,7 @@ function CreateInvitePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const groupId = searchParams.get('groupId')
+  const queryClient = useQueryClient()
 
   const [formData, setFormData] = useState({
     telegramEntityId: groupId || '',
@@ -125,6 +126,10 @@ function CreateInvitePageContent() {
         // memberLimit: formData.memberLimit ? parseInt(formData.memberLimit) : null, // Defaults to 1 on server
         name: formData.name || null,
       })
+
+      // Invalidate invites and token balance queries to refresh the lists
+      queryClient.invalidateQueries({ queryKey: ['invites'] })
+      queryClient.invalidateQueries({ queryKey: ['tokens', 'balance'] })
 
       setCreatedInvite(result)
       toast.success('Invite link created successfully')
