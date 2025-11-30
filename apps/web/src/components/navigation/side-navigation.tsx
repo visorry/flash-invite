@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard } from "lucide-react"
+import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard, BookOpen } from "lucide-react"
 import { ModeToggle } from "../mode-toggle"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ export function SideNavigation() {
   const links = [
     { to: "/", label: "Home", icon: Home },
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/dashboard/tutorial", label: "Tutorial", icon: BookOpen },
     { to: "/dashboard/bots", label: "My Bots", icon: Cpu },
     { to: "/dashboard/groups", label: "Groups", icon: Bot },
     { to: "/dashboard/invites", label: "Invites", icon: LinkIcon },
