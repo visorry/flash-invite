@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { BotConfigDialog } from '@/components/admin/bot-config-dialog'
+import { WelcomeBonusConfig } from '@/components/admin/WelcomeBonusConfig'
 import { toast } from 'sonner'
 
 // Duration unit enum values
@@ -569,6 +570,8 @@ export default function AdminSettingsPage() {
           </CardContent>
         </Card>
       </div>
+      {/* Welcome Bonus Configuration */}
+      <WelcomeBonusConfig />
 
       {/* Bot Configuration */}
       <div className="space-y-4">

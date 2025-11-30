@@ -103,34 +103,39 @@ export default function BotsPage() {
             <Card key={bot.id}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Bot className="h-4 w-4" />
-                      @{bot.username}
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{bot.firstName}</span>
+                        {/* Status indicator - green circle for active */}
+                        {bot.status === 0 ? (
+                          <div className="h-2 w-2 rounded-full bg-green-500 shrink-0" title="Active" />
+                        ) : bot.status === 2 ? (
+                          <div className="h-2 w-2 rounded-full bg-red-500 shrink-0" title="Error" />
+                        ) : (
+                          <div className="h-2 w-2 rounded-full bg-gray-400 shrink-0" title="Inactive" />
+                        )}
+                      </div>
                       {bot.isDefault && (
-                        <Badge className="bg-yellow-500">
+                        <Badge className="bg-yellow-500 shrink-0">
                           <Star className="h-3 w-3 sm:mr-1" />
                           <span className="hidden sm:inline">Default</span>
                         </Badge>
                       )}
-                      {bot.status === 0 ? (
-                        <Badge className="bg-green-500">Active</Badge>
-                      ) : bot.status === 2 ? (
-                        <Badge variant="destructive">Error</Badge>
-                      ) : (
-                        <Badge variant="secondary">Inactive</Badge>
-                      )}
                     </CardTitle>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {bot.firstName}
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      @{bot.username}
                     </p>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 shrink-0">
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => syncMutation.mutate(bot.id)}
                       disabled={syncMutation.isPending}
+                      className="h-8 w-8 p-0"
+                      title="Refresh"
                     >
                       <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
                     </Button>
@@ -140,6 +145,8 @@ export default function BotsPage() {
                         variant="ghost"
                         onClick={() => setDefaultMutation.mutate(bot.id)}
                         disabled={setDefaultMutation.isPending}
+                        className="h-8 w-8 p-0"
+                        title="Set as default"
                       >
                         <Star className="h-4 w-4" />
                       </Button>
@@ -157,6 +164,8 @@ export default function BotsPage() {
                         if (confirmed) deleteMutation.mutate(bot.id)
                       }}
                       disabled={deleteMutation.isPending}
+                      className="h-8 w-8 p-0"
+                      title="Delete"
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

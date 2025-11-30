@@ -3,13 +3,19 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Bot, Link as LinkIcon, Users, Cpu } from "lucide-react"
+import { Bot, Link as LinkIcon, Users, Cpu, BookOpen } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function ManagePage() {
   const pathname = usePathname()
 
   const links = [
+    {
+      to: "/dashboard/tutorial",
+      label: "Tutorial & Guide",
+      icon: BookOpen,
+      description: "Learn how to use FlashInvite step by step"
+    },
     {
       to: "/dashboard/bots",
       label: "My Bots",

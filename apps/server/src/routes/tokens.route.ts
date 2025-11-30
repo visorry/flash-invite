@@ -85,4 +85,30 @@ router.get(
   }
 )
 
+// GET /tokens/welcome-bonus-status - Check if user has received welcome bonus
+router.get(
+  '/welcome-bonus-status',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return tokenService.getWelcomeBonusStatus(ctx)
+  }
+)
+
+// GET /tokens/welcome-bonus-config - Get welcome bonus configuration (public)
+router.get(
+  '/welcome-bonus-config',
+  async (_req: Request) => {
+    return tokenService.getWelcomeBonusConfig()
+  }
+)
+
+// POST /tokens/claim-welcome-bonus - Claim welcome bonus (auto-grants if not already received)
+router.post(
+  '/claim-welcome-bonus',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return tokenService.claimWelcomeBonus(ctx)
+  }
+)
+
 export { router }

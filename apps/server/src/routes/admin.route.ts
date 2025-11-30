@@ -225,6 +225,33 @@ router.put(
   }
 )
 
+// Get welcome bonus config
+router.get(
+  '/welcome-bonus-config',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return adminService.getWelcomeBonusConfig(ctx)
+  }
+)
+
+// Update welcome bonus config
+const UpdateWelcomeBonusConfigSchema = z.object({
+  amount: z.number().int().min(0).max(10000),
+  enabled: z.boolean().optional(),
+})
+
+router.put(
+  '/welcome-bonus-config',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const data = req.validatedBody
+    return adminService.updateWelcomeBonusConfig(ctx, data)
+  },
+  {
+    validation: UpdateWelcomeBonusConfigSchema,
+  }
+)
+
 
 
 // Token pricing configuration
