@@ -30,6 +30,8 @@ export default function InvitesPage() {
         order: 'desc',
       })
     },
+    refetchOnMount: 'always', // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   })
 
   const invites = (invitesData as any)?.items || []

@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession } from '@/hooks/use-session'
-import { Bot, Link, Users, Coins } from 'lucide-react'
+import { Bot, Link, Users, Coins, BookOpen } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
@@ -148,6 +148,17 @@ export default function DashboardPage() {
       <div className="space-y-3">
         <h2 className="text-base font-semibold">Telegram Actions</h2>
         <div className="grid grid-cols-4 gap-3">
+          {/* Tutorial */}
+          <button
+            onClick={() => router.push('/dashboard/tutorial' as any)}
+            className="flex flex-col items-center gap-2 group"
+          >
+            <div className="w-14 h-14 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 border border-primary/20">
+              <BookOpen className="h-6 w-6 text-primary" />
+            </div>
+            <span className="text-xs font-medium text-center text-primary group-hover:text-primary/80 transition-colors">Tutorial &amp; Guide</span>
+          </button>
+
           {/* Create Invite */}
           <button
             onClick={() => router.push('/dashboard/invites/create' as any)}
@@ -157,17 +168,6 @@ export default function DashboardPage() {
               <Link className="h-6 w-6 text-foreground" />
             </div>
             <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-foreground transition-colors">Create<br />Invite</span>
-          </button>
-
-          {/* Manage Groups */}
-          <button
-            onClick={() => router.push('/dashboard/groups' as any)}
-            className="flex flex-col items-center gap-2 group"
-          >
-            <div className="w-14 h-14 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 border border-border">
-              <Users className="h-6 w-6 text-foreground" />
-            </div>
-            <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-foreground transition-colors">Manage Groups</span>
           </button>
 
           {/* Auto Approval */}
