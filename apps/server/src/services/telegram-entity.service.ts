@@ -79,7 +79,12 @@ const create = async (ctx: RequestContext, data: {
 
   // Check if entity already exists
   const existing = await db.telegramEntity.findUnique({
-    where: { telegramId: data.telegramId },
+    where: { 
+      telegramId_userId: {
+        telegramId: data.telegramId,
+        userId: ctx.user.id
+      }
+    },
   })
 
   if (existing) {
