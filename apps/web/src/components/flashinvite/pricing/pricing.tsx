@@ -58,7 +58,7 @@ export function Pricing({ country }: Props) {
       <div className="text-center mb-8 sm:mb-12 space-y-2 sm:space-y-4 w-full">
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">Choose Your Plan</h2>
         <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto px-2 sm:px-4">
-          Perfect plan for your community. 14-day free trial included.
+          Perfect plan for your community.
         </p>
       </div>
       <Toggle frequency={frequency} setFrequency={setFrequency} />
