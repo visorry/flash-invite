@@ -3,7 +3,9 @@
 import { BottomNavigation } from "@/components/navigation/bottom-navigation"
 import { SideNavigation } from "@/components/navigation/side-navigation"
 import { TopNavigation } from "@/components/navigation/top-navigation"
+import { WelcomeBonusPopup } from "@/components/welcome-bonus-popup"
 import { useRequireAuth } from "@/hooks/use-require-auth"
+import { useSession } from "@/hooks/use-session"
 
 export default function DashboardLayout({
   children,
@@ -12,6 +14,7 @@ export default function DashboardLayout({
 }) {
   // Require authentication for all dashboard pages
   const { isLoading } = useRequireAuth()
+  const { user } = useSession()
 
   if (isLoading) {
     return (
@@ -34,6 +37,7 @@ export default function DashboardLayout({
         </main>
       </div>
       <BottomNavigation />
+      {user && <WelcomeBonusPopup userId={user.id} />}
     </div>
   )
 }

@@ -537,6 +537,64 @@ const initializeSystemBot = async () => {
   }
 }
 
+// Get welcome bonus configuration
+const getWelcomeBonusConfig = async (_ctx: RequestContext) => {
+  const config = await db.config.findUnique({
+    where: { key: 'welcomeBonusAmount' },
+  })
+
+  const enabledConfig = await db.config.findUnique({
+    where: { key: 'welcomeBonusEnabled' },
+  })
+
+  return {
+    amount: config ? parseInt(config.value) : 100, // Default 100 tokens
+    enabled: enabledConfig ? enabledConfig.value === 'true' : true, // Default enabled
+  }
+}
+
+// Update welcome bonus configuration
+const updateWelcomeBonusConfig = async (
+  ctx: RequestContext,
+  data: { amount: number; enabled?: boolean }
+) => {
+  if (!ctx.user?.isAdmin) {
+    throw new BadRequestError('Admin access required')
+  }
+
+  // Update amount
+  await db.config.upsert({
+    where: { key: 'welcomeBonusAmount' },
+    create: {
+      key: 'welcomeBonusAmount',
+      value: data.amount.toString(),
+    },
+    update: {
+      value: data.amount.toString(),
+    },
+  })
+
+  // Update enabled status if provided
+  if (data.enabled !== undefined) {
+    await db.config.upsert({
+      where: { key: 'welcomeBonusEnabled' },
+      create: {
+        key: 'welcomeBonusEnabled',
+        value: data.enabled.toString(),
+      },
+      update: {
+        value: data.enabled.toString(),
+      },
+    })
+  }
+
+  return {
+    amount: data.amount,
+    enabled: data.enabled ?? true,
+    message: 'Welcome bonus configuration updated successfully',
+  }
+}
+
 export default {
   listUsers,
   getUserById,
@@ -554,4 +612,6 @@ export default {
   getConfig,
   updateConfig,
   initializeSystemBot,
+  getWelcomeBonusConfig,
+  updateWelcomeBonusConfig,
 }

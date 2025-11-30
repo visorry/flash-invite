@@ -31,6 +31,7 @@ export enum TransactionType {
   BOT_CREATION = 5,
   AUTOMATION_COST = 6,
   DAILY_CLAIM = 7,
+  WELCOME_BONUS = 8,
 }
 
 // Transaction Status

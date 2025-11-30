@@ -1,4 +1,66 @@
-import db, { SubscriptionStatus } from '@super-invite/db'
+import db, { SubscriptionStatus, TransactionType, TransactionStatus } from '@super-invite/db'
+
+const WELCOME_BONUS_TOKENS = 100
+
+/**
+ * Grants welcome bonus tokens to a new user
+ */
+const grantWelcomeBonus = async (userId: string) => {
+    // Check if user already received welcome bonus
+    const existingBonus = await db.tokenTransaction.findFirst({
+        where: {
+            userId,
+            type: TransactionType.WELCOME_BONUS,
+        },
+    })
+
+    if (existingBonus) {
+        console.log(`User ${userId} already received welcome bonus`)
+        return null
+    }
+
+    // Get or create token balance
+    let balance = await db.tokenBalance.findUnique({
+        where: { userId },
+    })
+
+    if (!balance) {
+        balance = await db.tokenBalance.create({
+            data: {
+                userId,
+                balance: 0,
+                totalEarned: 0,
+                totalSpent: 0,
+            },
+        })
+    }
+
+    const newBalance = balance.balance + WELCOME_BONUS_TOKENS
+
+    // Update balance
+    await db.tokenBalance.update({
+        where: { userId },
+        data: {
+            balance: newBalance,
+            totalEarned: { increment: WELCOME_BONUS_TOKENS },
+        },
+    })
+
+    // Create transaction record
+    const transaction = await db.tokenTransaction.create({
+        data: {
+            userId,
+            type: TransactionType.WELCOME_BONUS,
+            status: TransactionStatus.COMPLETED,
+            amount: WELCOME_BONUS_TOKENS,
+            balanceAfter: newBalance,
+            description: 'Welcome bonus for new account',
+        },
+    })
+
+    console.log(`Granted ${WELCOME_BONUS_TOKENS} welcome bonus tokens to user ${userId}`)
+    return transaction
+}
 
 /**
  * Assigns a free tier subscription to a new user
@@ -54,4 +116,5 @@ const assignFreeTier = async (userId: string) => {
 
 export default {
     assignFreeTier,
+    grantWelcomeBonus,
 }
