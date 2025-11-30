@@ -577,6 +577,129 @@ const getClaimHistory = async (ctx: RequestContext, limit: number = 30) => {
   return claims
 }
 
+const getWelcomeBonusStatus = async (ctx: RequestContext) => {
+  if (!ctx.user) {
+    throw new BadRequestError('User not authenticated')
+  }
+
+  // Check if user has received welcome bonus
+  const welcomeBonus = await db.tokenTransaction.findFirst({
+    where: {
+      userId: ctx.user.id,
+      type: TransactionType.WELCOME_BONUS,
+    },
+  })
+
+  return {
+    hasReceived: !!welcomeBonus,
+    transaction: welcomeBonus,
+  }
+}
+
+// Get welcome bonus configuration (public - no auth required)
+const getWelcomeBonusConfig = async () => {
+  const amountConfig = await db.config.findUnique({
+    where: { key: 'welcomeBonusAmount' },
+  })
+
+  const enabledConfig = await db.config.findUnique({
+    where: { key: 'welcomeBonusEnabled' },
+  })
+
+  return {
+    amount: amountConfig ? parseInt(amountConfig.value) : 100,
+    enabled: enabledConfig ? enabledConfig.value === 'true' : true,
+  }
+}
+
+const claimWelcomeBonus = async (ctx: RequestContext) => {
+  if (!ctx.user) {
+    throw new BadRequestError('User not authenticated')
+  }
+
+  // Check if welcome bonus is enabled
+  const enabledConfig = await db.config.findUnique({
+    where: { key: 'welcomeBonusEnabled' },
+  })
+
+  if (enabledConfig && enabledConfig.value === 'false') {
+    throw new BadRequestError('Welcome bonus is currently disabled')
+  }
+
+  // Get configured welcome bonus amount
+  const amountConfig = await db.config.findUnique({
+    where: { key: 'welcomeBonusAmount' },
+  })
+
+  const WELCOME_BONUS_AMOUNT = amountConfig ? parseInt(amountConfig.value) : 100
+
+  // Check if user already received welcome bonus
+  const existingBonus = await db.tokenTransaction.findFirst({
+    where: {
+      userId: ctx.user.id,
+      type: TransactionType.WELCOME_BONUS,
+    },
+  })
+
+  if (existingBonus) {
+    return {
+      alreadyClaimed: true,
+      message: 'Welcome bonus already claimed',
+      transaction: existingBonus,
+    }
+  }
+
+  // Grant welcome bonus
+  return withTransaction(ctx, async (tx) => {
+    // Get or create balance
+    let balance = await tx.tokenBalance.findUnique({
+      where: { userId: ctx.user!.id },
+    })
+
+    if (!balance) {
+      balance = await tx.tokenBalance.create({
+        data: {
+          userId: ctx.user!.id,
+          balance: 0,
+          totalEarned: 0,
+          totalSpent: 0,
+        },
+      })
+    }
+
+    const newBalance = balance.balance + WELCOME_BONUS_AMOUNT
+
+    // Update balance
+    await tx.tokenBalance.update({
+      where: { userId: ctx.user!.id },
+      data: {
+        balance: newBalance,
+        totalEarned: { increment: WELCOME_BONUS_AMOUNT },
+      },
+    })
+
+    // Create transaction record
+    const transaction = await tx.tokenTransaction.create({
+      data: {
+        userId: ctx.user!.id,
+        type: TransactionType.WELCOME_BONUS,
+        status: TransactionStatus.COMPLETED,
+        amount: WELCOME_BONUS_AMOUNT,
+        balanceAfter: newBalance,
+        description: 'Welcome bonus for new account',
+      },
+    })
+
+    return {
+      alreadyClaimed: false,
+      message: 'Welcome bonus claimed successfully',
+      tokensGranted: WELCOME_BONUS_AMOUNT,
+      newBalance,
+      transaction,
+    }
+  })
+}
+
 export default {
   getBalance,
   getTransactions,
@@ -596,4 +719,8 @@ export default {
   claimDailyTokens,
   getDailyClaimStatus,
   getClaimHistory,
+  // Welcome bonus
+  getWelcomeBonusStatus,
+  getWelcomeBonusConfig,
+  claimWelcomeBonus,
 }

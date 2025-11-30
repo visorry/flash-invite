@@ -141,6 +141,8 @@ router.get(
           console.error(`[AUTH] Failed to assign free tier to user ${user.id}:`, error)
           // Don't fail the login if free tier assignment fails
         }
+
+        // Note: Welcome bonus will be granted when user clicks "Claim Now" in the popup
       } else {
         // Update user info
         user = await db.user.update({
