@@ -189,6 +189,16 @@ const create = async (ctx: RequestContext, data: CreateAutoApprovalData) => {
     throw new BadRequestError('An auto-approval rule already exists for this entity')
   }
 
+  // Validate delay settings for delayed mode
+  if (data.approvalMode === 1) {
+    if (!data.delayInterval || data.delayInterval <= 0) {
+      throw new BadRequestError('Delay interval must be greater than 0 for delayed approval mode')
+    }
+    if (data.delayUnit === undefined || data.delayUnit === null) {
+      throw new BadRequestError('Delay unit is required for delayed approval mode')
+    }
+  }
+
   // Calculate token cost for automation
   const { cost: tokensCost } = await tokenService.calculateAutomationCost(
     ctx.user.id,
@@ -295,14 +305,24 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateAutoAppro
     throw new NotFoundError('Auto-approval rule not found')
   }
 
+  // Validate delay settings for delayed mode
+  if (data.approvalMode === 1) {
+    if (!data.delayInterval || data.delayInterval <= 0) {
+      throw new BadRequestError('Delay interval must be greater than 0 for delayed approval mode')
+    }
+    if (data.delayUnit === undefined || data.delayUnit === null) {
+      throw new BadRequestError('Delay unit is required for delayed approval mode')
+    }
+  }
+
   const updatedRule = await db.autoApprovalRule.update({
     where: { id: ruleId },
     data: {
       name: data.name,
       isActive: data.isActive,
       approvalMode: data.approvalMode,
-      delayInterval: data.delayInterval,
-      delayUnit: data.delayUnit,
+      delayInterval: data.delayInterval ?? rule.delayInterval,
+      delayUnit: data.delayUnit ?? rule.delayUnit,
       requirePremium: data.requirePremium,
       requireUsername: data.requireUsername,
       minAccountAge: data.minAccountAge,
