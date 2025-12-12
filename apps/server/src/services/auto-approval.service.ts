@@ -464,37 +464,163 @@ const processJoinRequest = async (
       return { action: 'error', reason: error.message }
     }
   } else if (rule.approvalMode === 1) {
-    // Delayed approval - schedule for later
+    // Delayed approval - save to database for later processing
     const delayMs = calculateDelayInMs(rule.delayInterval, rule.delayUnit)
     const delayText = formatDelayText(rule.delayInterval, rule.delayUnit)
-    
-    setTimeout(async () => {
-      try {
-        await bot.telegram.approveChatJoinRequest(chatId, userId)
-        await db.autoApprovalRule.update({
-          where: { id: rule.id },
-          data: {
-            approvedCount: { increment: 1 },
-            lastApprovedAt: new Date(),
-          },
-        })
+    const scheduledFor = new Date(Date.now() + delayMs)
 
-        if (rule.sendWelcomeMsg && rule.welcomeMessage) {
-          try {
-            await bot.telegram.sendMessage(userId, rule.welcomeMessage)
-          } catch (e) {
-            console.error('[AUTO_APPROVAL] Failed to send welcome message:', e)
-          }
-        }
-      } catch (error) {
-        console.error('[AUTO_APPROVAL] Delayed approval failed:', error)
-      }
-    }, delayMs)
+    // Save to database
+    await db.pendingApproval.create({
+      data: {
+        ruleId: rule.id,
+        botId,
+        chatId,
+        userId,
+        username: userInfo.username,
+        firstName: userInfo.firstName,
+        isPremium: userInfo.isPremium || false,
+        scheduledFor,
+        status: 'pending',
+      },
+    })
 
     return { action: 'scheduled', reason: `Approval scheduled in ${delayText}` }
   }
 
   return { action: 'none', reason: 'Unknown approval mode' }
+}
+
+// Get pending approvals for a rule
+const getPendingApprovals = async (ruleId: string) => {
+  return db.pendingApproval.findMany({
+    where: {
+      ruleId,
+      status: 'pending',
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  })
+}
+
+// Manually approve all pending requests for a rule
+const manuallyApproveAll = async (ruleId: string) => {
+  const rule = await db.autoApprovalRule.findUnique({
+    where: { id: ruleId },
+  })
+
+  if (!rule) {
+    throw new Error('Rule not found')
+  }
+
+  const pendingRequests = await db.pendingApproval.findMany({
+    where: {
+      ruleId,
+      status: 'pending',
+    },
+  })
+
+  if (pendingRequests.length === 0) {
+    return { approved: 0, failed: 0 }
+  }
+
+  const bot = getBot(rule.botId)
+  if (!bot) {
+    throw new Error('Bot not found')
+  }
+
+  let approved = 0
+  let failed = 0
+
+  for (const request of pendingRequests) {
+    await bot.telegram.approveChatJoinRequest(request.chatId, request.userId)
+    await db.pendingApproval.update({
+      where: { id: request.id },
+      data: {
+        status: 'approved',
+        processedAt: new Date(),
+      },
+    })
+
+    // Send welcome message if enabled
+    if (rule.sendWelcomeMsg && rule.welcomeMessage) {
+      await bot.telegram.sendMessage(request.userId, rule.welcomeMessage).catch((e) => {
+        console.error('[AUTO_APPROVAL] Failed to send welcome message:', e)
+      })
+    }
+
+    approved++
+  }
+
+  // Update rule stats
+  await db.autoApprovalRule.update({
+    where: { id: ruleId },
+    data: {
+      approvedCount: { increment: approved },
+      lastApprovedAt: new Date(),
+    },
+  })
+
+  return { approved, failed }
+}
+
+// Process scheduled approvals (called by cron job)
+const processScheduledApprovals = async () => {
+  const now = new Date()
+
+  const dueApprovals = await db.pendingApproval.findMany({
+    where: {
+      status: 'pending',
+      scheduledFor: {
+        lte: now,
+      },
+    },
+    include: {
+      rule: true,
+    },
+  })
+
+  let processed = 0
+  let failed = 0
+
+  for (const approval of dueApprovals) {
+    const bot = getBot(approval.botId)
+    if (!bot) {
+      console.error('[AUTO_APPROVAL] Bot not found for approval:', approval.id)
+      failed++
+      continue
+    }
+
+    await bot.telegram.approveChatJoinRequest(approval.chatId, approval.userId)
+    await db.pendingApproval.update({
+      where: { id: approval.id },
+      data: {
+        status: 'approved',
+        processedAt: new Date(),
+      },
+    })
+
+    // Update rule stats
+    await db.autoApprovalRule.update({
+      where: { id: approval.ruleId },
+      data: {
+        approvedCount: { increment: 1 },
+        lastApprovedAt: new Date(),
+      },
+    })
+
+    // Send welcome message if enabled
+    if (approval.rule.sendWelcomeMsg && approval.rule.welcomeMessage) {
+      await bot.telegram.sendMessage(approval.userId, approval.rule.welcomeMessage).catch((e) => {
+        console.error('[AUTO_APPROVAL] Failed to send welcome message:', e)
+      })
+    }
+
+    processed++
+  }
+
+  console.log(`[AUTO_APPROVAL] Processed ${processed} scheduled approvals, ${failed} failed`)
+  return { processed, failed }
 }
 
 export default {
@@ -505,4 +631,7 @@ export default {
   delete: deleteRule,
   toggleActive,
   processJoinRequest,
+  getPendingApprovals,
+  manuallyApproveAll,
+  processScheduledApprovals,
 }

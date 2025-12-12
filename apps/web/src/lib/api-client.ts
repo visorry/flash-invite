@@ -342,6 +342,8 @@ export const api = {
     }) => apiClient.put(`/api/v1/auto-approval/${id}`, data),
     toggle: (id: string) => apiClient.post(`/api/v1/auto-approval/${id}/toggle`),
     delete: (id: string) => apiClient.delete(`/api/v1/auto-approval/${id}`),
+    getPending: (id: string) => apiClient.get(`/api/v1/auto-approval/${id}/pending`),
+    approveAll: (id: string) => apiClient.post(`/api/v1/auto-approval/${id}/approve-all`),
   },
   forwardRules: {
     list: (params?: { botId?: string }) => {

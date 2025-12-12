@@ -3,7 +3,7 @@
 import { useSession } from '@/hooks/use-session'
 import { useConfirm } from '@/hooks/use-confirm'
 import { Button } from '@/components/ui/button'
-import { Plus, Power, Trash2, Pencil, UserCheck, Clock, Shield } from 'lucide-react'
+import { Plus, Power, Trash2, Pencil, UserCheck, Clock, Shield, Zap } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
@@ -46,6 +46,18 @@ export default function AutoApprovalPage() {
     },
     onError: (error: any) => {
       toast.error(error.message || 'Failed to delete rule')
+    },
+  })
+
+  // Approve all pending mutation
+  const approveAllMutation = useMutation({
+    mutationFn: (id: string) => api.autoApproval.approveAll(id),
+    onSuccess: (result: any) => {
+      queryClient.invalidateQueries({ queryKey: ['auto-approval-rules'] })
+      toast.success(`Successfully approved ${result.approved} requests`)
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to approve pending requests')
     },
   })
 
@@ -96,87 +108,16 @@ export default function AutoApprovalPage() {
       {rulesList.length > 0 ? (
         <div className="space-y-3">
           {rulesList.map((rule: any) => (
-            <Card key={rule.id}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm truncate">
-                        {rule.name}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {rule.approvalMode === 0 && <UserCheck className="h-3 w-3 mr-1" />}
-                        {rule.approvalMode === 1 && <Clock className="h-3 w-3 mr-1" />}
-                        {rule.approvalMode === 2 && <Shield className="h-3 w-3 mr-1" />}
-                        {getApprovalModeLabel(rule.approvalMode)}
-                      </Badge>
-                      {rule.isActive ? (
-                        <Badge className="bg-green-500 text-xs">Active</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">Paused</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <span className="truncate">
-                        {rule.telegramEntity?.title || 'Unknown'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      @{rule.bot?.username} • {rule.approvedCount} approved • {rule.rejectedCount} rejected
-                      {rule.approvalMode === 1 && ` • ${rule.delaySeconds}s delay`}
-                    </p>
-                    {/* Filters */}
-                    <div className="flex gap-1 mt-2 flex-wrap">
-                      {rule.requireUsername && (
-                        <Badge variant="outline" className="text-xs">Username required</Badge>
-                      )}
-                      {rule.requirePremium && (
-                        <Badge variant="outline" className="text-xs">Premium only</Badge>
-                      )}
-                      {rule.minAccountAge && (
-                        <Badge variant="outline" className="text-xs">{rule.minAccountAge}d min age</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => toggleMutation.mutate(rule.id)}
-                      disabled={toggleMutation.isPending}
-                      title={rule.isActive ? 'Pause' : 'Activate'}
-                    >
-                      <Power className={`h-4 w-4 ${rule.isActive ? 'text-green-500' : 'text-muted-foreground'}`} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => router.push(`/dashboard/auto-approval/${rule.id}/edit` as any)}
-                      title="Edit"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={async () => {
-                        const confirmed = await confirm({
-                          title: 'Delete rule?',
-                          description: 'This will permanently delete this auto-approval rule.',
-                          confirmText: 'Delete',
-                          destructive: true,
-                        })
-                        if (confirmed) deleteMutation.mutate(rule.id)
-                      }}
-                      disabled={deleteMutation.isPending}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <RuleCard
+              key={rule.id}
+              rule={rule}
+              getApprovalModeLabel={getApprovalModeLabel}
+              toggleMutation={toggleMutation}
+              deleteMutation={deleteMutation}
+              approveAllMutation={approveAllMutation}
+              router={router}
+              confirm={confirm}
+            />
           ))}
         </div>
       ) : (
@@ -212,5 +153,126 @@ export default function AutoApprovalPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function RuleCard({ rule, getApprovalModeLabel, toggleMutation, deleteMutation, approveAllMutation, router, confirm }: any) {
+  const { data: pendingData } = useQuery({
+    queryKey: ['pending-approvals', rule.id],
+    queryFn: () => api.autoApproval.getPending(rule.id),
+    enabled: rule.approvalMode === 1 && rule.isActive,
+    refetchInterval: 5000, // Refresh every 5 seconds
+  })
+
+  const pendingCount = (pendingData as any)?.length || 0
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium text-sm truncate">
+                {rule.name}
+              </span>
+              <Badge variant="outline" className="text-xs">
+                {rule.approvalMode === 0 && <UserCheck className="h-3 w-3 mr-1" />}
+                {rule.approvalMode === 1 && <Clock className="h-3 w-3 mr-1" />}
+                {rule.approvalMode === 2 && <Shield className="h-3 w-3 mr-1" />}
+                {getApprovalModeLabel(rule.approvalMode)}
+              </Badge>
+              {rule.isActive ? (
+                <Badge className="bg-green-500 text-xs">Active</Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs">Paused</Badge>
+              )}
+              {rule.approvalMode === 1 && pendingCount > 0 && (
+                <Badge variant="default" className="bg-orange-500 text-xs">
+                  {pendingCount} pending
+                </Badge>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <span className="truncate">
+                {rule.telegramEntity?.title || 'Unknown'}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              @{rule.bot?.username} • {rule.approvedCount} approved • {rule.rejectedCount} rejected
+              {rule.approvalMode === 1 && rule.delayInterval && rule.delayUnit !== undefined && (
+                ` • ${rule.delayInterval}${['s', 'm', 'h', 'd', 'M'][rule.delayUnit] || 's'} delay`
+              )}
+            </p>
+            {/* Filters */}
+            <div className="flex gap-1 mt-2 flex-wrap">
+              {rule.requireUsername && (
+                <Badge variant="outline" className="text-xs">Username required</Badge>
+              )}
+              {rule.requirePremium && (
+                <Badge variant="outline" className="text-xs">Premium only</Badge>
+              )}
+              {rule.minAccountAge && (
+                <Badge variant="outline" className="text-xs">{rule.minAccountAge}d min age</Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {rule.approvalMode === 1 && pendingCount > 0 && (
+              <Button
+                size="sm"
+                variant="default"
+                className="bg-orange-500 hover:bg-orange-600"
+                onClick={async () => {
+                  const confirmed = await confirm({
+                    title: 'Approve all pending?',
+                    description: `This will instantly approve ${pendingCount} pending join requests.`,
+                    confirmText: 'Approve All',
+                  })
+                  if (confirmed) approveAllMutation.mutate(rule.id)
+                }}
+                disabled={approveAllMutation.isPending}
+                title="Instantly approve all pending requests"
+              >
+                <Zap className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => toggleMutation.mutate(rule.id)}
+              disabled={toggleMutation.isPending}
+              title={rule.isActive ? 'Pause' : 'Activate'}
+            >
+              <Power className={`h-4 w-4 ${rule.isActive ? 'text-green-500' : 'text-muted-foreground'}`} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => router.push(`/dashboard/auto-approval/${rule.id}/edit` as any)}
+              title="Edit"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                const confirmed = await confirm({
+                  title: 'Delete rule?',
+                  description: 'This will permanently delete this auto-approval rule.',
+                  confirmText: 'Delete',
+                  destructive: true,
+                })
+                if (confirmed) deleteMutation.mutate(rule.id)
+              }}
+              disabled={deleteMutation.isPending}
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

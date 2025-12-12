@@ -639,6 +639,32 @@ model AutoApprovalRule {
   @@index([telegramEntityId])
   @@index([isActive])
   @@map("auto_approval_rule")
+
+  pendingApprovals PendingApproval[]
+}
+
+// Pending join requests awaiting delayed approval
+model PendingApproval {
+  id               String           @id @default(uuid())
+  ruleId           String           @map("rule_id")
+  rule             AutoApprovalRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  botId            String           @map("bot_id")
+  chatId           String           @map("chat_id") // Telegram chat ID
+  userId           String           @map("user_id") // Telegram user ID
+  username         String?
+  firstName        String?          @map("first_name")
+  isPremium        Boolean          @default(false) @map("is_premium")
+  scheduledFor     DateTime         @map("scheduled_for") @db.Timestamptz(3) // When to auto-approve
+  status           String           @default("pending") // pending, approved, rejected, cancelled
+  processedAt      DateTime?        @map("processed_at") @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([ruleId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([botId, chatId, userId])
+  @@map("pending_approval")
 }
 
 // Welcome/Goodbye Message Configuration

@@ -1,6 +1,7 @@
 import { kickExpiredMembers, cleanupOldInvites, sendExpiryWarnings } from './kick-expired-members'
 import { processScheduledForwards } from './forward-scheduler'
 import { checkExpiredSubscriptions } from './subscription-expiry.job'
+import autoApprovalService from '../services/auto-approval.service'
 
 /**
  * Initialize all scheduled jobs
@@ -57,6 +58,15 @@ export function initializeScheduler() {
     }
   }, 60 * 60 * 1000) // Every 1 hour
 
+  // Process scheduled auto-approvals every minute
+  const autoApprovalInterval = setInterval(async () => {
+    try {
+      await autoApprovalService.processScheduledApprovals()
+    } catch (error) {
+      console.error('[SCHEDULER] Error in auto-approval job:', error)
+    }
+  }, 60 * 1000) // Every 1 minute
+
   // Run kick job immediately on startup
   console.log('[SCHEDULER] Running initial kick job in 5 seconds...')
   setTimeout(() => {
@@ -81,6 +91,7 @@ export function initializeScheduler() {
       cleanup: cleanupInterval,
       forward: forwardInterval,
       subscriptionExpiry: subscriptionExpiryInterval,
+      autoApproval: autoApprovalInterval,
     }
 
   console.log('✅ Job scheduler initialized')
@@ -89,5 +100,6 @@ export function initializeScheduler() {
   console.log('  - Cleanup old invite links: Every 24 hours')
   console.log('  - Process scheduled forwards: Every 1 minute')
   console.log('  - Check expired subscriptions: Every 1 hour')
+  console.log('  - Process auto-approvals: Every 1 minute')
   console.log('  - GroupMember records: Kept permanently for analytics')
 }

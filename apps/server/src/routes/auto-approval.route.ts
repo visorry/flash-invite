@@ -121,4 +121,28 @@ router.delete(
   }
 )
 
+// GET /auto-approval/:id/pending - Get pending approvals for a rule
+router.get(
+  '/:id/pending',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return autoApprovalService.getPendingApprovals(id)
+  },
+  {
+    validation: ParamsSchema,
+  }
+)
+
+// POST /auto-approval/:id/approve-all - Manually approve all pending requests
+router.post(
+  '/:id/approve-all',
+  async (req: Request) => {
+    const { id } = req.validatedParams
+    return autoApprovalService.manuallyApproveAll(id)
+  },
+  {
+    validation: ParamsSchema,
+  }
+)
+
 export { router }
