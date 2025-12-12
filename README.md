@@ -1,156 +1,366 @@
 # Super Invite
 
-A platform for Telegram channel/group owners to manage invite links with time limits and auto-kick functionality.
+Open-source Telegram bot management platform with advanced automation, monetization, and analytics.
+
+## What is Super Invite?
+
+Super Invite is a comprehensive platform for managing Telegram bots, groups, and channels. It provides tools for creating time-limited invite links, auto-approving join requests, forwarding messages between channels, broadcasting to users, and monetizing your Telegram communities with subscriptions and tokens.
 
 ## Features
 
-- 🤖 **Bot Management**: Configure and manage multiple Telegram bots
-- 🔗 **Invite Links**: Generate time-limited invite links
-- ⏰ **Auto-Kick**: Automatically remove members after specified time
-- 📊 **Dashboard**: Track invites, members, and activity
-- 🎨 **Modern UI**: Built with Next.js 15 and Tailwind CSS
+### Bot Management
+- Add and manage multiple Telegram bots
+- Health monitoring and status tracking
+- Multi-bot support per user
+- Token-based bot cost system
+
+### Invite Links
+- Generate time-limited invite links (seconds to years)
+- Member limits per link
+- Auto-kick members after expiration
+- Join tracking and analytics
+- Member renewal support
+
+### Auto-Approval Rules
+- **Instant approval** - Approve join requests immediately
+- **Delayed approval** - Add spam protection with configurable delays
+- **Manual override** - Instantly approve all pending requests with one click
+- Filters: Premium users, username requirement, account age, country blocking
+- Welcome messages after approval
+- Real-time pending count tracking
+
+### Message Forwarding
+- Forward messages between channels/groups
+- **Realtime mode** - Instant forwarding
+- **Scheduled mode** - Batch forwarding with intervals
+- Content filters (media, text, documents, stickers, polls)
+- Keyword filtering (whitelist/blacklist)
+- Text modifications (remove links, add watermarks)
+- Shuffle and repeat options
+
+### Broadcasting
+- Send mass messages to bot users
+- HTML/Markdown formatting
+- Inline keyboard buttons
+- Template management
+- Progress tracking and statistics
+
+### Welcome/Goodbye Messages
+- Customizable welcome and goodbye messages per group
+- Auto-delete after specified time
+- User mentions and custom keyboards
+
+### Monetization
+- **Subscriptions** - Recurring plans with token allocations
+- **Token system** - Pay-per-use model for features
+- **Payment gateways** - PhonePe and Cashfree integration
+- Daily token claims for subscribers
+- Token bundles for direct purchase
+
+### Admin Panel
+- User management with role assignment
+- Cost configuration for features
+- System settings management
+- Analytics and reporting
+
+## Tech Stack
+
+- **Runtime**: Bun (fast JavaScript runtime)
+- **Backend**: Express + TypeScript
+- **Frontend**: Next.js 15 (App Router) + React 19
+- **Database**: PostgreSQL with Prisma ORM
+- **Auth**: Better Auth
+- **Styling**: Tailwind CSS + Shadcn UI
+- **API Client**: TanStack Query (React Query)
+- **Validation**: Zod
+- **Telegram**: Telegraf (Bot API wrapper)
 
 ## Project Structure
 
 ```
 super-invite/
 ├── apps/
-│   ├── server/          # Express API server
+│   ├── server/              # Express API backend
 │   │   ├── src/
-│   │   │   ├── config/       # Configuration
-│   │   │   ├── enums/        # Enums (HTTP status, error codes)
-│   │   │   ├── errors/       # Custom error classes
-│   │   │   ├── helper/       # Helper functions (context)
-│   │   │   ├── lib/          # Custom router implementation
-│   │   │   ├── middleware/   # Auth, validation, error handling
-│   │   │   ├── routes/       # API routes
-│   │   │   ├── services/     # Business logic
-│   │   │   └── types/        # TypeScript types
+│   │   │   ├── bot/         # Telegram bot handlers
+│   │   │   ├── config/      # App configuration
+│   │   │   ├── jobs/        # Cron jobs and schedulers
+│   │   │   ├── routes/      # API endpoints
+│   │   │   ├── services/    # Business logic
+│   │   │   ├── middleware/  # Express middleware
+│   │   │   └── validation/  # Zod schemas
 │   │   └── package.json
-│   └── web/             # Next.js dashboard
+│   └── web/                 # Next.js frontend
 │       ├── src/
-│       │   ├── app/          # App router pages
-│       │   ├── components/   # React components
-│       │   └── lib/          # Utilities, API client
+│       │   ├── app/         # App router pages
+│       │   ├── components/  # React components
+│       │   ├── hooks/       # Custom React hooks
+│       │   └── lib/         # API client, utilities
 │       └── package.json
 └── packages/
-    ├── auth/            # Better Auth configuration
-    ├── config/          # Shared config
-    └── db/              # Prisma database
+    ├── auth/                # Better Auth config
+    ├── config/              # Shared configuration
+    └── db/                  # Prisma schema and migrations
+        └── prisma/
+            └── schema/      # Database models
+```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Bun >= 1.3.0
-- PostgreSQL
-- Telegram Bot Token
+- **Bun** >= 1.3.0 ([Install Bun](https://bun.sh))
+- **PostgreSQL** (local or hosted like Neon, Supabase)
+- **Telegram Bot Token** ([Create bot with BotFather](https://t.me/botfather))
 
 ### Installation
 
-1. Clone the repository
-2. Install dependencies:
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/super-invite.git
+   cd super-invite
+   ```
+
+2. **Install dependencies**
    ```bash
    bun install
    ```
 
-3. Set up environment variables:
+3. **Set up environment variables**
+
+   Create `.env` file in `apps/server/`:
    ```bash
-   # Server (.env in apps/server/)
-   cp apps/server/.env.example apps/server/.env
-   
-   # Web (.env in apps/web/)
-   cp apps/web/.env.example apps/web/.env
+   # Database
+   DATABASE_URL="postgresql://user:password@localhost:5432/superinvite"
+
+   # App
+   NODE_ENV="development"
+   PORT=3000
+   FRONTEND_URL="http://localhost:3001"
+
+   # Auth (generate random secrets)
+   BETTER_AUTH_SECRET="your-secret-key"
+   BETTER_AUTH_URL="http://localhost:3000"
+
+   # Payment Gateways (optional)
+   PHONEPE_MERCHANT_ID=""
+   PHONEPE_SALT_KEY=""
+   PHONEPE_SALT_INDEX=""
    ```
 
-4. Configure your database and Telegram bot token in `apps/server/.env`
-
-5. Run database migrations:
+   Create `.env.local` file in `apps/web/`:
    ```bash
-   bun run db:push
+   NEXT_PUBLIC_API_URL="http://localhost:3000"
+   BETTER_AUTH_URL="http://localhost:3000"
+   BETTER_AUTH_SECRET="your-secret-key"
    ```
 
-### Development
+4. **Run database migrations**
+   ```bash
+   bun run db:migrate
+   ```
 
-Run all services:
+5. **Start development servers**
+   ```bash
+   # All services
+   bun run dev
+
+   # Or individually
+   bun run dev:server  # Backend on :3000
+   bun run dev:web     # Frontend on :3001
+   ```
+
+6. **Access the app**
+   - Frontend: http://localhost:3001
+   - Backend API: http://localhost:3000
+
+## Development
+
+### Available Scripts
+
 ```bash
-bun run dev
+# Development
+bun run dev              # Run all services
+bun run dev:server       # Backend only
+bun run dev:web          # Frontend only
+
+# Database
+bun run db:migrate       # Run migrations
+bun run db:push          # Push schema changes
+bun run db:studio        # Open Prisma Studio
+bun run db:generate      # Generate Prisma Client
+
+# Build
+bun run build            # Build all apps
+bun run check-types      # TypeScript type checking
 ```
 
-Or run individually:
-```bash
-# Server only
-bun run dev:server
+### Database Migrations
 
-# Web only
-bun run dev:web
+```bash
+# Create a new migration
+cd packages/db
+npx prisma migrate dev --name migration_name
+
+# Apply migrations
+bun run db:migrate
+
+# Reset database (WARNING: deletes all data)
+npx prisma migrate reset
 ```
 
-The server will run on http://localhost:3000
-The web dashboard will run on http://localhost:3001
+### Adding a New Feature
 
-## API Routes
+1. **Define database model** in `packages/db/prisma/schema/schema.prisma`
+2. **Create migration**: `cd packages/db && npx prisma migrate dev`
+3. **Add service** in `apps/server/src/services/`
+4. **Add routes** in `apps/server/src/routes/`
+5. **Update API client** in `apps/web/src/lib/api-client.ts`
+6. **Create UI** in `apps/web/src/app/dashboard/`
 
-### Public Routes
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/register` - User registration
-- `GET /api/v1/auth/me` - Get current user
+## API Documentation
 
-### Protected Routes (require authentication)
-- `GET /api/v1/bots` - List all bots
-- `POST /api/v1/bots` - Create a new bot
-- `GET /api/v1/bots/:id` - Get bot details
-- `PUT /api/v1/bots/:id` - Update bot
-- `DELETE /api/v1/bots/:id` - Delete bot
+### Base URL
+```
+http://localhost:3000/api/v1
+```
 
-- `GET /api/v1/invites` - List all invites
-- `POST /api/v1/invites` - Create invite link
-- `GET /api/v1/invites/:id` - Get invite details
-- `DELETE /api/v1/invites/:id` - Revoke invite
-- `GET /api/v1/invites/:id/stats` - Get invite statistics
+### Authentication
+Most endpoints require authentication. Include the session cookie in requests.
 
-- `GET /api/v1/dashboard/stats` - Dashboard statistics
-- `GET /api/v1/dashboard/recent-activity` - Recent activity
+### Key Endpoints
 
-## Architecture
+#### Bots
+- `GET /bots` - List all user bots
+- `POST /bots` - Add a new bot
+- `DELETE /bots/:id` - Remove bot
+- `POST /bots/:id/sync` - Sync bot chats
 
-### Server Architecture (Elite Squad Style)
+#### Invites
+- `GET /invites` - List invite links
+- `POST /invites` - Create invite link
+- `DELETE /invites/:id` - Revoke invite
+- `GET /invites/:id/stats` - Get statistics
 
-- **Custom Router**: Type-safe router with automatic validation and error handling
-- **Middleware**: Auth, validation, and error handling middleware
-- **Services**: Business logic separated from routes
-- **Context Pattern**: Request context for user, filters, and pagination
-- **Error Handling**: Centralized error handling with custom error classes
-- **Type Safety**: Full TypeScript support with proper types
+#### Auto-Approval
+- `GET /auto-approval` - List rules
+- `POST /auto-approval` - Create rule
+- `PUT /auto-approval/:id` - Update rule
+- `POST /auto-approval/:id/toggle` - Enable/disable
+- `GET /auto-approval/:id/pending` - Get pending approvals
+- `POST /auto-approval/:id/approve-all` - Approve all pending
 
-### Web Architecture
+#### Forward Rules
+- `GET /forward-rules` - List rules
+- `POST /forward-rules` - Create rule
+- `POST /forward-rules/:id/start` - Start forwarding
+- `POST /forward-rules/:id/pause` - Pause forwarding
+- `POST /forward-rules/:id/resume` - Resume forwarding
 
-- **Next.js 15**: App router with server components
-- **Tailwind CSS**: Utility-first styling
-- **React Query**: Data fetching and caching
-- **Shadcn UI**: Component library foundation
-- **Dark Mode**: Theme support with next-themes
+#### Tokens
+- `GET /tokens/balance` - Get user token balance
+- `GET /tokens/transactions` - Transaction history
+- `POST /tokens/claim-daily` - Claim daily tokens
 
-## TODO
 
-- [ ] Implement Prisma schema for bots, invites, and members
-- [ ] Integrate Telegram Bot API
-- [ ] Add authentication with Better Auth
-- [ ] Implement invite link generation
-- [ ] Add auto-kick scheduler
-- [ ] Create bot configuration UI
-- [ ] Add member management
-- [ ] Implement analytics and reporting
+### Database Schema
 
-## Tech Stack
+Key models:
+- **User** - User accounts and auth
+- **Bot** - Telegram bots
+- **TelegramEntity** - Groups/channels
+- **InviteLink** - Time-limited invites
+- **GroupMember** - Member tracking
+- **AutoApprovalRule** - Auto-approval config
+- **PendingApproval** - Delayed approvals queue
+- **ForwardRule** - Message forwarding config
+- **Subscription** - User subscriptions
+- **TokenTransaction** - Token history
+- **Payment** - Payment records
 
-- **Backend**: Bun, Express, TypeScript
-- **Frontend**: Next.js 15, React 19, Tailwind CSS
-- **Database**: PostgreSQL with Prisma
-- **Auth**: Better Auth
-- **Validation**: Zod
-- **API Client**: React Query
+## Deployment
 
-## License
+### Docker
 
-MIT
+```bash
+# Build images
+docker build -f Dockerfile.server -t super-invite-server .
+docker build -f Dockerfile.web -t super-invite-web .
+
+# Run with docker-compose
+docker-compose up -d
+```
+
+### Manual Deployment
+
+1. Build the apps:
+   ```bash
+   bun run build
+   ```
+
+2. Set production environment variables
+
+3. Run migrations:
+   ```bash
+   bun run db:migrate
+   ```
+
+4. Start services:
+   ```bash
+   # Server
+   cd apps/server && bun run start
+
+   # Web
+   cd apps/web && bun run start
+   ```
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow TypeScript best practices
+- Add Zod validation for all inputs
+- Update documentation when adding features
+- Test your changes before submitting
+
+## Roadmap
+
+- [ ] Multi-language support (i18n)
+- [ ] Advanced analytics dashboard
+- [ ] Webhook support for external integrations
+- [ ] More payment gateway options (Stripe, Razorpay)
+- [ ] Referral system
+- [ ] API rate limiting
+- [ ] Mobile app (React Native)
+- [ ] Plugin system for custom features
+
+## Common Issues
+
+### Database Connection Error
+Make sure PostgreSQL is running and `DATABASE_URL` is correct in `.env`.
+
+### Bot Token Invalid
+Verify your bot token from BotFather. Make sure it's added via the dashboard after login.
+
+### Port Already in Use
+Change `PORT` in server's `.env` file or kill the process using the port.
+
+### Prisma Client Not Generated
+Run `bun run db:generate` to regenerate the Prisma client.
+
+
+## Acknowledgments
+
+Built with modern tools and inspired by the Telegram bot ecosystem. Thanks to all contributors and the open-source community.
+
+---
+
+**Made with ❤️ for the Telegram community**

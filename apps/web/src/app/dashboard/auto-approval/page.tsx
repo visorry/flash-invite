@@ -171,24 +171,24 @@ function RuleCard({ rule, getApprovalModeLabel, toggleMutation, deleteMutation, 
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               <span className="font-medium text-sm truncate">
                 {rule.name}
               </span>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs shrink-0">
                 {rule.approvalMode === 0 && <UserCheck className="h-3 w-3 mr-1" />}
                 {rule.approvalMode === 1 && <Clock className="h-3 w-3 mr-1" />}
                 {rule.approvalMode === 2 && <Shield className="h-3 w-3 mr-1" />}
                 {getApprovalModeLabel(rule.approvalMode)}
               </Badge>
               {rule.isActive ? (
-                <Badge className="bg-green-500 text-xs">Active</Badge>
+                <Badge className="bg-green-500 text-xs shrink-0">Active</Badge>
               ) : (
-                <Badge variant="secondary" className="text-xs">Paused</Badge>
+                <Badge variant="secondary" className="text-xs shrink-0">Paused</Badge>
               )}
               {rule.approvalMode === 1 && pendingCount > 0 && (
-                <Badge variant="default" className="bg-orange-500 text-xs">
-                  {pendingCount} pending
+                <Badge variant="default" className="bg-orange-500 text-[10px] px-1.5 py-0 h-5 shrink-0">
+                  {pendingCount}
                 </Badge>
               )}
             </div>
