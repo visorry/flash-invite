@@ -553,7 +553,24 @@ const manuallyApproveAll = async (ruleId: string) => {
   let failed = 0
 
   for (const request of pendingRequests) {
-    await bot.telegram.approveChatJoinRequest(request.chatId, request.userId)
+    const approvalResult = await bot.telegram.approveChatJoinRequest(request.chatId, request.userId).catch((error) => {
+      console.error('[AUTO_APPROVAL] Failed to approve request:', error.message)
+      return { error: error.message }
+    })
+
+    if (approvalResult && 'error' in approvalResult) {
+      // Mark as failed/cancelled
+      await db.pendingApproval.update({
+        where: { id: request.id },
+        data: {
+          status: 'cancelled',
+          processedAt: new Date(),
+        },
+      })
+      failed++
+      continue
+    }
+
     await db.pendingApproval.update({
       where: { id: request.id },
       data: {
@@ -607,11 +624,35 @@ const processScheduledApprovals = async () => {
     const bot = getBot(approval.botId)
     if (!bot) {
       console.error('[AUTO_APPROVAL] Bot not found for approval:', approval.id)
+      await db.pendingApproval.update({
+        where: { id: approval.id },
+        data: {
+          status: 'cancelled',
+          processedAt: new Date(),
+        },
+      })
       failed++
       continue
     }
 
-    await bot.telegram.approveChatJoinRequest(approval.chatId, approval.userId)
+    const approvalResult = await bot.telegram.approveChatJoinRequest(approval.chatId, approval.userId).catch((error) => {
+      console.error('[AUTO_APPROVAL] Failed to approve scheduled request:', error.message)
+      return { error: error.message }
+    })
+
+    if (approvalResult && 'error' in approvalResult) {
+      // Mark as cancelled if already a participant or other error
+      await db.pendingApproval.update({
+        where: { id: approval.id },
+        data: {
+          status: 'cancelled',
+          processedAt: new Date(),
+        },
+      })
+      failed++
+      continue
+    }
+
     await db.pendingApproval.update({
       where: { id: approval.id },
       data: {
