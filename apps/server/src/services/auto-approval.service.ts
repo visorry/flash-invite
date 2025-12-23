@@ -558,7 +558,7 @@ const manuallyApproveAll = async (ruleId: string) => {
       return { error: error.message }
     })
 
-    if (approvalResult && 'error' in approvalResult) {
+    if (approvalResult && typeof approvalResult === 'object' && 'error' in approvalResult) {
       // Mark as failed/cancelled
       await db.pendingApproval.update({
         where: { id: request.id },
@@ -640,7 +640,7 @@ const processScheduledApprovals = async () => {
       return { error: error.message }
     })
 
-    if (approvalResult && 'error' in approvalResult) {
+    if (approvalResult && typeof approvalResult === 'object' && 'error' in approvalResult) {
       // Mark as cancelled if already a participant or other error
       await db.pendingApproval.update({
         where: { id: approval.id },
