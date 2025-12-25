@@ -183,6 +183,19 @@ export default function DashboardPage() {
             <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-foreground transition-colors">Auto Approval</span>
           </button>
 
+          {/* Auto Drop */}
+          <button
+            onClick={() => router.push('/dashboard/auto-drop' as any)}
+            className="flex flex-col items-center gap-2 group"
+          >
+            <div className="w-14 h-14 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center shadow-sm hover:shadow-md transition-all duration-200 border border-border">
+              <svg className="h-6 w-6 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+            <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-foreground transition-colors">Auto Drop</span>
+          </button>
+
           {/* Forward Rules */}
           <button
             onClick={() => router.push('/dashboard/forward-rules' as any)}

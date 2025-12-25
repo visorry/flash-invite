@@ -2,6 +2,7 @@ import { kickExpiredMembers, cleanupOldInvites, sendExpiryWarnings } from './kic
 import { processScheduledForwards } from './forward-scheduler'
 import { checkExpiredSubscriptions } from './subscription-expiry.job'
 import autoApprovalService from '../services/auto-approval.service'
+import autoDropService from '../services/auto-drop.service'
 
 /**
  * Initialize all scheduled jobs
@@ -67,6 +68,15 @@ export function initializeScheduler() {
     }
   }, 60 * 1000) // Every 1 minute
 
+  // Process scheduled auto-drops every minute
+  const autoDropInterval = setInterval(async () => {
+    try {
+      await autoDropService.processScheduledDrops()
+    } catch (error) {
+      console.error('[SCHEDULER] Error in auto-drop job:', error)
+    }
+  }, 60 * 1000) // Every 1 minute
+
   // Run kick job immediately on startup
   console.log('[SCHEDULER] Running initial kick job in 5 seconds...')
   setTimeout(() => {
@@ -92,6 +102,7 @@ export function initializeScheduler() {
       forward: forwardInterval,
       subscriptionExpiry: subscriptionExpiryInterval,
       autoApproval: autoApprovalInterval,
+      autoDrop: autoDropInterval,
     }
 
   console.log('✅ Job scheduler initialized')
@@ -101,5 +112,6 @@ export function initializeScheduler() {
   console.log('  - Process scheduled forwards: Every 1 minute')
   console.log('  - Check expired subscriptions: Every 1 hour')
   console.log('  - Process auto-approvals: Every 1 minute')
+  console.log('  - Process auto-drops: Every 1 minute')
   console.log('  - GroupMember records: Kept permanently for analytics')
 }

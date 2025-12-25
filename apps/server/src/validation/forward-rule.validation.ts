@@ -39,6 +39,7 @@ export const CreateForwardRuleSchema = z.object({
   addWatermark: z.string().max(500).optional(),
   includeKeywords: z.array(z.string()).optional(),
   excludeKeywords: z.array(z.string()).optional(),
+  hideAuthorSignature: z.boolean().optional(),
 })
 
 export const UpdateForwardRuleSchema = z.object({
@@ -54,7 +55,7 @@ export const UpdateForwardRuleSchema = z.object({
   broadcastEnabled: z.boolean().optional(),
   broadcastMessage: z.string().max(4000).nullable().optional(),
   broadcastParseMode: z.enum(['HTML', 'Markdown', 'MarkdownV2']).nullable().optional(),
-  broadcastDeleteAfter: z.boolean().optional(),
+  broadcastDeleteAfter: z.boolean().nullable().optional(),
   broadcastDeleteInterval: z.number().min(1).nullable().optional(),
   broadcastDeleteUnit: z.number().min(0).max(5).nullable().optional(),
   startFromMessageId: z.number().nullable().optional(),
@@ -70,4 +71,5 @@ export const UpdateForwardRuleSchema = z.object({
   addWatermark: z.string().max(500).nullable().optional(),
   includeKeywords: z.array(z.string()).optional(),
   excludeKeywords: z.array(z.string()).optional(),
+  hideAuthorSignature: z.boolean().optional(),
 })

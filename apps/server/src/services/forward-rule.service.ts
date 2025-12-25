@@ -41,6 +41,7 @@ interface CreateForwardRuleData {
   addWatermark?: string
   includeKeywords?: string[]
   excludeKeywords?: string[]
+  hideAuthorSignature?: boolean
 }
 
 interface UpdateForwardRuleData {
@@ -72,6 +73,7 @@ interface UpdateForwardRuleData {
   addWatermark?: string | null
   includeKeywords?: string[]
   excludeKeywords?: string[]
+  hideAuthorSignature?: boolean
 }
 
 // List all forward rules for the current user
@@ -381,38 +383,42 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateForwardRu
     throw new NotFoundError('Forward rule not found')
   }
 
+  // Filter out null and undefined values from the update data
+  const updateData: any = {}
+
+  if (data.name !== undefined) updateData.name = data.name
+  if (data.isActive !== undefined) updateData.isActive = data.isActive
+  if (data.scheduleMode !== undefined) updateData.scheduleMode = data.scheduleMode
+  if (data.batchSize !== undefined) updateData.batchSize = data.batchSize
+  if (data.postInterval !== undefined) updateData.postInterval = data.postInterval
+  if (data.postIntervalUnit !== undefined) updateData.postIntervalUnit = data.postIntervalUnit
+  if (data.deleteAfterEnabled !== undefined) updateData.deleteAfterEnabled = data.deleteAfterEnabled
+  if (data.deleteInterval !== undefined) updateData.deleteInterval = data.deleteInterval
+  if (data.deleteIntervalUnit !== undefined) updateData.deleteIntervalUnit = data.deleteIntervalUnit
+  if (data.broadcastEnabled !== undefined) updateData.broadcastEnabled = data.broadcastEnabled
+  if (data.broadcastMessage !== undefined) updateData.broadcastMessage = data.broadcastMessage
+  if (data.broadcastParseMode !== undefined) updateData.broadcastParseMode = data.broadcastParseMode
+  if (data.broadcastDeleteAfter !== undefined && data.broadcastDeleteAfter !== null) updateData.broadcastDeleteAfter = data.broadcastDeleteAfter
+  if (data.broadcastDeleteInterval !== undefined) updateData.broadcastDeleteInterval = data.broadcastDeleteInterval
+  if (data.broadcastDeleteUnit !== undefined) updateData.broadcastDeleteUnit = data.broadcastDeleteUnit
+  if (data.startFromMessageId !== undefined) updateData.startFromMessageId = data.startFromMessageId
+  if (data.endAtMessageId !== undefined) updateData.endAtMessageId = data.endAtMessageId
+  if (data.shuffle !== undefined) updateData.shuffle = data.shuffle
+  if (data.repeatWhenDone !== undefined) updateData.repeatWhenDone = data.repeatWhenDone
+  if (data.forwardMedia !== undefined) updateData.forwardMedia = data.forwardMedia
+  if (data.forwardText !== undefined) updateData.forwardText = data.forwardText
+  if (data.forwardDocuments !== undefined) updateData.forwardDocuments = data.forwardDocuments
+  if (data.forwardStickers !== undefined) updateData.forwardStickers = data.forwardStickers
+  if (data.forwardPolls !== undefined) updateData.forwardPolls = data.forwardPolls
+  if (data.removeLinks !== undefined) updateData.removeLinks = data.removeLinks
+  if (data.addWatermark !== undefined) updateData.addWatermark = data.addWatermark
+  if (data.includeKeywords !== undefined) updateData.includeKeywords = data.includeKeywords
+  if (data.excludeKeywords !== undefined) updateData.excludeKeywords = data.excludeKeywords
+  if (data.hideAuthorSignature !== undefined) updateData.hideAuthorSignature = data.hideAuthorSignature
+
   const updatedRule = await db.forwardRule.update({
     where: { id: ruleId },
-    data: {
-      name: data.name,
-      isActive: data.isActive,
-      scheduleMode: data.scheduleMode,
-      batchSize: data.batchSize,
-      postInterval: data.postInterval,
-      postIntervalUnit: data.postIntervalUnit,
-      deleteAfterEnabled: data.deleteAfterEnabled,
-      deleteInterval: data.deleteInterval,
-      deleteIntervalUnit: data.deleteIntervalUnit,
-      broadcastEnabled: data.broadcastEnabled,
-      broadcastMessage: data.broadcastMessage,
-      broadcastParseMode: data.broadcastParseMode,
-      broadcastDeleteAfter: data.broadcastDeleteAfter,
-      broadcastDeleteInterval: data.broadcastDeleteInterval,
-      broadcastDeleteUnit: data.broadcastDeleteUnit,
-      startFromMessageId: data.startFromMessageId,
-      endAtMessageId: data.endAtMessageId,
-      shuffle: data.shuffle,
-      repeatWhenDone: data.repeatWhenDone,
-      forwardMedia: data.forwardMedia,
-      forwardText: data.forwardText,
-      forwardDocuments: data.forwardDocuments,
-      forwardStickers: data.forwardStickers,
-      forwardPolls: data.forwardPolls,
-      removeLinks: data.removeLinks,
-      addWatermark: data.addWatermark,
-      includeKeywords: data.includeKeywords,
-      excludeKeywords: data.excludeKeywords,
-    },
+    data: updateData,
     include: {
       bot: {
         select: {

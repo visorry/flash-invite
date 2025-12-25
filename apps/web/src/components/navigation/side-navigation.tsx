@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard, BookOpen } from "lucide-react"
+import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard, BookOpen, ArrowDown } from "lucide-react"
 import { ModeToggle } from "../mode-toggle"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,7 @@ export function SideNavigation() {
     { to: "/dashboard/invites", label: "Invites", icon: LinkIcon },
     { to: "/dashboard/forward-rules", label: "Forwarding", icon: Forward },
     { to: "/dashboard/auto-approval", label: "Auto Approval", icon: UserCheck },
+    { to: "/dashboard/auto-drop", label: "Auto Drop", icon: ArrowDown },
     { to: "/dashboard/members", label: "Members", icon: Users },
     { to: "/dashboard/tokens", label: "Tokens", icon: Coins },
     { to: "/dashboard/subscription", label: "Subscription", icon: Zap },

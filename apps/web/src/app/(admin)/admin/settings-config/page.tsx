@@ -29,6 +29,7 @@ const DURATION_UNITS = [
 const AUTOMATION_FEATURES = [
   { value: 0, label: 'Auto Approval', description: 'Cost per auto-approval rule' },
   { value: 1, label: 'Forward Rule', description: 'Cost per forward rule' },
+  { value: 2, label: 'Auto Drop', description: 'Cost per auto-drop rule' },
 ]
 
 // Payment gateway enum values

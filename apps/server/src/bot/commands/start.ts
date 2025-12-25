@@ -43,6 +43,7 @@ export function registerStartCommand(bot: Telegraf) {
             languageCode: ctx.from.language_code ?? null,
             isPremium: ctx.from.is_premium ?? false,
             isBot: ctx.from.is_bot ?? false,
+            isActive: false, // Don't activate for auto drop by default
           },
         }).catch((botMemberError) => {
           console.error('Failed to track bot member:', botMemberError)

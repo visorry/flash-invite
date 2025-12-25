@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+const API_URL = 'http://localhost:3000'
 
 interface ApiResponse<T = any> {
   success: boolean
@@ -96,7 +96,16 @@ export const api = {
     getCost: () => apiClient.get('/api/v1/bots/cost'),
   },
   telegramEntities: {
-    list: (params?: any) => apiClient.get('/api/v1/telegram-entities', { ...params }),
+    list: (params?: any) => {
+      const queryParams = new URLSearchParams()
+      if (params?.botId) queryParams.append('botId', params.botId)
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      if (params?.sort) queryParams.append('sort', params.sort)
+      if (params?.order) queryParams.append('order', params.order)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/telegram-entities${queryString ? `?${queryString}` : ''}`)
+    },
     getById: (id: string) => apiClient.get(`/api/v1/telegram-entities/${id}`),
     create: (data: any) => apiClient.post('/api/v1/telegram-entities', data),
     update: (id: string, data: any) => apiClient.put(`/api/v1/telegram-entities/${id}`, data),
@@ -345,6 +354,42 @@ export const api = {
     getPending: (id: string) => apiClient.get(`/api/v1/auto-approval/${id}/pending`),
     approveAll: (id: string) => apiClient.post(`/api/v1/auto-approval/${id}/approve-all`),
   },
+  autoDrop: {
+    list: (params?: { botId?: string }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.botId) queryParams.append('botId', params.botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/auto-drop${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/auto-drop/${id}`),
+    create: (data: {
+      botId: string
+      telegramEntityId: string
+      name: string
+      startPostId?: number
+      endPostId?: number
+      batchSize?: number
+      dropInterval?: number
+      dropUnit?: number
+      hideAuthorSignature?: boolean
+    }) => apiClient.post('/api/v1/auto-drop', data),
+    update: (id: string, data: {
+      name?: string
+      isActive?: boolean
+      startPostId?: number | null
+      endPostId?: number | null
+      batchSize?: number
+      dropInterval?: number
+      dropUnit?: number
+      hideAuthorSignature?: boolean
+    }) => apiClient.put(`/api/v1/auto-drop/${id}`, data),
+    toggle: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/toggle`),
+    delete: (id: string) => apiClient.delete(`/api/v1/auto-drop/${id}`),
+    start: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/start`),
+    pause: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/pause`),
+    resume: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/resume`),
+    reset: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/reset`),
+  },
   forwardRules: {
     list: (params?: { botId?: string }) => {
       const queryParams = new URLSearchParams()
@@ -384,6 +429,7 @@ export const api = {
       addWatermark?: string
       includeKeywords?: string[]
       excludeKeywords?: string[]
+      hideAuthorSignature?: boolean
     }) => apiClient.post('/api/v1/forward-rules', data),
     update: (id: string, data: {
       name?: string
@@ -414,6 +460,7 @@ export const api = {
       addWatermark?: string | null
       includeKeywords?: string[]
       excludeKeywords?: string[]
+      hideAuthorSignature?: boolean
     }) => apiClient.put(`/api/v1/forward-rules/${id}`, data),
     toggle: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/toggle`),
     delete: (id: string) => apiClient.delete(`/api/v1/forward-rules/${id}`),

@@ -74,10 +74,10 @@ async function processRule(rule: any) {
   // Process batch of messages
   const batchSize = rule.batchSize || 1
   const batch = messageQueue.splice(0, Math.min(batchSize, messageQueue.length))
-  
+
   const sourceChatId = rule.sourceEntity.telegramId
   const destChatId = rule.destinationEntity.telegramId
-  
+
   let successCount = 0
   let lastProcessedId = rule.lastProcessedMsgId
 
@@ -93,9 +93,9 @@ async function processRule(rule: any) {
   // Send broadcast message if enabled and batch is complete
   if (rule.broadcastEnabled && rule.broadcastMessage && successCount > 0) {
     await sendBroadcastMessage(
-      bot, 
-      destChatId, 
-      rule.broadcastMessage, 
+      bot,
+      destChatId,
+      rule.broadcastMessage,
       rule.broadcastParseMode,
       rule.broadcastDeleteAfter,
       rule.broadcastDeleteInterval,
@@ -139,7 +139,7 @@ async function buildMessageQueue(rule: any): Promise<number[]> {
   if (rule.shuffle) {
     for (let i = messageIds.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[messageIds[i], messageIds[j]] = [messageIds[j], messageIds[i]]
+        ;[messageIds[i], messageIds[j]] = [messageIds[j], messageIds[i]]
     }
   }
 
@@ -154,47 +154,41 @@ async function forwardMessageById(
   rule: any
 ): Promise<boolean> {
   try {
-    // If no modifications needed, just forward
-    if (!rule.removeLinks && !rule.addWatermark) {
-      const forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
-      
-      // Schedule deletion if enabled
-      if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
-        scheduleMessageDeletion(bot, destChatId, forwardedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
-      }
-      
-      return true
+    let forwardedMsg: any
+
+    // Check if we should hide author signature (use copy instead of forward)
+    if (rule.hideAuthorSignature) {
+      // Copy message - hides "Forwarded from" attribution
+      forwardedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId)
+    } else {
+      // Forward message - shows "Forwarded from" attribution
+      forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
     }
 
-    // Need to copy with modifications - this is more complex
-    // For now, just forward directly
-    // TODO: Implement copyMessage with modifications
-    const forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
-    
     // Schedule deletion if enabled
     if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
       scheduleMessageDeletion(bot, destChatId, forwardedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
     }
-    
+
     return true
   } catch (error: any) {
     // Handle "message not found" error - skip this message and continue
     if (error.response?.error_code === 400 &&
-        error.response?.description?.includes('not found')) {
+      error.response?.description?.includes('not found')) {
       console.log(`[FORWARD_SCHEDULER] Skipping message ${messageId} - not found in source channel`)
       return false
     }
 
     // Handle "message can't be forwarded" error
     if (error.response?.error_code === 400 &&
-        error.response?.description?.includes("can't be forwarded")) {
+      error.response?.description?.includes("can't be forwarded")) {
       console.log(`[FORWARD_SCHEDULER] Skipping message ${messageId} - can't be forwarded`)
       return false
     }
 
     // Handle chat not found errors
     if (error.response?.error_code === 400 &&
-        error.response?.description?.includes('chat not found')) {
+      error.response?.description?.includes('chat not found')) {
       console.error(`[FORWARD_SCHEDULER] Chat not found for message ${messageId}`)
       throw error // Re-throw as this is a configuration error
     }
@@ -211,7 +205,7 @@ async function forwardMessageById(
  */
 function calculateNextRunTime(interval: number, unit: number): Date {
   const now = new Date()
-  
+
   switch (unit) {
     case 0: // seconds
       return new Date(now.getTime() + interval * 1000)
@@ -235,7 +229,7 @@ function calculateNextRunTime(interval: number, unit: number): Date {
  */
 function scheduleMessageDeletion(bot: any, chatId: string, messageId: number, interval: number, unit: number) {
   let delayMs = 0
-  
+
   switch (unit) {
     case 0: // seconds
       delayMs = interval * 1000
@@ -253,7 +247,7 @@ function scheduleMessageDeletion(bot: any, chatId: string, messageId: number, in
       delayMs = interval * 30 * 24 * 60 * 60 * 1000 // Approximate
       break
   }
-  
+
   setTimeout(async () => {
     try {
       await bot.telegram.deleteMessage(chatId, messageId)
@@ -268,9 +262,9 @@ function scheduleMessageDeletion(bot: any, chatId: string, messageId: number, in
  * Send broadcast message to destination chat
  */
 async function sendBroadcastMessage(
-  bot: any, 
-  chatId: string, 
-  message: string, 
+  bot: any,
+  chatId: string,
+  message: string,
   parseMode?: string,
   deleteAfter?: boolean,
   deleteInterval?: number,
@@ -281,7 +275,7 @@ async function sendBroadcastMessage(
       parse_mode: parseMode as any,
     })
     console.log(`[FORWARD_SCHEDULER] Sent broadcast message to ${chatId}`)
-    
+
     // Schedule deletion if enabled
     if (deleteAfter && deleteInterval && deleteUnit !== 5) {
       scheduleMessageDeletion(bot, chatId, sentMessage.message_id, deleteInterval, deleteUnit)

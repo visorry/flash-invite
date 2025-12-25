@@ -57,6 +57,7 @@ export default function EditForwardRulePage() {
   // Keywords
   const [includeKeywords, setIncludeKeywords] = useState('')
   const [excludeKeywords, setExcludeKeywords] = useState('')
+  const [hideAuthorSignature, setHideAuthorSignature] = useState(false)
 
   // Fetch rule
   const { data: rule, isLoading: ruleLoading } = useQuery({
@@ -97,6 +98,7 @@ export default function EditForwardRulePage() {
       setAddWatermark(r.addWatermark || '')
       setIncludeKeywords(r.includeKeywords?.join(', ') || '')
       setExcludeKeywords(r.excludeKeywords?.join(', ') || '')
+      setHideAuthorSignature(r.hideAuthorSignature === true)
     }
   }, [rule])
 
@@ -131,6 +133,7 @@ export default function EditForwardRulePage() {
       addWatermark: addWatermark || null,
       includeKeywords: includeKeywords ? includeKeywords.split(',').map(k => k.trim()) : [],
       excludeKeywords: excludeKeywords ? excludeKeywords.split(',').map(k => k.trim()) : [],
+      hideAuthorSignature,
     }),
     onSuccess: (data) => {
       toast.success('Forward rule updated')
@@ -365,7 +368,7 @@ export default function EditForwardRulePage() {
                       <option value="HTML">HTML</option>
                       <option value="Markdown">Markdown</option>
                     </select>
-                    
+
                     <div className="mt-3">
                       <div className="flex items-center justify-between mb-2">
                         <Label htmlFor="broadcastDelete" className="text-xs">Auto-Delete Broadcast</Label>
@@ -543,6 +546,19 @@ export default function EditForwardRulePage() {
               value={addWatermark}
               onChange={(e) => setAddWatermark(e.target.value)}
               className="mt-1 h-20"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="hideAuthorSignature" className="text-xs">Hide Author Signature</Label>
+              <p className="text-xs text-muted-foreground">
+                Hide "Forwarded from" label (uses copy instead of forward)
+              </p>
+            </div>
+            <Switch
+              id="hideAuthorSignature"
+              checked={hideAuthorSignature}
+              onCheckedChange={setHideAuthorSignature}
             />
           </div>
         </CardContent>

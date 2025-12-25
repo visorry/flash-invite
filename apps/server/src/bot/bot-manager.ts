@@ -21,21 +21,22 @@ const botsByTelegramId = new Map<string, string>()
 // Initialize all active bots from database
 export async function initializeAllBots(): Promise<void> {
   console.log('Initializing all bots from database...')
-  console.log('Bot mode: WEBHOOK (webhook-only mode)')
+  
+  // Determine bot mode based on webhook configuration
+  const useWebhooks = !!(config.TELEGRAM_WEBHOOK_DOMAIN && config.TELEGRAM_WEBHOOK_DOMAIN.startsWith('https://'))
+  const botMode = useWebhooks ? 'WEBHOOK' : 'POLLING'
+  
+  console.log(`Bot mode: ${botMode}`)
 
-  // Validate webhook configuration
-  if (!config.TELEGRAM_WEBHOOK_DOMAIN) {
-    console.error('❌ TELEGRAM_WEBHOOK_DOMAIN is not configured!')
-    console.error('   Please set TELEGRAM_WEBHOOK_DOMAIN in your .env file')
-    console.error('   For local development, use ngrok: ngrok http 3000')
-    throw new Error('TELEGRAM_WEBHOOK_DOMAIN is required for webhook mode')
+  if (useWebhooks) {
+    // Validate webhook configuration
+    if (!config.TELEGRAM_WEBHOOK_SECRET) {
+      console.warn('⚠️  TELEGRAM_WEBHOOK_SECRET is not set - using empty secret (not recommended)')
+    }
+    console.log(`✅ Webhook domain configured: ${config.TELEGRAM_WEBHOOK_DOMAIN}`)
+  } else {
+    console.log('✅ Using polling mode for local development')
   }
-
-  if (!config.TELEGRAM_WEBHOOK_SECRET) {
-    console.warn('⚠️  TELEGRAM_WEBHOOK_SECRET is not set - using empty secret (not recommended)')
-  }
-
-  console.log(`✅ Webhook domain configured: ${config.TELEGRAM_WEBHOOK_DOMAIN}`)
 
   // First, let's check ALL bots in the database for debugging
   const allBots = await db.bot.findMany({
@@ -151,9 +152,16 @@ export async function addBot(botConfig: {
     bots.set(dbBotId, instance)
     botsByTelegramId.set(instance.telegramBotId, dbBotId)
 
-    // Launch bot in webhook mode
-    console.log(`[ADD_BOT] Setting up webhook for bot @${instance.username}...`)
-    await launchBotWebhook(instance)
+    // Launch bot in appropriate mode
+    const useWebhooks = !!(config.TELEGRAM_WEBHOOK_DOMAIN && config.TELEGRAM_WEBHOOK_DOMAIN.startsWith('https://'))
+    
+    if (useWebhooks) {
+      console.log(`[ADD_BOT] Setting up webhook for bot @${instance.username}...`)
+      await launchBotWebhook(instance)
+    } else {
+      console.log(`[ADD_BOT] Starting polling for bot @${instance.username}...`)
+      await launchBotPolling(instance)
+    }
 
     // Update database
     await db.bot.update({
@@ -170,7 +178,7 @@ export async function addBot(botConfig: {
       console.error(`[ADD_BOT] Failed to update DB for bot ${dbBotId}:`, dbError)
     })
 
-    console.log(`[ADD_BOT] ✅ Bot @${instance.username} added successfully in webhook mode`)
+    console.log(`[ADD_BOT] ✅ Bot @${instance.username} added successfully in ${useWebhooks ? 'webhook' : 'polling'} mode`)
     return instance
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -264,6 +272,58 @@ async function launchBotWebhook(instance: BotInstance): Promise<void> {
     })
 }
 
+// Launch bot in polling mode
+async function launchBotPolling(instance: BotInstance): Promise<void> {
+  console.log(`[POLLING] Starting polling for bot @${instance.username}...`)
+
+  try {
+    // First, clear any existing webhook
+    await instance.bot.telegram.deleteWebhook({ drop_pending_updates: true })
+    console.log(`[POLLING] Cleared existing webhook for bot @${instance.username}`)
+    
+    // Start polling without await to avoid blocking
+    instance.bot.launch({
+      polling: {
+        timeout: 30,
+        limit: 100,
+        allowedUpdates: [
+          'message',
+          'chat_member',
+          'my_chat_member',
+          'channel_post',
+          'chat_join_request',
+        ],
+      },
+    }).catch((error) => {
+      console.error(`[POLLING] ❌ Polling error for bot @${instance.username}:`, error)
+      instance.healthStatus = 'unhealthy'
+    })
+    
+    // Set status to healthy immediately since we're not awaiting
+    instance.healthStatus = 'healthy'
+    console.log(`[POLLING] ✅ Bot @${instance.username} polling initiated`)
+  } catch (error) {
+    instance.healthStatus = 'unhealthy'
+    const errorMessage = error instanceof Error ? error.message : 'Failed to start polling'
+    console.error(`[POLLING] ❌ Failed to start polling for bot @${instance.username}:`, errorMessage)
+
+    bots.delete(instance.dbBotId)
+    botsByTelegramId.delete(instance.telegramBotId)
+
+    await db.bot.update({
+      where: { id: instance.dbBotId },
+      data: {
+        errorMessage,
+        lastHealthCheck: new Date(),
+      },
+    }).catch(dbError => {
+      console.error(`[POLLING] Failed to update DB for bot ${instance.dbBotId}:`, dbError)
+    })
+
+    throw error
+  }
+}
+
 
 // Remove a bot from the manager
 export async function removeBot(dbBotId: string): Promise<void> {
@@ -275,14 +335,18 @@ export async function removeBot(dbBotId: string): Promise<void> {
 
   console.log(`Removing bot @${instance.username}...`)
 
-  // Delete webhook (webhook mode only)
-  await instance.bot.telegram.deleteWebhook()
-    .then(() => {
-      console.log(`Webhook deleted for bot @${instance.username}`)
-    })
-    .catch((error) => {
-      console.error(`Failed to delete webhook for bot @${instance.username}:`, error)
-    })
+  const useWebhooks = !!(config.TELEGRAM_WEBHOOK_DOMAIN && config.TELEGRAM_WEBHOOK_DOMAIN.startsWith('https://'))
+
+  if (useWebhooks) {
+    // Delete webhook (webhook mode only)
+    await instance.bot.telegram.deleteWebhook()
+      .then(() => {
+        console.log(`Webhook deleted for bot @${instance.username}`)
+      })
+      .catch((error) => {
+        console.error(`Failed to delete webhook for bot @${instance.username}:`, error)
+      })
+  }
 
   // Stop the bot if it's running
   try {
@@ -360,16 +424,23 @@ export async function healthCheck(): Promise<{
 
     await instance.bot.telegram.getMe()
       .then(async (botInfo) => {
-        // Verify webhook status (webhook mode only)
-        return instance.bot.telegram.getWebhookInfo()
-          .then((webhookInfo) => {
-            if (!webhookInfo.url) {
-              throw new Error('Webhook not set')
-            }
-            return botInfo
-          })
+        const useWebhooks = !!(config.TELEGRAM_WEBHOOK_DOMAIN && config.TELEGRAM_WEBHOOK_DOMAIN.startsWith('https://'))
+        
+        if (useWebhooks) {
+          // Verify webhook status (webhook mode only)
+          return instance.bot.telegram.getWebhookInfo()
+            .then((webhookInfo) => {
+              if (!webhookInfo.url) {
+                throw new Error('Webhook not set')
+              }
+              return { botInfo, mode: 'webhook' }
+            })
+        } else {
+          // For polling mode, just return bot info
+          return { botInfo, mode: 'polling' }
+        }
       })
-      .then(async (botInfo) => {
+      .then(async ({ botInfo, mode }) => {
         instance.healthStatus = 'healthy'
         instance.lastHealthCheck = checkTime
         results.healthy++
@@ -391,7 +462,7 @@ export async function healthCheck(): Promise<{
           },
         })
 
-        console.log(`[HEALTH_CHECK] ✅ Bot @${botInfo.username} is healthy (webhook mode)`)
+        console.log(`[HEALTH_CHECK] ✅ Bot @${botInfo.username} is healthy (${mode} mode)`)
       })
       .catch(async (error) => {
         instance.healthStatus = 'unhealthy'
@@ -457,15 +528,19 @@ export function getStats() {
 export async function stopAllBots(): Promise<void> {
   console.log('Stopping all bots...')
 
+  const useWebhooks = !!(config.TELEGRAM_WEBHOOK_DOMAIN && config.TELEGRAM_WEBHOOK_DOMAIN.startsWith('https://'))
+
   const stopPromises = Array.from(bots.values()).map(async (instance) => {
-    // Delete webhook (webhook mode only)
-    await instance.bot.telegram.deleteWebhook()
-      .then(() => {
-        console.log(`Webhook deleted for bot @${instance.username}`)
-      })
-      .catch((error) => {
-        console.error(`Failed to delete webhook for bot @${instance.username}:`, error)
-      })
+    if (useWebhooks) {
+      // Delete webhook (webhook mode only)
+      await instance.bot.telegram.deleteWebhook()
+        .then(() => {
+          console.log(`Webhook deleted for bot @${instance.username}`)
+        })
+        .catch((error) => {
+          console.error(`Failed to delete webhook for bot @${instance.username}:`, error)
+        })
+    }
 
     // Stop the bot if it's running
     try {
@@ -874,19 +949,24 @@ export async function syncBotChats(dbBotId: string): Promise<{
     })
   }
 
-  // Restore webhook
-  console.log(`[SYNC_CHATS] Restoring webhook...`)
-  const webhookUrl = `${config.TELEGRAM_WEBHOOK_DOMAIN}/api/v1/telegram/webhook/${dbBotId}`
-  await instance.bot.telegram.setWebhook(webhookUrl, {
-    secret_token: config.TELEGRAM_WEBHOOK_SECRET,
-    allowed_updates: [
-      'message',
-      'chat_member',
-      'my_chat_member',
-      'channel_post',
-      'chat_join_request',
-    ],
-  })
+  // Restore webhook only if we're in webhook mode
+  const useWebhooks = !!(config.TELEGRAM_WEBHOOK_DOMAIN && config.TELEGRAM_WEBHOOK_DOMAIN.startsWith('https://'))
+  if (useWebhooks) {
+    console.log(`[SYNC_CHATS] Restoring webhook...`)
+    const webhookUrl = `${config.TELEGRAM_WEBHOOK_DOMAIN}/api/v1/telegram/webhook/${dbBotId}`
+    await instance.bot.telegram.setWebhook(webhookUrl, {
+      secret_token: config.TELEGRAM_WEBHOOK_SECRET,
+      allowed_updates: [
+        'message',
+        'chat_member',
+        'my_chat_member',
+        'channel_post',
+        'chat_join_request',
+      ],
+    })
+  } else {
+    console.log(`[SYNC_CHATS] Skipping webhook restore (polling mode)`)
+  }
 
   console.log(`[SYNC_CHATS] ✅ Sync completed - ${syncedCount} new chats synced`)
   return { success: true, synced: syncedCount }
