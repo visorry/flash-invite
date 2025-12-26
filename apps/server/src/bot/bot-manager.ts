@@ -865,6 +865,36 @@ export async function syncBotChats(dbBotId: string): Promise<{
     }
   }
 
+  // For existing chats, actively check admin status
+  console.log(`[SYNC_CHATS] Checking admin status for existing chats...`)
+  const existingLinks = await db.botTelegramEntity.findMany({
+    where: { botId: dbBotId },
+    include: { telegramEntity: true },
+  })
+
+  for (const link of existingLinks) {
+    try {
+      const chatId = link.telegramEntity.telegramId
+      const chatMember = await instance.bot.telegram.getChatMember(chatId, parseInt(bot.botId))
+      
+      const isCurrentlyAdmin = chatMember.status === 'administrator'
+      
+      if (link.isAdmin !== isCurrentlyAdmin) {
+        await db.botTelegramEntity.update({
+          where: { id: link.id },
+          data: {
+            isAdmin: isCurrentlyAdmin,
+            adminPermissions: isCurrentlyAdmin ? chatMember : null,
+            syncedAt: new Date(),
+          },
+        })
+        console.log(`[SYNC_CHATS] Updated admin status for ${link.telegramEntity.title}: ${isCurrentlyAdmin}`)
+      }
+    } catch (error) {
+      console.log(`[SYNC_CHATS] Could not check admin status for ${link.telegramEntity.title}:`, error)
+    }
+  }
+
   // Clear the update queue by calling getUpdates one more time with an offset
   if (updates.length > 0) {
     const lastUpdateId = updates[updates.length - 1].update_id

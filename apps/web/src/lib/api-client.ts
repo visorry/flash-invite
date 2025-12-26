@@ -89,6 +89,7 @@ export const api = {
     setDefault: (id: string) => apiClient.post(`/api/v1/bots/${id}/default`),
     getChats: (id: string) => apiClient.get(`/api/v1/bots/${id}/chats`),
     syncChats: (id: string) => apiClient.post(`/api/v1/bots/${id}/sync`),
+    cleanup: () => apiClient.post('/api/v1/bots/cleanup'),
     linkToEntity: (id: string, telegramEntityId: string, isPrimary: boolean = false) =>
       apiClient.post(`/api/v1/bots/${id}/entities`, { telegramEntityId, isPrimary }),
     unlinkFromEntity: (id: string, entityId: string) =>
@@ -382,6 +383,9 @@ export const api = {
       forwardPolls?: boolean
       removeLinks?: boolean
       addWatermark?: string
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
       includeKeywords?: string[]
       excludeKeywords?: string[]
     }) => apiClient.post('/api/v1/forward-rules', data),
@@ -398,7 +402,7 @@ export const api = {
       broadcastEnabled?: boolean
       broadcastMessage?: string | null
       broadcastParseMode?: string | null
-      broadcastDeleteAfter?: boolean | null
+      broadcastDeleteAfter?: boolean
       broadcastDeleteInterval?: number | null
       broadcastDeleteUnit?: number | null
       startFromMessageId?: number | null
@@ -412,6 +416,9 @@ export const api = {
       forwardPolls?: boolean
       removeLinks?: boolean
       addWatermark?: string | null
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
       includeKeywords?: string[]
       excludeKeywords?: string[]
     }) => apiClient.put(`/api/v1/forward-rules/${id}`, data),
@@ -421,6 +428,77 @@ export const api = {
     pause: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/pause`),
     resume: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/resume`),
     reset: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/reset`),
+  },
+  autoDrop: {
+    list: (params?: { botId?: string }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.botId) queryParams.append('botId', params.botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/auto-drop${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/auto-drop/${id}`),
+    create: (data: {
+      botId: string
+      sourceEntityId: string
+      name: string
+      command: string
+      rateLimitEnabled?: boolean
+      rateLimitCount?: number
+      rateLimitWindow?: number
+      rateLimitWindowUnit?: number
+      rateLimitMessage?: string
+      postsPerDrop?: number
+      randomOrder?: boolean
+      startFromMessageId?: number
+      endAtMessageId?: number
+      deleteAfterEnabled?: boolean
+      deleteInterval?: number
+      deleteIntervalUnit?: number
+      forwardMedia?: boolean
+      forwardText?: boolean
+      forwardDocuments?: boolean
+      forwardStickers?: boolean
+      forwardPolls?: boolean
+      removeLinks?: boolean
+      addWatermark?: string
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
+      includeKeywords?: string[]
+      excludeKeywords?: string[]
+    }) => apiClient.post('/api/v1/auto-drop', data),
+    update: (id: string, data: {
+      name?: string
+      isActive?: boolean
+      command?: string
+      rateLimitEnabled?: boolean
+      rateLimitCount?: number
+      rateLimitWindow?: number
+      rateLimitWindowUnit?: number
+      rateLimitMessage?: string | null
+      postsPerDrop?: number
+      randomOrder?: boolean
+      startFromMessageId?: number | null
+      endAtMessageId?: number | null
+      deleteAfterEnabled?: boolean
+      deleteInterval?: number | null
+      deleteIntervalUnit?: number | null
+      forwardMedia?: boolean
+      forwardText?: boolean
+      forwardDocuments?: boolean
+      forwardStickers?: boolean
+      forwardPolls?: boolean
+      removeLinks?: boolean
+      addWatermark?: string | null
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
+      includeKeywords?: string[]
+      excludeKeywords?: string[]
+    }) => apiClient.put(`/api/v1/auto-drop/${id}`, data),
+    toggle: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/toggle`),
+    reset: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/reset`),
+    delete: (id: string) => apiClient.delete(`/api/v1/auto-drop/${id}`),
   },
   payments: {
     createOrder: (data: { referenceId: string; type: number; phoneNumber?: string }) =>

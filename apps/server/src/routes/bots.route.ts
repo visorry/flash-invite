@@ -126,6 +126,28 @@ router.delete(
   }
 )
 
+// DELETE /bots/permanent/:botId - Permanently delete a soft-deleted bot by Telegram bot ID
+router.delete(
+  '/permanent/:botId',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    const { botId } = req.validatedParams
+    return userBotService.permanentlyDelete(ctx, botId)
+  },
+  {
+    validation: BotParamsSchema,
+  }
+)
+
+// POST /bots/cleanup - Clean up all soft-deleted bots for the user
+router.post(
+  '/cleanup',
+  async (req: Request) => {
+    const ctx = getRequestContext(req)
+    return userBotService.cleanupDeletedBots(ctx)
+  }
+)
+
 // DELETE /bots/:id/entities/:entityId - Unlink bot from entity
 router.delete(
   '/:id/entities/:entityId',

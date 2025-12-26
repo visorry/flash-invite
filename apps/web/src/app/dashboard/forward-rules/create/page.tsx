@@ -52,6 +52,9 @@ export default function CreateForwardRulePage() {
   // Modifications
   const [removeLinks, setRemoveLinks] = useState(false)
   const [addWatermark, setAddWatermark] = useState('')
+  const [deleteWatermark, setDeleteWatermark] = useState(true)
+  const [hideSenderName, setHideSenderName] = useState(false)
+  const [copyMode, setCopyMode] = useState(false)
 
   // Keywords
   const [includeKeywords, setIncludeKeywords] = useState('')
@@ -101,6 +104,9 @@ export default function CreateForwardRulePage() {
       forwardPolls,
       removeLinks,
       addWatermark: addWatermark || undefined,
+      deleteWatermark,
+      hideSenderName,
+      copyMode,
       includeKeywords: includeKeywords ? includeKeywords.split(',').map(k => k.trim()) : [],
       excludeKeywords: excludeKeywords ? excludeKeywords.split(',').map(k => k.trim()) : [],
     }),
@@ -228,17 +234,16 @@ export default function CreateForwardRulePage() {
                 className="mt-1 w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
               >
                 <option value="">Select destination</option>
-                {entitiesList
-                  .filter((link: any) => link.isAdmin)
-                  .map((link: any) => (
-                    <option key={link.telegramEntity.id} value={link.telegramEntity.id}>
-                      {link.telegramEntity.title}
-                      {link.telegramEntity.username && ` (@${link.telegramEntity.username})`}
-                    </option>
-                  ))}
+                {entitiesList.map((link: any) => (
+                  <option key={link.telegramEntity.id} value={link.telegramEntity.id}>
+                    {link.telegramEntity.title}
+                    {link.telegramEntity.username && ` (@${link.telegramEntity.username})`}
+                    {link.isAdmin ? ' ✅' : ' ❌ Not Admin'}
+                  </option>
+                ))}
               </select>
               <p className="text-xs text-muted-foreground mt-1">
-                Only showing chats where bot is admin
+                ✅ = Bot is admin, ❌ = Bot needs admin permissions
               </p>
             </div>
 
@@ -544,6 +549,32 @@ export default function CreateForwardRulePage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
+              <Label htmlFor="hideSenderName" className="text-xs">Hide Sender Name</Label>
+              <p className="text-xs text-muted-foreground">
+                Removes "Forwarded from" label completely. Note: If you see "account was hidden by the user" when forwarding is enabled, that's the original sender's privacy setting, not controlled by this option.
+              </p>
+            </div>
+            <Switch
+              id="hideSenderName"
+              checked={hideSenderName}
+              onCheckedChange={setHideSenderName}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="copyMode" className="text-xs">Copy Mode</Label>
+              <p className="text-xs text-muted-foreground">
+                Copy message instead of forwarding (removes "Forwarded from" label)
+              </p>
+            </div>
+            <Switch
+              id="copyMode"
+              checked={copyMode}
+              onCheckedChange={setCopyMode}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
               <Label htmlFor="removeLinks" className="text-xs">Remove Links</Label>
               <p className="text-xs text-muted-foreground">
                 Strip URLs and @mentions
@@ -564,6 +595,20 @@ export default function CreateForwardRulePage() {
               onChange={(e) => setAddWatermark(e.target.value)}
               className="mt-1 h-20"
             />
+            {addWatermark && (
+              <div className="flex items-center justify-between mt-2">
+                <div>
+                  <p className="text-xs font-medium">Delete with post</p>
+                  <p className="text-xs text-muted-foreground">
+                    Delete watermark when post is deleted
+                  </p>
+                </div>
+                <Switch
+                  checked={deleteWatermark}
+                  onCheckedChange={setDeleteWatermark}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -37,6 +37,9 @@ export const CreateForwardRuleSchema = z.object({
   forwardPolls: z.boolean().optional(),
   removeLinks: z.boolean().optional(),
   addWatermark: z.string().max(500).optional(),
+  deleteWatermark: z.boolean().optional(),
+  hideSenderName: z.boolean().optional(),
+  copyMode: z.boolean().optional(),
   includeKeywords: z.array(z.string()).optional(),
   excludeKeywords: z.array(z.string()).optional(),
 })
@@ -68,6 +71,9 @@ export const UpdateForwardRuleSchema = z.object({
   forwardPolls: z.boolean().optional(),
   removeLinks: z.boolean().optional(),
   addWatermark: z.string().max(500).nullable().optional(),
+  deleteWatermark: z.boolean().optional(),
+  hideSenderName: z.boolean().optional(),
+  copyMode: z.boolean().optional(),
   includeKeywords: z.array(z.string()).optional(),
   excludeKeywords: z.array(z.string()).optional(),
 })

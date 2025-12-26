@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Forward, UserCheck } from "lucide-react"
+import { Forward, UserCheck, Download } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function AutomatePage() {
@@ -15,6 +15,12 @@ export default function AutomatePage() {
       label: "Forwarding",
       icon: Forward,
       description: "Auto-forward messages between channels"
+    },
+    {
+      to: "/dashboard/auto-drop",
+      label: "Auto Drop",
+      icon: Download,
+      description: "Send posts to users on command"
     },
     {
       to: "/dashboard/auto-approval",

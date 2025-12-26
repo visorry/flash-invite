@@ -100,6 +100,7 @@ export enum ForwardScheduleStatus {
 export enum AutomationFeatureType {
   AUTO_APPROVAL = 0,
   FORWARD_RULE = 1,
+  AUTO_DROP = 2,
 }
 
 // Payment Status
@@ -151,6 +152,7 @@ export function getAutomationFeatureTypeLabel(type: AutomationFeatureType): stri
   const labels: Record<AutomationFeatureType, string> = {
     [AutomationFeatureType.AUTO_APPROVAL]: 'Auto Approval',
     [AutomationFeatureType.FORWARD_RULE]: 'Forward Rule',
+    [AutomationFeatureType.AUTO_DROP]: 'Auto Drop',
   }
   return labels[type]
 }
