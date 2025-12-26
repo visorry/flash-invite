@@ -67,6 +67,7 @@ router.post('/webhook/:botId', async (req: Request, res: Response) => {
 
     try {
         // Process update with Telegraf
+        console.log(`[WEBHOOK] Received update for bot ${botId}:`, JSON.stringify(req.body).substring(0, 200))
         await botInstance.bot.handleUpdate(req.body)
         res.status(200).json({ ok: true })
     } catch (error) {
