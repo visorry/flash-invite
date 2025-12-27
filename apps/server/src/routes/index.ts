@@ -23,6 +23,8 @@ import * as telegramRoute from './telegram.route'
 import * as botAdminRoute from './admin/bot-admin.route'
 import * as plansRoute from './plans.route'
 import * as configRoute from './config.route'
+import * as broadcastRoute from './broadcast.route'
+
 
 const publicAPIs = Promise.resolve({
   auth: authRoute,
@@ -47,6 +49,7 @@ const v1APIs = Promise.resolve({
   'token-bundles': tokenBundlesRoute,
   subscriptions: subscriptionsRoute,
   user: userRoute,
+  broadcast: broadcastRoute,
 })
 
 const adminAPIs = Promise.resolve({

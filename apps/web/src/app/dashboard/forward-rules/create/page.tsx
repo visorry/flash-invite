@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 export default function CreateForwardRulePage() {
   const { user, isLoading } = useSession()
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const [name, setName] = useState('')
   const [botId, setBotId] = useState('')
@@ -112,6 +113,7 @@ export default function CreateForwardRulePage() {
     }),
     onSuccess: () => {
       toast.success('Forward rule created')
+      queryClient.invalidateQueries({ queryKey: ['forward-rules'] })
       router.push('/dashboard/forward-rules' as any)
     },
     onError: (error: any) => {
@@ -390,7 +392,7 @@ export default function CreateForwardRulePage() {
                       <option value="HTML">HTML</option>
                       <option value="Markdown">Markdown</option>
                     </select>
-                    
+
                     <div className="mt-3">
                       <div className="flex items-center justify-between mb-2">
                         <Label htmlFor="broadcastDelete" className="text-xs">Auto-Delete Broadcast</Label>
