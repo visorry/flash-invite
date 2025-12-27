@@ -527,4 +527,86 @@ export const api = {
   config: {
     getPublic: () => apiClient.get<{ botUsername: string | null }>('/api/v1/config/public'),
   },
+  broadcast: {
+    // Bot and subscriber management
+    listBotsWithSubscribers: () => apiClient.get('/api/v1/broadcast/bots'),
+    getSubscribers: (botId: string, params?: {
+      isSubscribed?: boolean
+      isPremium?: boolean
+      languageCode?: string
+      activeWithinDays?: number
+      search?: string
+      page?: number
+      size?: number
+    }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.isSubscribed !== undefined) queryParams.append('isSubscribed', params.isSubscribed.toString())
+      if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString())
+      if (params?.languageCode) queryParams.append('languageCode', params.languageCode)
+      if (params?.activeWithinDays) queryParams.append('activeWithinDays', params.activeWithinDays.toString())
+      if (params?.search) queryParams.append('search', params.search)
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/broadcast/subscribers/${botId}${queryString ? `?${queryString}` : ''}`)
+    },
+    getSubscriberStats: (botId: string) => apiClient.get(`/api/v1/broadcast/subscribers/${botId}/stats`),
+    getSourceGroups: (botId: string) => apiClient.get(`/api/v1/broadcast/source-groups/${botId}`),
+    getSourceMessages: (botId: string, groupId: string, limit?: number) =>
+      apiClient.get(`/api/v1/broadcast/messages/${botId}/${groupId}${limit ? `?limit=${limit}` : ''}`),
+
+    // Broadcast CRUD
+    list: (botId?: string) => {
+      const queryParams = new URLSearchParams()
+      if (botId) queryParams.append('botId', botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/broadcast/list${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/broadcast/${id}`),
+    create: (data: {
+      botId: string
+      name?: string
+      content?: string
+      parseMode?: string
+      buttons?: any
+      sourceGroupId?: string
+      sourceMessageIds?: number[]
+      watermarkEnabled?: boolean
+      watermarkText?: string
+      watermarkPosition?: string
+      forwardMedia?: boolean
+      copyMode?: boolean
+      removeLinks?: boolean
+      filterCriteria?: {
+        isPremium?: boolean
+        languageCode?: string
+        activeWithinDays?: number
+        isSubscribed?: boolean
+      }
+      recipientIds?: string[]
+      scheduledFor?: string
+    }) => apiClient.post('/api/v1/broadcast', data),
+    send: (id: string) => apiClient.post(`/api/v1/broadcast/${id}/send`),
+    cancel: (id: string) => apiClient.post(`/api/v1/broadcast/${id}/cancel`),
+    delete: (id: string) => apiClient.delete(`/api/v1/broadcast/${id}`),
+    preview: (data: {
+      botId: string
+      content?: string
+      parseMode?: string
+      buttons?: any
+      sourceGroupId?: string
+      sourceMessageIds?: number[]
+      watermarkEnabled?: boolean
+      watermarkText?: string
+      watermarkPosition?: string
+      removeLinks?: boolean
+      filterCriteria?: {
+        isPremium?: boolean
+        languageCode?: string
+        activeWithinDays?: number
+        isSubscribed?: boolean
+      }
+    }) => apiClient.post('/api/v1/broadcast/preview', data),
+    duplicate: (id: string) => apiClient.post(`/api/v1/broadcast/${id}/duplicate`),
+  },
 }

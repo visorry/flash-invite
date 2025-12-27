@@ -401,26 +401,32 @@ model GroupMember {
 
 // Bot Member - Track all Telegram users who interact with a bot via /start
 model BotMember {
-  id             String   @id @default(uuid())
-  botId          String   @map("bot_id")
-  bot            Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  telegramUserId String   @map("telegram_user_id")
+  id             String    @id @default(uuid())
+  botId          String    @map("bot_id")
+  bot            Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
+  telegramUserId String    @map("telegram_user_id")
   username       String?
-  firstName      String?  @map("first_name")
-  lastName       String?  @map("last_name")
-  languageCode   String?  @map("language_code")
-  isPremium      Boolean  @default(false) @map("is_premium")
-  isBot          Boolean  @default(false) @map("is_bot")
-  lastActiveAt   DateTime @default(now()) @map("last_active_at") @db.Timestamptz(3)
+  firstName      String?   @map("first_name")
+  lastName       String?   @map("last_name")
+  languageCode   String?   @map("language_code")
+  isPremium      Boolean   @default(false) @map("is_premium")
+  isBot          Boolean   @default(false) @map("is_bot")
+  isSubscribed   Boolean   @default(true) @map("is_subscribed") // Whether user is subscribed to broadcasts
+  isBlocked      Boolean   @default(false) @map("is_blocked") // Whether bot is blocked by user
+  subscribedAt   DateTime  @default(now()) @map("subscribed_at") @db.Timestamptz(3)
+  blockedAt      DateTime? @map("blocked_at") @db.Timestamptz(3)
+  lastActiveAt   DateTime  @default(now()) @map("last_active_at") @db.Timestamptz(3)
   metadata       Json?
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([botId, telegramUserId]) // Same user can interact with different bots
   @@index([botId])
   @@index([telegramUserId])
   @@index([username])
   @@index([lastActiveAt])
+  @@index([isSubscribed])
+  @@index([isBlocked])
   @@map("bot_member")
 }
 
@@ -472,28 +478,58 @@ model BroadcastTemplate {
 // Broadcast - Track broadcast sends
 model Broadcast {
   id              String             @id @default(uuid())
+  userId          String             @map("user_id") // Owner of this broadcast
   botId           String             @map("bot_id")
   bot             Bot                @relation(fields: [botId], references: [id], onDelete: Cascade)
   templateId      String?            @map("template_id")
   template        BroadcastTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  content         String             @db.Text // Actual message sent (in case template was modified)
-  parseMode       String?            @map("parse_mode")
-  buttons         Json? // Inline keyboard buttons used
+  name            String?            // Optional broadcast name for identification
+  
+  // Content options
+  content         String?            @db.Text // Text message content (optional if forwarding)
+  parseMode       String?            @map("parse_mode") // HTML, Markdown
+  buttons         Json?              // Inline keyboard buttons
+  
+  // Source group for forwarding posts
+  sourceGroupId   String?            @map("source_group_id") // TelegramEntity ID if forwarding from a group
+  sourceMessageIds Int[]             @map("source_message_ids") // Message IDs to forward from source group
+  
+  // Watermark options
+  watermarkEnabled Boolean           @default(false) @map("watermark_enabled")
+  watermarkText   String?            @map("watermark_text") // Text watermark to add
+  watermarkPosition String?          @map("watermark_position") // top, bottom, overlay
+  
+  // Media handling
+  forwardMedia    Boolean            @default(true) @map("forward_media")
+  copyMode        Boolean            @default(true) @map("copy_mode") // Use copyMessage instead of forward
+  removeLinks     Boolean            @default(false) @map("remove_links")
+  
+  // Status and progress
   status          Int                @default(0) // BroadcastStatus enum: 0=pending, 1=in_progress, 2=completed, 3=failed, 4=cancelled
   totalRecipients Int                @default(0) @map("total_recipients")
   sentCount       Int                @default(0) @map("sent_count")
   failedCount     Int                @default(0) @map("failed_count")
+  blockedCount    Int                @default(0) @map("blocked_count") // Users who blocked the bot
+  
+  // Filtering and scheduling
   filterCriteria  Json?              @map("filter_criteria") // Store filter options used
   recipientIds    String[]           @map("recipient_ids") // Array of bot member IDs
+  scheduledFor    DateTime?          @map("scheduled_for") @db.Timestamptz(3) // Schedule for later
   startedAt       DateTime?          @map("started_at") @db.Timestamptz(3)
   completedAt     DateTime?          @map("completed_at") @db.Timestamptz(3)
+  
+  // Error logging
+  errorLog        Json?              @map("error_log") // Store errors per recipient
+  
   metadata        Json?
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  @@index([userId])
   @@index([botId])
   @@index([status])
   @@index([createdAt])
+  @@index([scheduledFor])
   @@map("broadcast")
 }
 

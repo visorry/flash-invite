@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter, useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,6 +19,7 @@ export default function EditAutoApprovalPage() {
   const router = useRouter()
   const params = useParams()
   const ruleId = params.id as string
+  const queryClient = useQueryClient()
 
   const [name, setName] = useState('')
   const [isActive, setIsActive] = useState(true)
@@ -77,6 +78,8 @@ export default function EditAutoApprovalPage() {
     }),
     onSuccess: () => {
       toast.success('Auto-approval rule updated')
+      queryClient.invalidateQueries({ queryKey: ['auto-approval-rule', ruleId] })
+      queryClient.invalidateQueries({ queryKey: ['auto-approval-rules'] })
       router.push('/dashboard/auto-approval' as any)
     },
     onError: (error: any) => {
