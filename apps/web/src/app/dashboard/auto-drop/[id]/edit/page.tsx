@@ -25,6 +25,10 @@ export default function EditAutoDropPage() {
   const [isActive, setIsActive] = useState(true)
   const [command, setCommand] = useState('/drop')
 
+  // Custom messages (optional)
+  const [startMessage, setStartMessage] = useState('')
+  const [endMessage, setEndMessage] = useState('')
+
   // Rate limiting
   const [rateLimitEnabled, setRateLimitEnabled] = useState(true)
   const [rateLimitCount, setRateLimitCount] = useState(5)
@@ -75,6 +79,8 @@ export default function EditAutoDropPage() {
       setName(r.name || '')
       setIsActive(r.isActive ?? true)
       setCommand(r.command || '/drop')
+      setStartMessage(r.startMessage || '')
+      setEndMessage(r.endMessage || '')
       setRateLimitEnabled(r.rateLimitEnabled ?? true)
       setRateLimitCount(r.rateLimitCount ?? 5)
       setRateLimitWindow(r.rateLimitWindow ?? 60)
@@ -108,6 +114,8 @@ export default function EditAutoDropPage() {
       name,
       isActive,
       command,
+      startMessage: startMessage || null,
+      endMessage: endMessage || null,
       rateLimitEnabled,
       rateLimitCount,
       rateLimitWindow,
@@ -231,12 +239,47 @@ export default function EditAutoDropPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-sm">
-            {ruleData.sourceEntity?.title || 'Unknown'}
+            {ruleData.sourceEntity?.title || 'No source channel (messages only)'}
             {ruleData.sourceEntity?.username && ` (@${ruleData.sourceEntity.username})`}
           </div>
           <p className="text-xs text-muted-foreground">
             Source cannot be changed. Delete and create a new rule if needed.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Custom Messages */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Custom Messages (Optional)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="startMessage" className="text-xs">Start Message</Label>
+            <Textarea
+              id="startMessage"
+              placeholder="Message to send before posts..."
+              value={startMessage}
+              onChange={(e) => setStartMessage(e.target.value)}
+              className="mt-1 h-20"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Sent before forwarding posts from source channel
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="endMessage" className="text-xs">End Message</Label>
+            <Textarea
+              id="endMessage"
+              placeholder="Message to send after posts..."
+              value={endMessage}
+              onChange={(e) => setEndMessage(e.target.value)}
+              className="mt-1 h-20"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Sent after all posts have been forwarded
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -319,68 +362,70 @@ export default function EditAutoDropPage() {
         </CardContent>
       </Card>
 
-      {/* Drop Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Drop Configuration</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="postsPerDrop" className="text-xs">Posts Per Drop</Label>
-            <Input
-              id="postsPerDrop"
-              type="number"
-              min={1}
-              max={10}
-              value={postsPerDrop}
-              onChange={(e) => setPostsPerDrop(parseInt(e.target.value) || 1)}
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Number of posts to send when user triggers the command
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between">
+      {/* Drop Configuration - only shown when source channel exists */}
+      {ruleData.sourceEntity && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Drop Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="randomOrder" className="text-xs">Random Order</Label>
-              <p className="text-xs text-muted-foreground">
-                Send posts in random order instead of sequential
+              <Label htmlFor="postsPerDrop" className="text-xs">Posts Per Drop</Label>
+              <Input
+                id="postsPerDrop"
+                type="number"
+                min={1}
+                max={10}
+                value={postsPerDrop}
+                onChange={(e) => setPostsPerDrop(parseInt(e.target.value) || 1)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Number of posts to send when user triggers the command
               </p>
             </div>
-            <Switch
-              id="randomOrder"
-              checked={randomOrder}
-              onCheckedChange={setRandomOrder}
-            />
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="startId" className="text-xs">Start from Message ID</Label>
-              <Input
-                id="startId"
-                type="number"
-                placeholder="e.g., 1"
-                value={startFromMessageId}
-                onChange={(e) => setStartFromMessageId(e.target.value)}
-                className="mt-1"
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="randomOrder" className="text-xs">Random Order</Label>
+                <p className="text-xs text-muted-foreground">
+                  Send posts in random order instead of sequential
+                </p>
+              </div>
+              <Switch
+                id="randomOrder"
+                checked={randomOrder}
+                onCheckedChange={setRandomOrder}
               />
             </div>
-            <div>
-              <Label htmlFor="endId" className="text-xs">End at Message ID</Label>
-              <Input
-                id="endId"
-                type="number"
-                placeholder="e.g., 100"
-                value={endAtMessageId}
-                onChange={(e) => setEndAtMessageId(e.target.value)}
-                className="mt-1"
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="startId" className="text-xs">Start from Message ID</Label>
+                <Input
+                  id="startId"
+                  type="number"
+                  placeholder="e.g., 1"
+                  value={startFromMessageId}
+                  onChange={(e) => setStartFromMessageId(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="endId" className="text-xs">End at Message ID</Label>
+                <Input
+                  id="endId"
+                  type="number"
+                  placeholder="e.g., 100"
+                  value={endAtMessageId}
+                  onChange={(e) => setEndAtMessageId(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Auto-Delete Configuration */}
       <Card>

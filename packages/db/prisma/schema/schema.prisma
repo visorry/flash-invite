@@ -641,17 +641,21 @@ model ForwardRule {
 
 // Auto Drop Rule - Send posts to users on command
 model AutoDropRule {
-  id             String         @id @default(uuid())
-  userId         String         @map("user_id")
-  botId          String         @map("bot_id")
-  bot            Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
-  sourceEntityId String         @map("source_entity_id")
-  sourceEntity   TelegramEntity @relation("AutoDropSource", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
+  botId          String          @map("bot_id")
+  bot            Bot             @relation(fields: [botId], references: [id], onDelete: Cascade)
+  sourceEntityId String?         @map("source_entity_id")
+  sourceEntity   TelegramEntity? @relation("AutoDropSource", fields: [sourceEntityId], references: [id], onDelete: Cascade)
   name           String
-  isActive       Boolean        @default(true) @map("is_active")
+  isActive       Boolean         @default(true) @map("is_active")
 
   // Command configuration
-  command        String         @default("/drop") // Command to trigger the drop (e.g., /post, /get, /drop)
+  command        String          @default("/drop") // Command to trigger the drop (e.g., /post, /get, /drop)
+
+  // Custom messages (optional)
+  startMessage   String?         @map("start_message") @db.Text
+  endMessage     String?         @map("end_message") @db.Text
 
   // Rate limiting
   rateLimitEnabled    Boolean @default(true) @map("rate_limit_enabled")
