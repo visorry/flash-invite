@@ -6,9 +6,11 @@ import tokenService from './token.service'
 
 interface CreateAutoDropData {
   botId: string
-  sourceEntityId: string
+  sourceEntityId?: string // Now optional for message-only rules
   name: string
   command: string
+  startMessage?: string
+  endMessage?: string
   rateLimitEnabled?: boolean
   rateLimitCount?: number
   rateLimitWindow?: number
@@ -39,6 +41,8 @@ interface UpdateAutoDropData {
   name?: string
   isActive?: boolean
   command?: string
+  startMessage?: string | null
+  endMessage?: string | null
   rateLimitEnabled?: boolean
   rateLimitCount?: number
   rateLimitWindow?: number
@@ -149,6 +153,11 @@ const create = async (ctx: RequestContext, data: CreateAutoDropData) => {
     throw new BadRequestError('User not authenticated')
   }
 
+  // Require either source entity OR at least one custom message
+  if (!data.sourceEntityId && !data.startMessage && !data.endMessage) {
+    throw new BadRequestError('Either a source channel or at least one custom message (start/end) is required')
+  }
+
   // Verify bot belongs to user
   const bot = await db.bot.findFirst({
     where: {
@@ -162,26 +171,28 @@ const create = async (ctx: RequestContext, data: CreateAutoDropData) => {
     throw new NotFoundError('Bot not found')
   }
 
-  // Verify source entity belongs to user and bot is linked
-  const sourceEntity = await db.telegramEntity.findFirst({
-    where: {
-      id: data.sourceEntityId,
-      userId: ctx.user.id,
-      deletedAt: null,
-    },
-    include: {
-      botLinks: {
-        where: { botId: data.botId },
+  // Only verify source entity if provided
+  if (data.sourceEntityId) {
+    const sourceEntity = await db.telegramEntity.findFirst({
+      where: {
+        id: data.sourceEntityId,
+        userId: ctx.user.id,
+        deletedAt: null,
       },
-    },
-  })
+      include: {
+        botLinks: {
+          where: { botId: data.botId },
+        },
+      },
+    })
 
-  if (!sourceEntity) {
-    throw new NotFoundError('Source entity not found')
-  }
+    if (!sourceEntity) {
+      throw new NotFoundError('Source entity not found')
+    }
 
-  if (sourceEntity.botLinks.length === 0) {
-    throw new BadRequestError('Bot is not linked to the source entity')
+    if (sourceEntity.botLinks.length === 0) {
+      throw new BadRequestError('Bot is not linked to the source entity')
+    }
   }
 
   // Check for duplicate command for this bot
@@ -255,6 +266,8 @@ const create = async (ctx: RequestContext, data: CreateAutoDropData) => {
         sourceEntityId: data.sourceEntityId,
         name: data.name,
         command: data.command,
+        startMessage: data.startMessage,
+        endMessage: data.endMessage,
         rateLimitEnabled: data.rateLimitEnabled ?? true,
         rateLimitCount: data.rateLimitCount ?? 5,
         rateLimitWindow: data.rateLimitWindow ?? 60,
@@ -343,6 +356,8 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateAutoDropD
       name: data.name,
       isActive: data.isActive,
       command: data.command,
+      startMessage: data.startMessage,
+      endMessage: data.endMessage,
       rateLimitEnabled: data.rateLimitEnabled,
       rateLimitCount: data.rateLimitCount,
       rateLimitWindow: data.rateLimitWindow,

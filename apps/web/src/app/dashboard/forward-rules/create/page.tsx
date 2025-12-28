@@ -111,9 +111,9 @@ export default function CreateForwardRulePage() {
       includeKeywords: includeKeywords ? includeKeywords.split(',').map(k => k.trim()) : [],
       excludeKeywords: excludeKeywords ? excludeKeywords.split(',').map(k => k.trim()) : [],
     }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Forward rule created')
-      queryClient.invalidateQueries({ queryKey: ['forward-rules'] })
+      await queryClient.invalidateQueries({ queryKey: ['forward-rules'] })
       router.push('/dashboard/forward-rules' as any)
     },
     onError: (error: any) => {

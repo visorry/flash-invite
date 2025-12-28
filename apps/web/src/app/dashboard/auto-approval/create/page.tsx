@@ -65,9 +65,9 @@ export default function CreateAutoApprovalPage() {
       sendWelcomeMsg,
       welcomeMessage: sendWelcomeMsg ? welcomeMessage : undefined,
     }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Auto-approval rule created')
-      queryClient.invalidateQueries({ queryKey: ['auto-approval-rules'] })
+      await queryClient.invalidateQueries({ queryKey: ['auto-approval-rules'] })
       router.push('/dashboard/auto-approval' as any)
     },
     onError: (error: any) => {

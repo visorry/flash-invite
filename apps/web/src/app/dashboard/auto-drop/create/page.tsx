@@ -24,6 +24,10 @@ export default function CreateAutoDropPage() {
   const [sourceEntityId, setSourceEntityId] = useState('')
   const [command, setCommand] = useState('/drop')
 
+  // Custom messages (optional)
+  const [startMessage, setStartMessage] = useState('')
+  const [endMessage, setEndMessage] = useState('')
+
   // Rate limiting
   const [rateLimitEnabled, setRateLimitEnabled] = useState(true)
   const [rateLimitCount, setRateLimitCount] = useState(5)
@@ -77,9 +81,11 @@ export default function CreateAutoDropPage() {
   const createMutation = useMutation({
     mutationFn: () => api.autoDrop.create({
       botId,
-      sourceEntityId,
+      sourceEntityId: sourceEntityId || undefined, // Now optional
       name,
       command,
+      startMessage: startMessage || undefined,
+      endMessage: endMessage || undefined,
       rateLimitEnabled,
       rateLimitCount,
       rateLimitWindow,
@@ -105,9 +111,9 @@ export default function CreateAutoDropPage() {
       includeKeywords: includeKeywords ? includeKeywords.split(',').map(k => k.trim()) : [],
       excludeKeywords: excludeKeywords ? excludeKeywords.split(',').map(k => k.trim()) : [],
     }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Auto drop rule created')
-      queryClient.invalidateQueries({ queryKey: ['auto-drop-rules'] })
+      await queryClient.invalidateQueries({ queryKey: ['auto-drop-rules'] })
       router.push('/dashboard/auto-drop' as any)
     },
     onError: (error: any) => {
@@ -130,7 +136,9 @@ export default function CreateAutoDropPage() {
   const botsList = (bots as any) || []
   const entitiesList = (entities as any) || []
 
-  const canSubmit = name && botId && sourceEntityId && command && command.startsWith('/')
+  // Can submit if: name, botId, command are valid AND (has source entity OR has start/end message)
+  const hasSourceOrMessage = sourceEntityId || startMessage || endMessage
+  const canSubmit = name && botId && command && command.startsWith('/') && hasSourceOrMessage
 
   return (
     <div className="flex-1 space-y-6 p-4">
@@ -208,7 +216,7 @@ export default function CreateAutoDropPage() {
       {botId && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm">Source Channel</CardTitle>
+            <CardTitle className="text-sm">Source Channel (Optional)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -219,7 +227,7 @@ export default function CreateAutoDropPage() {
                 onChange={(e) => setSourceEntityId(e.target.value)}
                 className="mt-1 w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
               >
-                <option value="">Select source</option>
+                <option value="">No source (messages only)</option>
                 {entitiesList.map((link: any) => (
                   <option key={link.telegramEntity.id} value={link.telegramEntity.id}>
                     {link.telegramEntity.title}
@@ -227,10 +235,48 @@ export default function CreateAutoDropPage() {
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty to send only custom start/end messages
+              </p>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Custom Messages */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Custom Messages (Optional)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="startMessage" className="text-xs">Start Message</Label>
+            <Textarea
+              id="startMessage"
+              placeholder="Message to send before posts..."
+              value={startMessage}
+              onChange={(e) => setStartMessage(e.target.value)}
+              className="mt-1 h-20"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Sent before forwarding posts from source channel
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="endMessage" className="text-xs">End Message</Label>
+            <Textarea
+              id="endMessage"
+              placeholder="Message to send after posts..."
+              value={endMessage}
+              onChange={(e) => setEndMessage(e.target.value)}
+              className="mt-1 h-20"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Sent after all posts have been forwarded
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Rate Limiting */}
       <Card>
@@ -311,71 +357,73 @@ export default function CreateAutoDropPage() {
         </CardContent>
       </Card>
 
-      {/* Drop Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Drop Configuration</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="postsPerDrop" className="text-xs">Posts Per Drop</Label>
-            <Input
-              id="postsPerDrop"
-              type="number"
-              min={1}
-              max={10}
-              value={postsPerDrop}
-              onChange={(e) => setPostsPerDrop(parseInt(e.target.value) || 1)}
-              className="mt-1"
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Number of posts to send when user triggers the command
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between">
+      {/* Drop Configuration - only shown when source channel is selected */}
+      {sourceEntityId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Drop Configuration</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="randomOrder" className="text-xs">Random Order</Label>
-              <p className="text-xs text-muted-foreground">
-                Send posts in random order instead of sequential
+              <Label htmlFor="postsPerDrop" className="text-xs">Posts Per Drop</Label>
+              <Input
+                id="postsPerDrop"
+                type="number"
+                min={1}
+                max={10}
+                value={postsPerDrop}
+                onChange={(e) => setPostsPerDrop(parseInt(e.target.value) || 1)}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Number of posts to send when user triggers the command
               </p>
             </div>
-            <Switch
-              id="randomOrder"
-              checked={randomOrder}
-              onCheckedChange={setRandomOrder}
-            />
-          </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="startId" className="text-xs">Start from Message ID</Label>
-              <Input
-                id="startId"
-                type="number"
-                placeholder="e.g., 1"
-                value={startFromMessageId}
-                onChange={(e) => setStartFromMessageId(e.target.value)}
-                className="mt-1"
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="randomOrder" className="text-xs">Random Order</Label>
+                <p className="text-xs text-muted-foreground">
+                  Send posts in random order instead of sequential
+                </p>
+              </div>
+              <Switch
+                id="randomOrder"
+                checked={randomOrder}
+                onCheckedChange={setRandomOrder}
               />
             </div>
-            <div>
-              <Label htmlFor="endId" className="text-xs">End at Message ID</Label>
-              <Input
-                id="endId"
-                type="number"
-                placeholder="e.g., 100"
-                value={endAtMessageId}
-                onChange={(e) => setEndAtMessageId(e.target.value)}
-                className="mt-1"
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="startId" className="text-xs">Start from Message ID</Label>
+                <Input
+                  id="startId"
+                  type="number"
+                  placeholder="e.g., 1"
+                  value={startFromMessageId}
+                  onChange={(e) => setStartFromMessageId(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="endId" className="text-xs">End at Message ID</Label>
+                <Input
+                  id="endId"
+                  type="number"
+                  placeholder="e.g., 100"
+                  value={endAtMessageId}
+                  onChange={(e) => setEndAtMessageId(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
             </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            To find message IDs: open the message in Telegram, copy its link (e.g., t.me/channel/123), the number at the end is the ID.
-          </p>
-        </CardContent>
-      </Card>
+            <p className="text-xs text-muted-foreground">
+              To find message IDs: open the message in Telegram, copy its link (e.g., t.me/channel/123), the number at the end is the ID.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Auto-Delete Configuration */}
       <Card>

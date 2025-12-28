@@ -26,7 +26,7 @@ function calculateDelayMs(interval: number, unit: number): number {
  */
 function scheduleMessageDeletion(ctx: Context, chatId: number, messageId: number, interval: number, unit: number) {
   const delayMs = calculateDelayMs(interval, unit)
-  
+
   setTimeout(async () => {
     try {
       await ctx.telegram.deleteMessage(chatId, messageId)
@@ -52,10 +52,11 @@ export async function handleAutoDropCommand(ctx: Context, command: string) {
   }
 
   const telegramUserId = ctx.from.id.toString()
+  const destChatId = ctx.from.id
 
   // Get active rules for this bot with matching command
   const rules = await autoDropService.getActiveRulesForBot(dbBotId)
-  const rule = rules.find(r => r.command === command)
+  const rule = rules.find(r => r.command === command) as any // Cast to any to access new fields
 
   if (!rule) {
     return false // No matching rule, let other handlers process
@@ -82,38 +83,75 @@ export async function handleAutoDropCommand(ctx: Context, command: string) {
       timeString = `${waitTime}s`
     }
 
-    const message = rule.rateLimitMessage || 
+    const message = rule.rateLimitMessage ||
       `⏳ Slow down! Please wait ${timeString} before trying again.`
-    
+
     await ctx.reply(message)
     return true
   }
 
-  // Get messages to send
-  const postsToSend = rule.postsPerDrop || 1
-  let sentCount = 0
+  // Check if auto-delete is enabled
+  const shouldDelete = rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5
 
-  for (let i = 0; i < postsToSend; i++) {
-    const messageId = await autoDropService.getNextMessageId(rule.id, telegramUserId)
-    
-    if (!messageId) {
-      console.log(`[AUTO_DROP] No message ID available for rule ${rule.id}`)
-      break
-    }
-
-    const success = await sendDropMessage(ctx, rule, messageId)
-    
-    if (success) {
-      await autoDropService.updateLastMessageId(rule.id, telegramUserId, messageId)
-      sentCount++
+  // Send start message if configured
+  if (rule.startMessage) {
+    try {
+      const startMsg = await ctx.telegram.sendMessage(destChatId, rule.startMessage)
+      if (shouldDelete) {
+        scheduleMessageDeletion(ctx, destChatId, startMsg.message_id, rule.deleteInterval!, rule.deleteIntervalUnit!)
+      }
+    } catch (error) {
+      console.error('[AUTO_DROP] Error sending start message:', error)
     }
   }
 
-  if (sentCount > 0) {
+  // Check if we have a source entity for forwarding posts
+  const hasSourceEntity = rule.sourceEntity && rule.sourceEntityId
+
+  let sentCount = 0
+
+  if (hasSourceEntity) {
+    // Get messages to send from source entity
+    const postsToSend = rule.postsPerDrop || 1
+
+    for (let i = 0; i < postsToSend; i++) {
+      const messageId = await autoDropService.getNextMessageId(rule.id, telegramUserId)
+
+      if (!messageId) {
+        console.log(`[AUTO_DROP] No message ID available for rule ${rule.id}`)
+        break
+      }
+
+      const success = await sendDropMessage(ctx, rule, messageId)
+
+      if (success) {
+        await autoDropService.updateLastMessageId(rule.id, telegramUserId, messageId)
+        sentCount++
+      }
+    }
+
+    if (sentCount === 0 && !rule.startMessage && !rule.endMessage) {
+      // No posts were sent and no custom messages configured
+      await ctx.reply('❌ No posts available at the moment. Please try again later.')
+    }
+  }
+
+  // Send end message if configured
+  if (rule.endMessage) {
+    try {
+      const endMsg = await ctx.telegram.sendMessage(destChatId, rule.endMessage)
+      if (shouldDelete) {
+        scheduleMessageDeletion(ctx, destChatId, endMsg.message_id, rule.deleteInterval!, rule.deleteIntervalUnit!)
+      }
+    } catch (error) {
+      console.error('[AUTO_DROP] Error sending end message:', error)
+    }
+  }
+
+  // Increment drop count if anything was sent
+  if (sentCount > 0 || rule.startMessage || rule.endMessage) {
     await autoDropService.incrementDropCount(rule.id)
-    console.log(`[AUTO_DROP] Sent ${sentCount} messages to user ${telegramUserId}`)
-  } else {
-    await ctx.reply('❌ No posts available at the moment. Please try again later.')
+    console.log(`[AUTO_DROP] Completed drop for user ${telegramUserId}: ${sentCount} posts, hasStartMsg=${!!rule.startMessage}, hasEndMsg=${!!rule.endMessage}`)
   }
 
   return true
@@ -137,22 +175,22 @@ async function sendDropMessage(
     if (!shouldCopy) {
       // Forward message (shows "Forwarded from")
       const sentMsg = await ctx.telegram.forwardMessage(destChatId, sourceChatId, messageId)
-      
+
       // Schedule deletion if enabled
       if (shouldDelete) {
         scheduleMessageDeletion(ctx, destChatId, sentMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
       }
-      
+
       return true
     }
 
     // If watermark is set
     if (rule.addWatermark) {
       console.log(`[AUTO_DROP] Applying watermark for message ${messageId}`)
-      
+
       // Check if we should hide sender (copyMode or hideSenderName)
       const hideSender = rule.copyMode || rule.hideSenderName
-      
+
       if (hideSender) {
         // Try to copy with caption (works for media - photo, video, gif, document)
         // For text messages, this will fail and we'll fall back to separate message
@@ -160,18 +198,18 @@ async function sendDropMessage(
           const sentMsg = await ctx.telegram.copyMessage(destChatId, sourceChatId, messageId, {
             caption: rule.addWatermark,
           })
-          
+
           // Schedule deletion if enabled
           if (shouldDelete) {
             scheduleMessageDeletion(ctx, destChatId, sentMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
           }
-          
+
           return true
         } catch {
           // If caption fails (text message), copy without caption and send watermark separately
           const sentMsg = await ctx.telegram.copyMessage(destChatId, sourceChatId, messageId)
           const watermarkMsg = await ctx.telegram.sendMessage(destChatId, rule.addWatermark).catch(() => null)
-          
+
           // Schedule deletion if enabled
           if (shouldDelete) {
             scheduleMessageDeletion(ctx, destChatId, sentMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
@@ -180,14 +218,14 @@ async function sendDropMessage(
               scheduleMessageDeletion(ctx, destChatId, watermarkMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
             }
           }
-          
+
           return true
         }
       } else {
         // Forward the message (shows "Forwarded from") then send watermark
         const sentMsg = await ctx.telegram.forwardMessage(destChatId, sourceChatId, messageId)
         const watermarkMsg = await ctx.telegram.sendMessage(destChatId, rule.addWatermark).catch(() => null)
-        
+
         // Schedule deletion if enabled
         if (shouldDelete) {
           scheduleMessageDeletion(ctx, destChatId, sentMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
@@ -196,25 +234,25 @@ async function sendDropMessage(
             scheduleMessageDeletion(ctx, destChatId, watermarkMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
           }
         }
-        
+
         return true
       }
     }
 
     // Copy message (hides sender) - copyMode, hideSenderName, or removeLinks without watermark
     const sentMsg = await ctx.telegram.copyMessage(destChatId, sourceChatId, messageId)
-    
+
     // Schedule deletion if enabled
     if (shouldDelete) {
       scheduleMessageDeletion(ctx, destChatId, sentMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
     }
-    
+
     return true
   } catch (error: any) {
     // Handle common errors
     if (error.response?.error_code === 400) {
       const desc = error.response?.description || ''
-      
+
       if (desc.includes('not found') || desc.includes("can't be forwarded")) {
         console.log(`[AUTO_DROP] Skipping message ${messageId} - ${desc}`)
         return false
