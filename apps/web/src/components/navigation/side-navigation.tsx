@@ -35,9 +35,9 @@ export function SideNavigation() {
 
   return (
     <aside className="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 hidden sm:block">
-      <div className="h-full px-3 py-4 overflow-y-auto bg-background border-r flex flex-col">
+      <div className="h-full px-3 py-4 bg-background border-r flex flex-col">
         {/* Logo */}
-        <div className="flex items-center gap-3 mb-6 px-3">
+        <div className="flex items-center gap-3 mb-6 px-3 shrink-0">
           <Image
             src="/favicon/icon-96x96.png"
             alt="Flash Invite Logo"
@@ -48,8 +48,8 @@ export function SideNavigation() {
           <span className="font-semibold text-lg">Flash Invite</span>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="space-y-1">
+        {/* Navigation Links - Scrollable */}
+        <nav className="space-y-1 flex-1 overflow-y-auto scrollbar-hide">
           {links.map(({ to, label, icon: Icon }) => {
             const isActive = to === "/"
               ? pathname === "/"
@@ -71,9 +71,6 @@ export function SideNavigation() {
             )
           })}
         </nav>
-
-        {/* Spacer */}
-        <div className="flex-1" />
 
         {/* User Menu & Theme Toggle */}
         <div className="space-y-2 border-t pt-4 mt-4">
