@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard, BookOpen, Download, Radio, ChevronDown } from "lucide-react"
+import { Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard, BookOpen, Download, Radio, ChevronDown } from "lucide-react"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
 
@@ -18,7 +18,6 @@ export function SideNavigation() {
     {
       label: "Main",
       links: [
-        { to: "/", label: "Home", icon: Home },
         { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { to: "/dashboard/tutorial", label: "Tutorial", icon: BookOpen },
       ],
@@ -64,7 +63,7 @@ export function SideNavigation() {
     <aside className="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 hidden sm:block">
       <div className="h-full px-3 py-4 bg-background border-r flex flex-col">
         {/* Logo */}
-        <div className="flex items-center gap-3 mb-6 px-3 shrink-0">
+        <Link href="/" className="flex items-center gap-3 mb-6 px-3 shrink-0 hover:opacity-80 transition-opacity">
           <Image
             src="/favicon/icon-96x96.png"
             alt="Flash Invite Logo"
@@ -73,7 +72,7 @@ export function SideNavigation() {
             className="rounded-lg"
           />
           <span className="font-semibold text-lg">Flash Invite</span>
-        </div>
+        </Link>
 
         {/* Navigation Links - Scrollable */}
         <div className="flex-1 overflow-hidden relative">
