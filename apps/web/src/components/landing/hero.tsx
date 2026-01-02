@@ -54,19 +54,14 @@ export const Hero: React.FC = () => {
           </LandingButton>
         </div>
 
-        {/* Dashboard Image Placeholder */}
+        {/* Dashboard Image */}
         <div className="relative w-full max-w-6xl mx-auto z-10">
           <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/50 backdrop-blur-sm transition-transform hover:scale-[1.01] duration-700 ease-out">
-            <div className="w-full aspect-video bg-gradient-to-br from-emerald-900/20 to-black flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-emerald-400/20 flex items-center justify-center">
-                  <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <p className="text-gray-500 text-lg">Dashboard Preview</p>
-              </div>
-            </div>
+            <img 
+              src="/dashboard-preview.png" 
+              alt="Dashboard Preview" 
+              className="w-full h-auto"
+            />
             
             {/* Overlay Gradient at bottom */}
             <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black to-transparent"></div>
