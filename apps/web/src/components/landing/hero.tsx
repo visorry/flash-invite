@@ -63,8 +63,12 @@ export const Hero: React.FC = () => {
               className="w-full h-auto"
             />
             
-            {/* Overlay Gradient at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black to-transparent"></div>
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-b from-black/60 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-black to-transparent"></div>
+              <div className="absolute top-0 bottom-0 left-0 w-24 bg-gradient-to-r from-black/50 to-transparent"></div>
+              <div className="absolute top-0 bottom-0 right-0 w-24 bg-gradient-to-l from-black/50 to-transparent"></div>
+            </div>
           </div>
         </div>
       </div>
