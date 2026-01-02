@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LandingButton, ButtonVariant } from './button';
+import { api } from '@/lib/api-client';
 
 interface Plan {
   id: string;
@@ -25,9 +26,8 @@ export const LandingPricing: React.FC = () => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const res = await fetch('/api/plans');
-        const data = await res.json();
-        setPlans(data);
+        const data = await api.plans.list();
+        setPlans(data as Plan[]);
       } catch (error) {
         console.error('Failed to fetch plans:', error);
       } finally {
