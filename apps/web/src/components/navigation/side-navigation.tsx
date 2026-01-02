@@ -124,20 +124,6 @@ export function SideNavigation() {
           </nav>
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none" />
         </div>
-
-        {/* User Menu & Theme Toggle */}
-        <div className="space-y-2 border-t pt-4 mt-4 shrink-0">
-          {isAdmin && (
-            <Link
-              href={"/admin/dashboard" as any}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              <Shield className="h-5 w-5" />
-              <span>Admin Panel</span>
-            </Link>
-          )}
-
-        </div>
       </div>
     </aside>
   )
