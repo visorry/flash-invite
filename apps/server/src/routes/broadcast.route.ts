@@ -26,7 +26,7 @@ const CreateBroadcastBodySchema = z.object({
   botId: z.string(),
   name: z.string().optional(),
   content: z.string().optional(),
-  parseMode: z.string().optional(),
+  parseMode: z.enum(['Markdown', 'MarkdownV2', 'HTML']).optional(),
   buttons: z.any().optional(),
   sourceGroupId: z.string().optional(),
   sourceMessageIds: z.array(z.number()).optional(),

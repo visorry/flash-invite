@@ -3,6 +3,7 @@
 import { useSession } from '@/hooks/use-session'
 import { useConfirm } from '@/hooks/use-confirm'
 import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
 import { ArrowLeft, Send, CheckCircle, XCircle, Loader2, Users, Clock, Wand2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
@@ -18,6 +19,7 @@ export default function SendBroadcastPage() {
     const queryClient = useQueryClient()
     const { confirm, ConfirmDialog } = useConfirm()
     const broadcastId = params.id as string
+    const [isSendingOptimistic, setIsSendingOptimistic] = useState(false);
 
     // Fetch broadcast details
     const { data: broadcast, isLoading: broadcastLoading, refetch } = useQuery({
@@ -26,19 +28,24 @@ export default function SendBroadcastPage() {
             return api.broadcast.getById(broadcastId)
         },
         enabled: !!broadcastId,
-        refetchInterval: (data: any) => {
+        refetchInterval: (query) => {
             // Keep polling if broadcast is in progress
-            if (data?.status === 1) return 2000
-            return false
+            const broadcastData = query.state.data as any
+            if (broadcastData?.status === 1) {
+                return 2000 // Poll every 2 seconds
+            }
+            return false // Stop polling when not in progress
         },
     })
 
     // Send mutation
     const sendMutation = useMutation({
         mutationFn: () => api.broadcast.send(broadcastId),
-        onSuccess: () => {
+        onSuccess: async () => {
             toast.success('Broadcast started!')
-            refetch()
+            // Invalidate and immediately refetch broadcast data
+            await queryClient.invalidateQueries({ queryKey: ['broadcast', broadcastId] })
+            await refetch()
         },
         onError: (error: any) => {
             toast.error(error.message || 'Failed to start broadcast')
@@ -57,6 +64,15 @@ export default function SendBroadcastPage() {
         },
     })
 
+    const broadcastData = broadcast as any
+
+    // Clear optimistic flag when broadcast status updates
+    useEffect(() => {
+        if (broadcastData?.status !== 0 && isSendingOptimistic) {
+            setIsSendingOptimistic(false);
+        }
+    }, [broadcastData?.status, isSendingOptimistic]);
+
     if (isLoading || broadcastLoading) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -68,8 +84,6 @@ export default function SendBroadcastPage() {
     if (!user) {
         return null
     }
-
-    const broadcastData = broadcast as any
 
     if (!broadcastData) {
         return (
@@ -92,6 +106,7 @@ export default function SendBroadcastPage() {
         )
     }
 
+
     const getStatusBadge = (status: number) => {
         switch (status) {
             case 0: return <Badge variant="outline" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
@@ -111,7 +126,10 @@ export default function SendBroadcastPage() {
             destructive: false,
         })
         if (confirmed) {
-            sendMutation.mutate()
+            setIsSendingOptimistic(true);
+            sendMutation.mutate(undefined, {
+                onSettled: () => setIsSendingOptimistic(false),
+            });
         }
     }
 
@@ -157,11 +175,11 @@ export default function SendBroadcastPage() {
             </div>
 
             {/* Status Card */}
-            {broadcastData.status === 0 && (
+            {broadcastData.status === 0 && !isSendingOptimistic && (
                 <Card className="border-primary">
                     <CardContent className="p-6">
                         <div className="text-center space-y-4">
-                            <div className="h-16 w-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
+                            <div className="h-16 w-16 mx-auto rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
                                 <Send className="h-8 w-8 text-primary" />
                             </div>
                             <div>
@@ -193,6 +211,20 @@ export default function SendBroadcastPage() {
                                     )}
                                 </Button>
                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+            {/* Optimistic sending state */}
+            {isSendingOptimistic && (
+                <Card className="border-blue-500">
+                    <CardContent className="p-6">
+                        <div className="text-center space-y-4">
+                            <div className="h-16 w-16 mx-auto rounded-full bg-blue-500/10 flex items-center justify-center">
+                                <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                            </div>
+                            <h2 className="text-xl font-semibold">Broadcasting...</h2>
+                            <p className="text-sm text-muted-foreground mt-1">Sending messages to {broadcastData.totalRecipients} subscribers</p>
                         </div>
                     </CardContent>
                 </Card>

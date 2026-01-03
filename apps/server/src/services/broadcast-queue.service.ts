@@ -120,8 +120,23 @@ async function processBroadcast(broadcastId: string): Promise<void> {
     if (broadcast.parseMode) {
         options.parse_mode = broadcast.parseMode
     }
-    if (broadcast.buttons && Array.isArray(broadcast.buttons)) {
-        options.reply_markup = { inline_keyboard: broadcast.buttons }
+    if (broadcast.buttons && Array.isArray(broadcast.buttons) && broadcast.buttons.length > 0) {
+        // Convert buttons array to Telegram inline keyboard format
+        // Frontend sends: [{ name: 'Button 1', url: 'https://...' }, ...]
+        // Telegram expects: [[{ text: 'Button 1', url: 'https://...' }], ...]
+        const inlineKeyboard = broadcast.buttons.map((btn: any) => {
+            // Check if button is already in Telegram format or needs conversion
+            if (btn.text && btn.url) {
+                return [btn] // Already in correct format
+            } else if (btn.name && btn.url) {
+                return [{ text: btn.name, url: btn.url }] // Convert from frontend format
+            }
+            return null
+        }).filter(Boolean) // Remove any null entries
+
+        if (inlineKeyboard.length > 0) {
+            options.reply_markup = { inline_keyboard: inlineKeyboard }
+        }
     }
 
     // Process in batches
