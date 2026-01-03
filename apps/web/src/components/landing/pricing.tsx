@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LandingButton, ButtonVariant } from './button';
-import { api } from '@/lib/api-client';
 
-interface Plan {
+export interface Plan {
   id: string;
   name: string;
   description: string | null;
@@ -18,24 +17,12 @@ interface Plan {
   isActive: boolean;
 }
 
-export const LandingPricing: React.FC = () => {
-  const [isYearly, setIsYearly] = useState(false);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [loading, setLoading] = useState(true);
+interface LandingPricingProps {
+  plans: Plan[];
+}
 
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const data = await api.plans.list();
-        setPlans(data as Plan[]);
-      } catch (error) {
-        console.error('Failed to fetch plans:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPlans();
-  }, []);
+export const LandingPricing: React.FC<LandingPricingProps> = ({ plans }) => {
+  const [isYearly, setIsYearly] = useState(false);
 
   const filteredPlans = plans.filter(plan => {
     if (isYearly) return plan.interval === 1;
@@ -76,11 +63,7 @@ export const LandingPricing: React.FC = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : filteredPlans.length === 0 ? (
+        {filteredPlans.length === 0 ? (
           <div className="text-center py-12 text-gray-400">No plans available</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

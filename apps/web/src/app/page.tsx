@@ -1,24 +1,29 @@
-'use client';
+import { Navbar, Hero, Features, Testimonials, FAQ, LandingPricing, LandingFooter, type Plan } from '@/components/landing';
+import { LandingPageClient } from '@/components/landing/landing-page-client';
 
-import { Navbar, Hero, Features, Testimonials, FAQ, LandingPricing, LandingFooter } from '@/components/landing';
-import { useSession } from '@/hooks/use-session';
+async function getPlans(): Promise<Plan[]> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const res = await fetch(`${apiUrl}/api/v1/plans`, {
+      next: { revalidate: 60 }, // Cache for 60 seconds
+    });
+    
+    if (!res.ok) return [];
+    
+    const data = await res.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error('Failed to fetch plans:', error);
+    return [];
+  }
+}
 
-export default function HomePage() {
-  const { user } = useSession();
+export default async function HomePage() {
+  const plans = await getPlans();
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-emerald-400 selection:text-black">
-      <Navbar user={user} />
-      
-      <main className="bg-gradient-to-b from-black via-emerald-950/20 to-black">
-        <Hero />
-        <Features />
-        <Testimonials />
-        <LandingPricing />
-        <FAQ />
-      </main>
-
-      <LandingFooter />
+      <LandingPageClient plans={plans} />
     </div>
   );
 }
