@@ -2,7 +2,7 @@
 
 import { useSession } from '@/hooks/use-session'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Send, Eye, Wand2, Users, Crown, Clock, Radio, Link2 } from 'lucide-react'
+import { ArrowLeft, Send, Eye, Wand2, Users, Crown, Clock, Radio, Link2, Filter, UserCheck, Plus, X } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SubscriberSearch } from '@/components/broadcast/SubscriberSearch'
 
 function CreateBroadcastContent() {
     const { user, isLoading } = useSession()
@@ -29,16 +31,21 @@ function CreateBroadcastContent() {
         content: '',
         parseMode: 'HTML',
         sourceGroupId: 'none',
+        sourceMessageIds: '',
         watermarkEnabled: false,
         watermarkText: '',
         watermarkPosition: 'bottom',
         copyMode: true,
         removeLinks: false,
+        buttons: [] as Array<{ name: string; url: string }>,
         filterCriteria: {
             isPremium: false,
             activeWithinDays: 0,
         },
     })
+
+    const [targetingMode, setTargetingMode] = useState<'filters' | 'manual'>('filters')
+    const [selectedSubscriberIds, setSelectedSubscriberIds] = useState<string[]>([])
 
     const [previewData, setPreviewData] = useState<any>(null)
 
@@ -94,14 +101,14 @@ function CreateBroadcastContent() {
                     watermarkText: formData.watermarkText,
                     watermarkPosition: formData.watermarkPosition,
                     removeLinks: formData.removeLinks,
-                    filterCriteria: formData.filterCriteria.activeWithinDays > 0 || formData.filterCriteria.isPremium
+                    filterCriteria: targetingMode === 'filters' && (formData.filterCriteria.activeWithinDays > 0 || formData.filterCriteria.isPremium)
                         ? formData.filterCriteria
                         : undefined,
                 })
             }, 500)
             return () => clearTimeout(timeout)
         }
-    }, [formData.botId, formData.content, formData.watermarkEnabled, formData.watermarkText, formData.watermarkPosition, formData.removeLinks, formData.filterCriteria])
+    }, [formData.botId, formData.content, formData.watermarkEnabled, formData.watermarkText, formData.watermarkPosition, formData.removeLinks, formData.filterCriteria, targetingMode])
 
     const handleSubmit = () => {
         if (!formData.botId) {
@@ -112,12 +119,24 @@ function CreateBroadcastContent() {
             toast.error('Please enter message content or select a source group')
             return
         }
+        if (targetingMode === 'manual' && selectedSubscriberIds.length === 0) {
+            toast.error('Please select at least one subscriber')
+            return
+        }
+
+        // Parse sourceMessageIds from comma-separated string to array of numbers
+        const sourceMessageIds = formData.sourceMessageIds
+            ? formData.sourceMessageIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+            : undefined
 
         createMutation.mutate({
             ...formData,
             sourceGroupId: formData.sourceGroupId === 'none' ? undefined : formData.sourceGroupId,
+            sourceMessageIds,
             parseMode: formData.parseMode === 'plain' ? '' : formData.parseMode,
-            filterCriteria: formData.filterCriteria.activeWithinDays > 0 || formData.filterCriteria.isPremium
+            buttons: formData.buttons.length > 0 ? formData.buttons : undefined,
+            recipientIds: targetingMode === 'manual' ? selectedSubscriberIds : undefined,
+            filterCriteria: targetingMode === 'filters' && (formData.filterCriteria.activeWithinDays > 0 || formData.filterCriteria.isPremium)
                 ? formData.filterCriteria
                 : undefined,
         })
@@ -230,6 +249,68 @@ function CreateBroadcastContent() {
                     </CardContent>
                 </Card>
 
+                {/* Buttons */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm">Buttons (Optional)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-xs text-muted-foreground">
+                            Add interactive buttons to your message. Each button can redirect to a URL.
+                        </p>
+
+                        {formData.buttons.map((button, index) => (
+                            <div key={index} className="flex gap-2 items-start">
+                                <div className="flex-1 space-y-2">
+                                    <Input
+                                        placeholder="Button Name"
+                                        value={button.name}
+                                        onChange={(e) => {
+                                            const newButtons = [...formData.buttons]
+                                            newButtons[index].name = e.target.value
+                                            setFormData({ ...formData, buttons: newButtons })
+                                        }}
+                                    />
+                                    <Input
+                                        placeholder="https://example.com"
+                                        value={button.url}
+                                        onChange={(e) => {
+                                            const newButtons = [...formData.buttons]
+                                            newButtons[index].url = e.target.value
+                                            setFormData({ ...formData, buttons: newButtons })
+                                        }}
+                                    />
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        const newButtons = formData.buttons.filter((_, i) => i !== index)
+                                        setFormData({ ...formData, buttons: newButtons })
+                                    }}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => {
+                                setFormData({
+                                    ...formData,
+                                    buttons: [...formData.buttons, { name: '', url: '' }],
+                                })
+                            }}
+                        >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Button
+                        </Button>
+                    </CardContent>
+                </Card>
+
                 {/* Source Group */}
                 {formData.botId && groupsList.length > 0 && (
                     <Card>
@@ -262,6 +343,20 @@ function CreateBroadcastContent() {
                                     Forward posts from this group to all subscribers
                                 </p>
                             </div>
+
+                            {formData.sourceGroupId !== 'none' && (
+                                <div className="space-y-2">
+                                    <Label>Post Numbers</Label>
+                                    <Input
+                                        placeholder="e.g., 1,4,6 or 60"
+                                        value={formData.sourceMessageIds}
+                                        onChange={(e) => setFormData({ ...formData, sourceMessageIds: e.target.value })}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Enter post numbers to forward (comma-separated for multiple posts, e.g., 1,4,6 or single number like 60)
+                                    </p>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 )}
@@ -317,7 +412,7 @@ function CreateBroadcastContent() {
                     </CardContent>
                 </Card>
 
-                {/* Filters */}
+                {/* Target Audience */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm flex items-center gap-2">
@@ -326,58 +421,92 @@ function CreateBroadcastContent() {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Label className="flex items-center gap-1">
-                                    <Crown className="h-3 w-3 text-yellow-500" />
-                                    Premium Users Only
-                                </Label>
-                                <p className="text-xs text-muted-foreground">Only send to Telegram Premium users</p>
-                            </div>
-                            <Switch
-                                checked={formData.filterCriteria.isPremium}
-                                onCheckedChange={(checked) => setFormData({
-                                    ...formData,
-                                    filterCriteria: { ...formData.filterCriteria, isPremium: checked },
-                                })}
-                            />
-                        </div>
+                        <Tabs value={targetingMode} onValueChange={(value: any) => setTargetingMode(value)}>
+                            <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="filters" className="text-xs">
+                                    <Filter className="h-3 w-3 mr-1" />
+                                    Filter-Based
+                                </TabsTrigger>
+                                <TabsTrigger value="manual" className="text-xs">
+                                    <UserCheck className="h-3 w-3 mr-1" />
+                                    Manual Selection
+                                </TabsTrigger>
+                            </TabsList>
 
-                        <div className="space-y-2">
-                            <Label className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Active Within (Days)
-                            </Label>
-                            <Select
-                                value={formData.filterCriteria.activeWithinDays.toString()}
-                                onValueChange={(value) => setFormData({
-                                    ...formData,
-                                    filterCriteria: { ...formData.filterCriteria, activeWithinDays: parseInt(value) },
-                                })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">All subscribers</SelectItem>
-                                    <SelectItem value="1">Active today</SelectItem>
-                                    <SelectItem value="7">Active this week</SelectItem>
-                                    <SelectItem value="30">Active this month</SelectItem>
-                                    <SelectItem value="90">Active in 3 months</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                            <TabsContent value="filters" className="space-y-4 mt-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label className="flex items-center gap-1">
+                                            <Crown className="h-3 w-3 text-yellow-500" />
+                                            Premium Users Only
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground">Only send to Telegram Premium users</p>
+                                    </div>
+                                    <Switch
+                                        checked={formData.filterCriteria.isPremium}
+                                        onCheckedChange={(checked) => setFormData({
+                                            ...formData,
+                                            filterCriteria: { ...formData.filterCriteria, isPremium: checked },
+                                        })}
+                                    />
+                                </div>
 
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <Label>Remove Links</Label>
-                                <p className="text-xs text-muted-foreground">Strip URLs from message content</p>
-                            </div>
-                            <Switch
-                                checked={formData.removeLinks}
-                                onCheckedChange={(checked) => setFormData({ ...formData, removeLinks: checked })}
-                            />
-                        </div>
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        Active Within (Days)
+                                    </Label>
+                                    <Select
+                                        value={formData.filterCriteria.activeWithinDays.toString()}
+                                        onValueChange={(value) => setFormData({
+                                            ...formData,
+                                            filterCriteria: { ...formData.filterCriteria, activeWithinDays: parseInt(value) },
+                                        })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="0">All subscribers</SelectItem>
+                                            <SelectItem value="1">Active today</SelectItem>
+                                            <SelectItem value="7">Active this week</SelectItem>
+                                            <SelectItem value="30">Active this month</SelectItem>
+                                            <SelectItem value="90">Active in 3 months</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label>Remove Links</Label>
+                                        <p className="text-xs text-muted-foreground">Strip URLs from message content</p>
+                                    </div>
+                                    <Switch
+                                        checked={formData.removeLinks}
+                                        onCheckedChange={(checked) => setFormData({ ...formData, removeLinks: checked })}
+                                    />
+                                </div>
+                            </TabsContent>
+
+                            <TabsContent value="manual" className="space-y-4 mt-4">
+                                {formData.botId ? (
+                                    <>
+                                        <p className="text-xs text-muted-foreground">
+                                            Search and select specific subscribers to target for this broadcast
+                                        </p>
+                                        <SubscriberSearch
+                                            botId={formData.botId}
+                                            selectedIds={selectedSubscriberIds}
+                                            onSelectionChange={setSelectedSubscriberIds}
+                                        />
+                                    </>
+                                ) : (
+                                    <div className="text-center py-8 text-sm text-muted-foreground">
+                                        Please select a bot first
+                                    </div>
+                                )}
+                            </TabsContent>
+                        </Tabs>
                     </CardContent>
                 </Card>
 
@@ -394,8 +523,14 @@ function CreateBroadcastContent() {
                             <div className="flex items-center gap-2">
                                 <Badge variant="secondary">
                                     <Users className="h-3 w-3 mr-1" />
-                                    {previewData.recipientCount} recipients
+                                    {targetingMode === 'manual' ? selectedSubscriberIds.length : previewData.recipientCount} recipients
                                 </Badge>
+                                {targetingMode === 'manual' && (
+                                    <Badge variant="outline">
+                                        <UserCheck className="h-3 w-3 mr-1" />
+                                        Manual Selection
+                                    </Badge>
+                                )}
                             </div>
 
                             {previewData.previewContent && (
