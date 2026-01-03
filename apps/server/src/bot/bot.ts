@@ -4,6 +4,7 @@ import { handleChatMember } from './handlers/chat-member'
 import { handleMyChatMember } from './handlers/my-chat-member'
 import { handleChannelPost, handleGroupMessage } from './handlers/channel-post'
 import { setupChatJoinRequestHandler } from './handlers/chat-join-request'
+import { handleAutoDropCommand, getAutoDropCommands } from './handlers/auto-drop'
 
 export function initBot(token: string, dbBotId: string): Telegraf {
   const bot = new Telegraf(token)
@@ -26,8 +27,23 @@ export function initBot(token: string, dbBotId: string): Telegraf {
   // Handle channel posts for forwarding
   bot.on('channel_post', handleChannelPost)
 
-  // Handle group messages for forwarding
-  bot.on('message', handleGroupMessage)
+  // Handle group/private messages for forwarding and auto-drop commands
+  bot.on('message', async (ctx, next) => {
+    // Check for auto-drop commands first (only in private chats)
+    if (ctx.chat?.type === 'private' && ctx.message && 'text' in ctx.message) {
+      const text = ctx.message.text
+      console.log(`[BOT] Private message received: ${text}`)
+      if (text.startsWith('/')) {
+        const command = text.split(' ')[0].split('@')[0] // Extract command without bot username
+        console.log(`[BOT] Command detected: ${command}`)
+        const handled = await handleAutoDropCommand(ctx, command)
+        if (handled) return
+      }
+    }
+    
+    // Then handle group message forwarding
+    await handleGroupMessage(ctx)
+  })
 
   // Handle chat join requests for auto-approval
   setupChatJoinRequestHandler(bot, dbBotId)

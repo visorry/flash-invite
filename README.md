@@ -1,10 +1,10 @@
-# Super Invite
+# FlashInvite
 
 Open-source Telegram bot management platform with advanced automation, monetization, and analytics.
 
-## What is Super Invite?
+## What is FlashInvite?
 
-Super Invite is a comprehensive platform for managing Telegram bots, groups, and channels. It provides tools for creating time-limited invite links, auto-approving join requests, forwarding messages between channels, broadcasting to users, and monetizing your Telegram communities with subscriptions and tokens.
+FlashInvite is a comprehensive platform for managing Telegram bots, groups, and channels. It provides tools for creating time-limited invite links, auto-approving join requests, forwarding messages between channels, broadcasting to users, and monetizing your Telegram communities with subscriptions and tokens.
 
 ## Features
 

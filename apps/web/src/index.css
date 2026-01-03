@@ -31,9 +31,9 @@ body {
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   
-  /* Primary - GitHub green */
-  --primary: oklch(0.52 0.14 155);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Primary - Emerald 400 */
+  --primary: oklch(0.765 0.177 163);
+  --primary-foreground: oklch(0.145 0 0);
   
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -41,9 +41,9 @@ body {
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   
-  /* Accent - Light green tint */
-  --accent: oklch(0.96 0.008 155);
-  --accent-foreground: oklch(0.40 0.14 155);
+  /* Accent - Emerald tint */
+  --accent: oklch(0.96 0.02 163);
+  --accent-foreground: oklch(0.50 0.14 163);
   
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
@@ -52,8 +52,8 @@ body {
   --input: oklch(0.922 0 0);
   --ring: oklch(0.60 0.16 210); /* Blue ring for focus */
   
-  /* Charts - GitHub-style palette */
-  --chart-1: oklch(0.52 0.14 155); /* Green */
+  /* Charts - Emerald-style palette */
+  --chart-1: oklch(0.765 0.177 163); /* Emerald */
   --chart-2: oklch(0.55 0.20 210); /* Blue */
   --chart-3: oklch(0.60 0.18 280); /* Purple */
   --chart-4: oklch(0.65 0.18 40); /* Orange */
@@ -61,8 +61,8 @@ body {
   
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.52 0.14 155);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.765 0.177 163);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
@@ -80,8 +80,8 @@ body {
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   
-  /* Primary - Bright GitHub green */
-  --primary: oklch(0.70 0.18 155);
+  /* Primary - Emerald 400 */
+  --primary: oklch(0.765 0.177 163);
   --primary-foreground: oklch(0.145 0 0);
   
   --secondary: oklch(0.269 0 0);
@@ -90,9 +90,9 @@ body {
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   
-  /* Accent - Dark green tint */
-  --accent: oklch(0.25 0.015 155);
-  --accent-foreground: oklch(0.72 0.18 155);
+  /* Accent - Emerald tint */
+  --accent: oklch(0.25 0.03 163);
+  --accent-foreground: oklch(0.765 0.177 163);
   
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
@@ -101,8 +101,8 @@ body {
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.65 0.18 210); /* Blue ring for focus */
   
-  /* Charts - Bright GitHub-style palette */
-  --chart-1: oklch(0.70 0.18 155); /* Green */
+  /* Charts - Emerald-style palette */
+  --chart-1: oklch(0.765 0.177 163); /* Emerald */
   --chart-2: oklch(0.68 0.22 210); /* Blue */
   --chart-3: oklch(0.72 0.20 280); /* Purple */
   --chart-4: oklch(0.75 0.20 50); /* Orange */
@@ -110,7 +110,7 @@ body {
   
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.68 0.16 155);
+  --sidebar-primary: oklch(0.765 0.177 163);
   --sidebar-primary-foreground: oklch(0.145 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);

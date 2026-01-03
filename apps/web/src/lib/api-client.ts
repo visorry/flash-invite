@@ -89,6 +89,7 @@ export const api = {
     setDefault: (id: string) => apiClient.post(`/api/v1/bots/${id}/default`),
     getChats: (id: string) => apiClient.get(`/api/v1/bots/${id}/chats`),
     syncChats: (id: string) => apiClient.post(`/api/v1/bots/${id}/sync`),
+    cleanup: () => apiClient.post('/api/v1/bots/cleanup'),
     linkToEntity: (id: string, telegramEntityId: string, isPrimary: boolean = false) =>
       apiClient.post(`/api/v1/bots/${id}/entities`, { telegramEntityId, isPrimary }),
     unlinkFromEntity: (id: string, entityId: string) =>
@@ -382,6 +383,9 @@ export const api = {
       forwardPolls?: boolean
       removeLinks?: boolean
       addWatermark?: string
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
       includeKeywords?: string[]
       excludeKeywords?: string[]
     }) => apiClient.post('/api/v1/forward-rules', data),
@@ -398,7 +402,7 @@ export const api = {
       broadcastEnabled?: boolean
       broadcastMessage?: string | null
       broadcastParseMode?: string | null
-      broadcastDeleteAfter?: boolean | null
+      broadcastDeleteAfter?: boolean
       broadcastDeleteInterval?: number | null
       broadcastDeleteUnit?: number | null
       startFromMessageId?: number | null
@@ -412,6 +416,9 @@ export const api = {
       forwardPolls?: boolean
       removeLinks?: boolean
       addWatermark?: string | null
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
       includeKeywords?: string[]
       excludeKeywords?: string[]
     }) => apiClient.put(`/api/v1/forward-rules/${id}`, data),
@@ -421,6 +428,77 @@ export const api = {
     pause: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/pause`),
     resume: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/resume`),
     reset: (id: string) => apiClient.post(`/api/v1/forward-rules/${id}/reset`),
+  },
+  autoDrop: {
+    list: (params?: { botId?: string }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.botId) queryParams.append('botId', params.botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/auto-drop${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/auto-drop/${id}`),
+    create: (data: {
+      botId: string
+      sourceEntityId: string
+      name: string
+      command: string
+      rateLimitEnabled?: boolean
+      rateLimitCount?: number
+      rateLimitWindow?: number
+      rateLimitWindowUnit?: number
+      rateLimitMessage?: string
+      postsPerDrop?: number
+      randomOrder?: boolean
+      startFromMessageId?: number
+      endAtMessageId?: number
+      deleteAfterEnabled?: boolean
+      deleteInterval?: number
+      deleteIntervalUnit?: number
+      forwardMedia?: boolean
+      forwardText?: boolean
+      forwardDocuments?: boolean
+      forwardStickers?: boolean
+      forwardPolls?: boolean
+      removeLinks?: boolean
+      addWatermark?: string
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
+      includeKeywords?: string[]
+      excludeKeywords?: string[]
+    }) => apiClient.post('/api/v1/auto-drop', data),
+    update: (id: string, data: {
+      name?: string
+      isActive?: boolean
+      command?: string
+      rateLimitEnabled?: boolean
+      rateLimitCount?: number
+      rateLimitWindow?: number
+      rateLimitWindowUnit?: number
+      rateLimitMessage?: string | null
+      postsPerDrop?: number
+      randomOrder?: boolean
+      startFromMessageId?: number | null
+      endAtMessageId?: number | null
+      deleteAfterEnabled?: boolean
+      deleteInterval?: number | null
+      deleteIntervalUnit?: number | null
+      forwardMedia?: boolean
+      forwardText?: boolean
+      forwardDocuments?: boolean
+      forwardStickers?: boolean
+      forwardPolls?: boolean
+      removeLinks?: boolean
+      addWatermark?: string | null
+      deleteWatermark?: boolean
+      hideSenderName?: boolean
+      copyMode?: boolean
+      includeKeywords?: string[]
+      excludeKeywords?: string[]
+    }) => apiClient.put(`/api/v1/auto-drop/${id}`, data),
+    toggle: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/toggle`),
+    reset: (id: string) => apiClient.post(`/api/v1/auto-drop/${id}/reset`),
+    delete: (id: string) => apiClient.delete(`/api/v1/auto-drop/${id}`),
   },
   payments: {
     createOrder: (data: { referenceId: string; type: number; phoneNumber?: string }) =>
@@ -448,5 +526,87 @@ export const api = {
   },
   config: {
     getPublic: () => apiClient.get<{ botUsername: string | null }>('/api/v1/config/public'),
+  },
+  broadcast: {
+    // Bot and subscriber management
+    listBotsWithSubscribers: () => apiClient.get('/api/v1/broadcast/bots'),
+    getSubscribers: (botId: string, params?: {
+      isSubscribed?: boolean
+      isPremium?: boolean
+      languageCode?: string
+      activeWithinDays?: number
+      search?: string
+      page?: number
+      size?: number
+    }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.isSubscribed !== undefined) queryParams.append('isSubscribed', params.isSubscribed.toString())
+      if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString())
+      if (params?.languageCode) queryParams.append('languageCode', params.languageCode)
+      if (params?.activeWithinDays) queryParams.append('activeWithinDays', params.activeWithinDays.toString())
+      if (params?.search) queryParams.append('search', params.search)
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.size) queryParams.append('size', params.size.toString())
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/broadcast/subscribers/${botId}${queryString ? `?${queryString}` : ''}`)
+    },
+    getSubscriberStats: (botId: string) => apiClient.get(`/api/v1/broadcast/subscribers/${botId}/stats`),
+    getSourceGroups: (botId: string) => apiClient.get(`/api/v1/broadcast/source-groups/${botId}`),
+    getSourceMessages: (botId: string, groupId: string, limit?: number) =>
+      apiClient.get(`/api/v1/broadcast/messages/${botId}/${groupId}${limit ? `?limit=${limit}` : ''}`),
+
+    // Broadcast CRUD
+    list: (botId?: string) => {
+      const queryParams = new URLSearchParams()
+      if (botId) queryParams.append('botId', botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/broadcast/list${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/broadcast/${id}`),
+    create: (data: {
+      botId: string
+      name?: string
+      content?: string
+      parseMode?: string
+      buttons?: any
+      sourceGroupId?: string
+      sourceMessageIds?: number[]
+      watermarkEnabled?: boolean
+      watermarkText?: string
+      watermarkPosition?: string
+      forwardMedia?: boolean
+      copyMode?: boolean
+      removeLinks?: boolean
+      filterCriteria?: {
+        isPremium?: boolean
+        languageCode?: string
+        activeWithinDays?: number
+        isSubscribed?: boolean
+      }
+      recipientIds?: string[]
+      scheduledFor?: string
+    }) => apiClient.post('/api/v1/broadcast', data),
+    send: (id: string) => apiClient.post(`/api/v1/broadcast/${id}/send`),
+    cancel: (id: string) => apiClient.post(`/api/v1/broadcast/${id}/cancel`),
+    delete: (id: string) => apiClient.delete(`/api/v1/broadcast/${id}`),
+    preview: (data: {
+      botId: string
+      content?: string
+      parseMode?: string
+      buttons?: any
+      sourceGroupId?: string
+      sourceMessageIds?: number[]
+      watermarkEnabled?: boolean
+      watermarkText?: string
+      watermarkPosition?: string
+      removeLinks?: boolean
+      filterCriteria?: {
+        isPremium?: boolean
+        languageCode?: string
+        activeWithinDays?: number
+        isSubscribed?: boolean
+      }
+    }) => apiClient.post('/api/v1/broadcast/preview', data),
+    duplicate: (id: string) => apiClient.post(`/api/v1/broadcast/${id}/duplicate`),
   },
 }

@@ -53,6 +53,9 @@ export default function EditForwardRulePage() {
   // Modifications
   const [removeLinks, setRemoveLinks] = useState(false)
   const [addWatermark, setAddWatermark] = useState('')
+  const [deleteWatermark, setDeleteWatermark] = useState(true)
+  const [hideSenderName, setHideSenderName] = useState(false)
+  const [copyMode, setCopyMode] = useState(false)
 
   // Keywords
   const [includeKeywords, setIncludeKeywords] = useState('')
@@ -95,6 +98,9 @@ export default function EditForwardRulePage() {
       setForwardPolls(r.forwardPolls ?? true)
       setRemoveLinks(r.removeLinks ?? false)
       setAddWatermark(r.addWatermark || '')
+      setDeleteWatermark(r.deleteWatermark ?? true)
+      setHideSenderName(r.hideSenderName ?? false)
+      setCopyMode(r.copyMode ?? false)
       setIncludeKeywords(r.includeKeywords?.join(', ') || '')
       setExcludeKeywords(r.excludeKeywords?.join(', ') || '')
     }
@@ -115,7 +121,7 @@ export default function EditForwardRulePage() {
       broadcastEnabled,
       broadcastMessage: broadcastEnabled ? broadcastMessage : null,
       broadcastParseMode: broadcastEnabled && broadcastParseMode ? broadcastParseMode : null,
-      broadcastDeleteAfter: broadcastEnabled ? broadcastDeleteAfter : null,
+      broadcastDeleteAfter: broadcastEnabled ? broadcastDeleteAfter : false,
       broadcastDeleteInterval: broadcastEnabled && broadcastDeleteAfter && broadcastDeleteUnit !== 5 ? broadcastDeleteInterval : null,
       broadcastDeleteUnit: broadcastEnabled && broadcastDeleteAfter ? broadcastDeleteUnit : null,
       startFromMessageId: startFromMessageId ? parseInt(startFromMessageId) : null,
@@ -129,6 +135,9 @@ export default function EditForwardRulePage() {
       forwardPolls,
       removeLinks,
       addWatermark: addWatermark || null,
+      deleteWatermark,
+      hideSenderName,
+      copyMode,
       includeKeywords: includeKeywords ? includeKeywords.split(',').map(k => k.trim()) : [],
       excludeKeywords: excludeKeywords ? excludeKeywords.split(',').map(k => k.trim()) : [],
     }),
@@ -524,6 +533,32 @@ export default function EditForwardRulePage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
+              <Label htmlFor="hideSenderName" className="text-xs">Hide Sender Name</Label>
+              <p className="text-xs text-muted-foreground">
+                Removes "Forwarded from" label completely. Note: If you see "account was hidden by the user" when forwarding is enabled, that's the original sender's privacy setting, not controlled by this option.
+              </p>
+            </div>
+            <Switch
+              id="hideSenderName"
+              checked={hideSenderName}
+              onCheckedChange={setHideSenderName}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="copyMode" className="text-xs">Copy Mode</Label>
+              <p className="text-xs text-muted-foreground">
+                Copy message instead of forwarding (removes "Forwarded from" label)
+              </p>
+            </div>
+            <Switch
+              id="copyMode"
+              checked={copyMode}
+              onCheckedChange={setCopyMode}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
               <Label htmlFor="removeLinks" className="text-xs">Remove Links</Label>
               <p className="text-xs text-muted-foreground">
                 Strip URLs and @mentions
@@ -544,6 +579,20 @@ export default function EditForwardRulePage() {
               onChange={(e) => setAddWatermark(e.target.value)}
               className="mt-1 h-20"
             />
+            {addWatermark && (
+              <div className="flex items-center justify-between mt-2">
+                <div>
+                  <p className="text-xs font-medium">Delete with post</p>
+                  <p className="text-xs text-muted-foreground">
+                    Delete watermark when post is deleted
+                  </p>
+                </div>
+                <Switch
+                  checked={deleteWatermark}
+                  onCheckedChange={setDeleteWatermark}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

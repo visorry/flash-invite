@@ -82,15 +82,42 @@ const create = async (ctx: RequestContext, token: string) => {
   const existingBot = await db.bot.findFirst({
     where: {
       botId: validation.botId,
-      deletedAt: null,
     },
   })
 
   if (existingBot) {
-    if (existingBot.userId === ctx.user.id) {
-      throw new BadRequestError('You have already added this bot')
+    if (existingBot.deletedAt) {
+      // Bot was soft-deleted, restore it for this user
+      if (existingBot.userId === ctx.user.id) {
+        const restoredBot = await db.bot.update({
+          where: { id: existingBot.id },
+          data: {
+            deletedAt: null,
+            token, // Update token in case it changed
+            status: BotStatus.ACTIVE,
+          },
+        })
+        
+        // Start the bot asynchronously
+        addBot({
+          dbBotId: restoredBot.id,
+          token,
+          userId: ctx.user.id,
+        }).catch((error) => {
+          console.error('Failed to start restored bot:', error)
+        })
+        
+        return restoredBot
+      } else {
+        throw new BadRequestError('This bot was previously registered by another user')
+      }
+    } else {
+      // Bot is active
+      if (existingBot.userId === ctx.user.id) {
+        throw new BadRequestError('You have already added this bot')
+      }
+      throw new BadRequestError('This bot is already registered by another user')
     }
-    throw new BadRequestError('This bot is already registered by another user')
   }
 
   // Check bot cost and user's token balance
@@ -235,6 +262,65 @@ const deleteBot = async (ctx: RequestContext, botId: string) => {
   }
 
   return { success: true }
+}
+
+// Permanently delete soft-deleted bots
+const permanentlyDeleteBot = async (ctx: RequestContext, botId: string) => {
+  if (!ctx.user) {
+    throw new BadRequestError('User not authenticated')
+  }
+
+  const bot = await db.bot.findFirst({
+    where: {
+      botId, // This is the Telegram bot ID, not our internal ID
+      userId: ctx.user.id,
+      deletedAt: { not: null }, // Only soft-deleted bots
+    },
+  })
+
+  if (!bot) {
+    throw new NotFoundError('Soft-deleted bot not found')
+  }
+
+  // Permanently delete the bot and all related data
+  await db.bot.delete({
+    where: { id: bot.id },
+  })
+
+  return { success: true }
+}
+
+// Clean up all soft-deleted bots for a user
+const cleanupDeletedBots = async (ctx: RequestContext) => {
+  if (!ctx.user) {
+    throw new BadRequestError('User not authenticated')
+  }
+
+  // Find all soft-deleted bots for this user
+  const deletedBots = await db.bot.findMany({
+    where: {
+      userId: ctx.user.id,
+      deletedAt: { not: null },
+    },
+  })
+
+  if (deletedBots.length === 0) {
+    return { success: true, message: 'No deleted bots to clean up', count: 0 }
+  }
+
+  // Permanently delete all soft-deleted bots
+  await db.bot.deleteMany({
+    where: {
+      userId: ctx.user.id,
+      deletedAt: { not: null },
+    },
+  })
+
+  return { 
+    success: true, 
+    message: `Permanently deleted ${deletedBots.length} bot(s)`, 
+    count: deletedBots.length 
+  }
 }
 
 // Set a bot as default
@@ -485,6 +571,8 @@ export default {
   getById,
   create,
   delete: deleteBot,
+  permanentlyDelete: permanentlyDeleteBot,
+  cleanupDeletedBots,
   setDefault,
   syncChats,
   getChats,

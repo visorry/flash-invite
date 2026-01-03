@@ -296,6 +296,10 @@ const calculateAutomationCost = async (
     existingCount = await db.forwardRule.count({
       where: { userId, deletedAt: null },
     })
+  } else if (featureType === AutomationFeatureType.AUTO_DROP) {
+    existingCount = await db.autoDropRule.count({
+      where: { userId, deletedAt: null },
+    })
   }
 
   const freeAllowed = config.freeRulesAllowed

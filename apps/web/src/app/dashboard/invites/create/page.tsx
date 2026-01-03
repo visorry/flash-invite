@@ -128,8 +128,8 @@ function CreateInvitePageContent() {
       })
 
       // Invalidate invites and token balance queries to refresh the lists
-      queryClient.invalidateQueries({ queryKey: ['invites'] })
-      queryClient.invalidateQueries({ queryKey: ['tokens', 'balance'] })
+      await queryClient.invalidateQueries({ queryKey: ['invites'] })
+      await queryClient.invalidateQueries({ queryKey: ['tokens', 'balance'] })
 
       setCreatedInvite(result)
       toast.success('Invite link created successfully')

@@ -39,6 +39,9 @@ interface CreateForwardRuleData {
   forwardPolls?: boolean
   removeLinks?: boolean
   addWatermark?: string
+  deleteWatermark?: boolean
+  hideSenderName?: boolean
+  copyMode?: boolean
   includeKeywords?: string[]
   excludeKeywords?: string[]
 }
@@ -70,6 +73,9 @@ interface UpdateForwardRuleData {
   forwardPolls?: boolean
   removeLinks?: boolean
   addWatermark?: string | null
+  deleteWatermark?: boolean
+  hideSenderName?: boolean
+  copyMode?: boolean
   includeKeywords?: string[]
   excludeKeywords?: string[]
 }
@@ -330,6 +336,9 @@ const create = async (ctx: RequestContext, data: CreateForwardRuleData) => {
         forwardPolls: data.forwardPolls ?? true,
         removeLinks: data.removeLinks ?? false,
         addWatermark: data.addWatermark,
+        deleteWatermark: data.deleteWatermark ?? true,
+        hideSenderName: data.hideSenderName ?? false,
+        copyMode: data.copyMode ?? false,
         includeKeywords: data.includeKeywords ?? [],
         excludeKeywords: data.excludeKeywords ?? [],
       },
@@ -410,6 +419,9 @@ const update = async (ctx: RequestContext, ruleId: string, data: UpdateForwardRu
       forwardPolls: data.forwardPolls,
       removeLinks: data.removeLinks,
       addWatermark: data.addWatermark,
+      deleteWatermark: data.deleteWatermark,
+      hideSenderName: data.hideSenderName,
+      copyMode: data.copyMode,
       includeKeywords: data.includeKeywords,
       excludeKeywords: data.excludeKeywords,
     },

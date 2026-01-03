@@ -4,7 +4,7 @@ import { TelegramEntityType } from '@super-invite/db'
 
 /**
  * Handle my_chat_member updates - detect when bot is added/removed from chats
- * This tracks all groups/channels the bot is in
+ * This tracks all groups/channels the bot is in, plus user block/unblock status
  */
 export async function handleMyChatMember(ctx: Context) {
   if (!ctx.myChatMember) return
@@ -19,7 +19,53 @@ export async function handleMyChatMember(ctx: Context) {
   const oldStatus = ctx.myChatMember.old_chat_member.status
   const newStatus = ctx.myChatMember.new_chat_member.status
 
-  // Get chat type
+  // Handle private chat - track user block/unblock
+  if (chat.type === 'private') {
+    const telegramUserId = chat.id.toString()
+
+    console.log(`[MY_CHAT_MEMBER] Private chat status changed for user ${telegramUserId}: ${oldStatus} -> ${newStatus}`)
+
+    // Find the bot member record
+    const botMember = await db.botMember.findFirst({
+      where: {
+        botId: dbBotId,
+        telegramUserId,
+      },
+    })
+
+    if (botMember) {
+      // User blocked the bot
+      if (newStatus === 'kicked') {
+        await db.botMember.update({
+          where: { id: botMember.id },
+          data: {
+            isBlocked: true,
+            blockedAt: new Date(),
+            isSubscribed: false,
+          },
+        })
+        console.log(`[MY_CHAT_MEMBER] User ${telegramUserId} blocked the bot`)
+      }
+
+      // User unblocked the bot (started again)
+      if (newStatus === 'member' && oldStatus === 'kicked') {
+        await db.botMember.update({
+          where: { id: botMember.id },
+          data: {
+            isBlocked: false,
+            blockedAt: null,
+            isSubscribed: true,
+            subscribedAt: new Date(),
+          },
+        })
+        console.log(`[MY_CHAT_MEMBER] User ${telegramUserId} unblocked the bot`)
+      }
+    }
+
+    return // Don't process private chats for entity tracking
+  }
+
+  // Get chat type for groups/channels
   let entityType: number
   if (chat.type === 'channel') {
     entityType = TelegramEntityType.CHANNEL
@@ -28,7 +74,6 @@ export async function handleMyChatMember(ctx: Context) {
   } else if (chat.type === 'group') {
     entityType = TelegramEntityType.GROUP
   } else {
-    // Private chat, ignore
     return
   }
 
@@ -135,7 +180,7 @@ export async function handleMyChatMember(ctx: Context) {
     if (!existingLink && isAdmin) {
       try {
         const chatTypeLabel = entityType === TelegramEntityType.CHANNEL ? 'Channel' :
-                              entityType === TelegramEntityType.SUPERGROUP ? 'Supergroup' : 'Group'
+          entityType === TelegramEntityType.SUPERGROUP ? 'Supergroup' : 'Group'
 
         // Get member count if possible
         let memberCount = 'N/A'

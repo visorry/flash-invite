@@ -139,7 +139,9 @@ async function buildMessageQueue(rule: any): Promise<number[]> {
   if (rule.shuffle) {
     for (let i = messageIds.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[messageIds[i], messageIds[j]] = [messageIds[j], messageIds[i]]
+      const temp = messageIds[i]!
+      messageIds[i] = messageIds[j]!
+      messageIds[j] = temp
     }
   }
 
@@ -154,8 +156,13 @@ async function forwardMessageById(
   rule: any
 ): Promise<boolean> {
   try {
-    // If no modifications needed, just forward
-    if (!rule.removeLinks && !rule.addWatermark) {
+    // Determine if we should use copy mode (hides sender name)
+    const shouldCopy = rule.copyMode || rule.hideSenderName || rule.removeLinks || rule.addWatermark
+    
+    console.log(`[FORWARD_SCHEDULER] Message ${messageId}: copyMode=${rule.copyMode}, hideSenderName=${rule.hideSenderName}, addWatermark="${rule.addWatermark}", shouldCopy=${shouldCopy}`)
+
+    // If no modifications needed and not hiding sender, just forward
+    if (!shouldCopy) {
       const forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
       
       // Schedule deletion if enabled
@@ -166,14 +173,68 @@ async function forwardMessageById(
       return true
     }
 
-    // Need to copy with modifications - this is more complex
-    // For now, just forward directly
-    // TODO: Implement copyMessage with modifications
-    const forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
+    // If watermark is set
+    if (rule.addWatermark) {
+      console.log(`[FORWARD_SCHEDULER] Applying watermark for message ${messageId}`)
+      
+      // Check if we should hide sender (copyMode or hideSenderName)
+      const hideSender = rule.copyMode || rule.hideSenderName
+      
+      if (hideSender) {
+        // Try to copy with caption (works for media - photo, video, gif, document)
+        // For text messages, this will fail and we'll fall back to separate message
+        try {
+          const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId, {
+            caption: rule.addWatermark,
+          })
+          
+          // Schedule deletion if enabled
+          if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
+            scheduleMessageDeletion(bot, destChatId, copiedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+          }
+          
+          return true
+        } catch {
+          // If caption fails (text message), copy without caption and send watermark separately
+          const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId)
+          const watermarkMsg = await bot.telegram.sendMessage(destChatId, rule.addWatermark).catch(() => null)
+          
+          // Schedule deletion if enabled
+          if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
+            scheduleMessageDeletion(bot, destChatId, copiedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+            // Also delete watermark if deleteWatermark is enabled
+            if (rule.deleteWatermark && watermarkMsg) {
+              scheduleMessageDeletion(bot, destChatId, watermarkMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+            }
+          }
+          
+          return true
+        }
+      } else {
+        // Forward the message (shows "Forwarded from") then send watermark
+        const forwardedMsg = await bot.telegram.forwardMessage(destChatId, sourceChatId, messageId)
+        const watermarkMsg = await bot.telegram.sendMessage(destChatId, rule.addWatermark).catch(() => null)
+        
+        // Schedule deletion if enabled
+        if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
+          scheduleMessageDeletion(bot, destChatId, forwardedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+          // Also delete watermark if deleteWatermark is enabled
+          if (rule.deleteWatermark && watermarkMsg) {
+            scheduleMessageDeletion(bot, destChatId, watermarkMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+          }
+        }
+        
+        return true
+      }
+    }
+
+    // Use copyMessage API to hide sender name (copyMode, hideSenderName, or removeLinks without watermark)
+    console.log(`[FORWARD_SCHEDULER] Using copyMessage for message ${messageId}`)
+    const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId)
     
     // Schedule deletion if enabled
     if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
-      scheduleMessageDeletion(bot, destChatId, forwardedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+      scheduleMessageDeletion(bot, destChatId, copiedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
     }
     
     return true
@@ -283,7 +344,7 @@ async function sendBroadcastMessage(
     console.log(`[FORWARD_SCHEDULER] Sent broadcast message to ${chatId}`)
     
     // Schedule deletion if enabled
-    if (deleteAfter && deleteInterval && deleteUnit !== 5) {
+    if (deleteAfter && deleteInterval !== undefined && deleteUnit !== undefined && deleteUnit !== 5) {
       scheduleMessageDeletion(bot, chatId, sentMessage.message_id, deleteInterval, deleteUnit)
     }
   } catch (error) {

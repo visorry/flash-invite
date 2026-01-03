@@ -247,6 +247,7 @@ model Bot {
   forwardRules      ForwardRule[]
   broadcasts        Broadcast[]
   autoApprovalRules AutoApprovalRule[]
+  autoDropRules     AutoDropRule[]
   welcomeConfigs    WelcomeConfig[]
 
   @@index([userId])
@@ -300,6 +301,7 @@ model TelegramEntity {
   joinLogs             JoinLog[]
   forwardRulesAsSource ForwardRule[]       @relation("ForwardSource")
   forwardRulesAsDest   ForwardRule[]       @relation("ForwardDestination")
+  autoDropRulesAsSource AutoDropRule[]     @relation("AutoDropSource")
   autoApprovalRules    AutoApprovalRule[]
   welcomeConfigs       WelcomeConfig[]
 
@@ -399,26 +401,32 @@ model GroupMember {
 
 // Bot Member - Track all Telegram users who interact with a bot via /start
 model BotMember {
-  id             String   @id @default(uuid())
-  botId          String   @map("bot_id")
-  bot            Bot      @relation(fields: [botId], references: [id], onDelete: Cascade)
-  telegramUserId String   @map("telegram_user_id")
+  id             String    @id @default(uuid())
+  botId          String    @map("bot_id")
+  bot            Bot       @relation(fields: [botId], references: [id], onDelete: Cascade)
+  telegramUserId String    @map("telegram_user_id")
   username       String?
-  firstName      String?  @map("first_name")
-  lastName       String?  @map("last_name")
-  languageCode   String?  @map("language_code")
-  isPremium      Boolean  @default(false) @map("is_premium")
-  isBot          Boolean  @default(false) @map("is_bot")
-  lastActiveAt   DateTime @default(now()) @map("last_active_at") @db.Timestamptz(3)
+  firstName      String?   @map("first_name")
+  lastName       String?   @map("last_name")
+  languageCode   String?   @map("language_code")
+  isPremium      Boolean   @default(false) @map("is_premium")
+  isBot          Boolean   @default(false) @map("is_bot")
+  isSubscribed   Boolean   @default(true) @map("is_subscribed") // Whether user is subscribed to broadcasts
+  isBlocked      Boolean   @default(false) @map("is_blocked") // Whether bot is blocked by user
+  subscribedAt   DateTime  @default(now()) @map("subscribed_at") @db.Timestamptz(3)
+  blockedAt      DateTime? @map("blocked_at") @db.Timestamptz(3)
+  lastActiveAt   DateTime  @default(now()) @map("last_active_at") @db.Timestamptz(3)
   metadata       Json?
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@unique([botId, telegramUserId]) // Same user can interact with different bots
   @@index([botId])
   @@index([telegramUserId])
   @@index([username])
   @@index([lastActiveAt])
+  @@index([isSubscribed])
+  @@index([isBlocked])
   @@map("bot_member")
 }
 
@@ -470,28 +478,58 @@ model BroadcastTemplate {
 // Broadcast - Track broadcast sends
 model Broadcast {
   id              String             @id @default(uuid())
+  userId          String             @map("user_id") // Owner of this broadcast
   botId           String             @map("bot_id")
   bot             Bot                @relation(fields: [botId], references: [id], onDelete: Cascade)
   templateId      String?            @map("template_id")
   template        BroadcastTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  content         String             @db.Text // Actual message sent (in case template was modified)
-  parseMode       String?            @map("parse_mode")
-  buttons         Json? // Inline keyboard buttons used
+  name            String?            // Optional broadcast name for identification
+  
+  // Content options
+  content         String?            @db.Text // Text message content (optional if forwarding)
+  parseMode       String?            @map("parse_mode") // HTML, Markdown
+  buttons         Json?              // Inline keyboard buttons
+  
+  // Source group for forwarding posts
+  sourceGroupId   String?            @map("source_group_id") // TelegramEntity ID if forwarding from a group
+  sourceMessageIds Int[]             @map("source_message_ids") // Message IDs to forward from source group
+  
+  // Watermark options
+  watermarkEnabled Boolean           @default(false) @map("watermark_enabled")
+  watermarkText   String?            @map("watermark_text") // Text watermark to add
+  watermarkPosition String?          @map("watermark_position") // top, bottom, overlay
+  
+  // Media handling
+  forwardMedia    Boolean            @default(true) @map("forward_media")
+  copyMode        Boolean            @default(true) @map("copy_mode") // Use copyMessage instead of forward
+  removeLinks     Boolean            @default(false) @map("remove_links")
+  
+  // Status and progress
   status          Int                @default(0) // BroadcastStatus enum: 0=pending, 1=in_progress, 2=completed, 3=failed, 4=cancelled
   totalRecipients Int                @default(0) @map("total_recipients")
   sentCount       Int                @default(0) @map("sent_count")
   failedCount     Int                @default(0) @map("failed_count")
+  blockedCount    Int                @default(0) @map("blocked_count") // Users who blocked the bot
+  
+  // Filtering and scheduling
   filterCriteria  Json?              @map("filter_criteria") // Store filter options used
   recipientIds    String[]           @map("recipient_ids") // Array of bot member IDs
+  scheduledFor    DateTime?          @map("scheduled_for") @db.Timestamptz(3) // Schedule for later
   startedAt       DateTime?          @map("started_at") @db.Timestamptz(3)
   completedAt     DateTime?          @map("completed_at") @db.Timestamptz(3)
+  
+  // Error logging
+  errorLog        Json?              @map("error_log") // Store errors per recipient
+  
   metadata        Json?
   createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  @@index([userId])
   @@index([botId])
   @@index([status])
   @@index([createdAt])
+  @@index([scheduledFor])
   @@map("broadcast")
 }
 
@@ -571,8 +609,11 @@ model ForwardRule {
   forwardPolls     Boolean @default(true) @map("forward_polls")
 
   // Text modifications
-  removeLinks  Boolean @default(false) @map("remove_links") // Strip URLs from text
-  addWatermark String? @map("add_watermark") // Text to append to forwarded messages
+  removeLinks     Boolean @default(false) @map("remove_links") // Strip URLs from text
+  addWatermark    String? @map("add_watermark") // Text to append to forwarded messages
+  deleteWatermark Boolean @default(true) @map("delete_watermark") // Delete watermark message along with post
+  hideSenderName  Boolean @default(false) @map("hide_sender_name") // Use copy instead of forward to hide original sender
+  copyMode        Boolean @default(false) @map("copy_mode") // Use copyMessage API instead of forwardMessage
 
   // Keyword filters (JSON arrays)
   includeKeywords String[] @map("include_keywords") // Only forward if contains these
@@ -596,6 +637,100 @@ model ForwardRule {
   @@index([scheduleMode])
   @@index([nextRunAt])
   @@map("forward_rule")
+}
+
+// Auto Drop Rule - Send posts to users on command
+model AutoDropRule {
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
+  botId          String          @map("bot_id")
+  bot            Bot             @relation(fields: [botId], references: [id], onDelete: Cascade)
+  sourceEntityId String?         @map("source_entity_id")
+  sourceEntity   TelegramEntity? @relation("AutoDropSource", fields: [sourceEntityId], references: [id], onDelete: Cascade)
+  name           String
+  isActive       Boolean         @default(true) @map("is_active")
+
+  // Command configuration
+  command        String          @default("/drop") // Command to trigger the drop (e.g., /post, /get, /drop)
+
+  // Custom messages (optional)
+  startMessage   String?         @map("start_message") @db.Text
+  endMessage     String?         @map("end_message") @db.Text
+
+  // Rate limiting
+  rateLimitEnabled    Boolean @default(true) @map("rate_limit_enabled")
+  rateLimitCount      Int     @default(5) @map("rate_limit_count") // Number of requests allowed
+  rateLimitWindow     Int     @default(60) @map("rate_limit_window") // Time window value
+  rateLimitWindowUnit Int     @default(0) @map("rate_limit_window_unit") // 0=seconds, 1=minutes, 2=hours, 3=days
+  rateLimitMessage    String? @map("rate_limit_message") @db.Text // Message to show when rate limited
+
+  // Drop configuration
+  postsPerDrop      Int     @default(1) @map("posts_per_drop") // Number of posts to send per command
+  randomOrder       Boolean @default(false) @map("random_order") // Send posts in random order
+  
+  // Message range
+  startFromMessageId Int? @map("start_from_message_id")
+  endAtMessageId     Int? @map("end_at_message_id")
+
+  // Auto-delete configuration
+  deleteAfterEnabled Boolean @default(false) @map("delete_after_enabled")
+  deleteInterval     Int?    @map("delete_interval") // Interval value
+  deleteIntervalUnit Int?    @map("delete_interval_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
+
+  // Content filters
+  forwardMedia     Boolean @default(true) @map("forward_media")
+  forwardText      Boolean @default(true) @map("forward_text")
+  forwardDocuments Boolean @default(true) @map("forward_documents")
+  forwardStickers  Boolean @default(false) @map("forward_stickers")
+  forwardPolls     Boolean @default(true) @map("forward_polls")
+
+  // Text modifications
+  removeLinks     Boolean @default(false) @map("remove_links")
+  addWatermark    String? @map("add_watermark")
+  deleteWatermark Boolean @default(true) @map("delete_watermark") // Delete watermark message along with post
+  hideSenderName  Boolean @default(false) @map("hide_sender_name")
+  copyMode        Boolean @default(false) @map("copy_mode")
+
+  // Keyword filters
+  includeKeywords String[] @map("include_keywords")
+  excludeKeywords String[] @map("exclude_keywords")
+
+  // Stats
+  totalDrops      Int       @default(0) @map("total_drops")
+  lastDropAt      DateTime? @map("last_drop_at") @db.Timestamptz(3)
+
+  metadata  Json?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  // User rate limit tracking
+  userRateLimits AutoDropUserRateLimit[]
+
+  @@unique([botId, command]) // One command per bot
+  @@index([userId])
+  @@index([botId])
+  @@index([sourceEntityId])
+  @@index([isActive])
+  @@index([command])
+  @@map("auto_drop_rule")
+}
+
+// Track user rate limits for auto drop
+model AutoDropUserRateLimit {
+  id             String       @id @default(uuid())
+  ruleId         String       @map("rule_id")
+  rule           AutoDropRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  telegramUserId String       @map("telegram_user_id")
+  requestCount   Int          @default(0) @map("request_count")
+  windowStart    DateTime     @map("window_start") @db.Timestamptz(3)
+  lastMessageId  Int?         @map("last_message_id") // Track which message was last sent to this user
+
+  @@unique([ruleId, telegramUserId])
+  @@index([ruleId])
+  @@index([telegramUserId])
+  @@index([windowStart])
+  @@map("auto_drop_user_rate_limit")
 }
 
 // Auto Approval Rule - Automatically approve join requests

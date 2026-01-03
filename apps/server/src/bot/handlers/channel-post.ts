@@ -126,13 +126,18 @@ async function forwardMessage(
   destChatId: string,
   rule: any
 ): Promise<boolean> {
-  // If no modifications needed, just forward
-  if (!rule.removeLinks && !rule.addWatermark) {
+  // Determine if we should use copy mode (hides sender name)
+  const shouldCopy = rule.copyMode || rule.hideSenderName || rule.removeLinks || rule.addWatermark
+
+  console.log(`[FORWARD] Rule modifications: copyMode=${rule.copyMode}, hideSenderName=${rule.hideSenderName}, removeLinks=${rule.removeLinks}, addWatermark="${rule.addWatermark}", shouldCopy=${shouldCopy}`)
+
+  // If no modifications needed and not hiding sender, just forward
+  if (!shouldCopy) {
     await ctx.telegram.forwardMessage(destChatId, message.chat.id, message.message_id)
     return true
   }
 
-  // Need to copy message with modifications
+  // Need to copy message (hides sender name) with optional modifications
   let text = getMessageText(message)
 
   // Remove links if enabled
@@ -144,9 +149,16 @@ async function forwardMessage(
   // Add watermark if enabled
   if (rule.addWatermark) {
     text = text.trim() + '\n\n' + rule.addWatermark
+    console.log(`[FORWARD] Applied watermark, new text: "${text}"`)
   }
 
-  // Send based on message type
+  // If only copyMode/hideSenderName is enabled (no text modifications), use copyMessage API
+  if (!rule.removeLinks && !rule.addWatermark) {
+    await ctx.telegram.copyMessage(destChatId, message.chat.id, message.message_id)
+    return true
+  }
+
+  // Send based on message type with modifications
   if ('photo' in message && message.photo) {
     const photo = message.photo[message.photo.length - 1]
     await ctx.telegram.sendPhoto(destChatId, photo.file_id, {
@@ -174,8 +186,8 @@ async function forwardMessage(
     return true
   }
 
-  // For other types, just forward
-  await ctx.telegram.forwardMessage(destChatId, message.chat.id, message.message_id)
+  // For other types, use copyMessage to hide sender
+  await ctx.telegram.copyMessage(destChatId, message.chat.id, message.message_id)
   return true
 }
 

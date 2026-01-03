@@ -61,12 +61,23 @@ router.post('/webhook/:botId', async (req: Request, res: Response) => {
     // Get bot instance
     const botInstance = getBotInstance(botId)
     if (!botInstance) {
-        console.error(`[WEBHOOK] Bot ${botId} not found`)
+        // Known old bot IDs that we want to ignore in logs
+        const KNOWN_OLD_BOTS = [
+            '76a1aa4a-f045-48d3-90d2-ca478c0897d5',
+            '34906bc0-e7b0-4e54-982a-d77b54604b3c',
+            '32addc8d-47da-4f1a-8e65-91f41306b578'
+        ]
+        
+        // Only log if it's not a known old bot
+        if (!KNOWN_OLD_BOTS.includes(botId)) {
+            console.error(`[WEBHOOK] Bot ${botId} not found`)
+        }
         return res.status(404).json({ error: 'Bot not found' })
     }
 
     try {
         // Process update with Telegraf
+        console.log(`[WEBHOOK] Received update for bot ${botId}:`, JSON.stringify(req.body).substring(0, 200))
         await botInstance.bot.handleUpdate(req.body)
         res.status(200).json({ ok: true })
     } catch (error) {

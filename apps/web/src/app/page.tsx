@@ -1,27 +1,29 @@
-'use client';
+import { type Plan } from '@/components/landing';
+import { LandingPageClient } from '@/components/landing/landing-page-client';
 
-import { useState } from 'react';
-import Header from '@/components/flashinvite/header/header';
-import { HeroSection } from '@/components/flashinvite/hero-section/hero-section';
-import { Pricing } from '@/components/flashinvite/pricing/pricing';
-import { HomePageBackground } from '@/components/gradients/home-page-background';
-import { Footer } from '@/components/flashinvite/footer/footer';
+async function getPlans(): Promise<Plan[]> {
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.flash-invite.com';
+    const res = await fetch(`${apiUrl}/api/v1/plans`, {
+      next: { revalidate: 60 }, // Cache for 60 seconds
+    });
+    
+    if (!res.ok) return [];
+    
+    const data = await res.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error('Failed to fetch plans:', error);
+    return [];
+  }
+}
 
-import { useSession } from '@/hooks/use-session';
-
-export default function HomePage() {
-  const [country, setCountry] = useState('US');
-  const { user } = useSession();
+export default async function HomePage() {
+  const plans = await getPlans();
 
   return (
-    <>
-      <div className="relative min-h-screen overflow-x-hidden">
-        <HomePageBackground />
-        <Header user={user} />
-        <HeroSection />
-        <Pricing country={country} />
-        <Footer />
-      </div>
-    </>
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-emerald-400 selection:text-black">
+      <LandingPageClient plans={plans} />
+    </div>
   );
 }

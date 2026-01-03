@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Forward, UserCheck } from "lucide-react"
+import { Forward, UserCheck, Download, Radio } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function AutomatePage() {
@@ -17,10 +17,22 @@ export default function AutomatePage() {
       description: "Auto-forward messages between channels"
     },
     {
+      to: "/dashboard/auto-drop",
+      label: "Auto Drop",
+      icon: Download,
+      description: "Send posts to users on command"
+    },
+    {
       to: "/dashboard/auto-approval",
       label: "Auto Approval",
       icon: UserCheck,
       description: "Automatically approve join requests"
+    },
+    {
+      to: "/dashboard/broadcast",
+      label: "Broadcast",
+      icon: Radio,
+      description: "Send messages to all bot subscribers"
     },
   ]
 
