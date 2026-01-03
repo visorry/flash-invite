@@ -41,8 +41,19 @@ class CashfreeService {
         ? 'https://api.cashfree.com/pg'
         : 'https://sandbox.cashfree.com/pg'
 
+    // Startup logging
+    console.log('[Cashfree] ========== Configuration ==========')
+    console.log('[Cashfree] Environment:', env)
+    console.log('[Cashfree] Base URL:', this.baseUrl)
+    console.log('[Cashfree] App ID present:', !!this.appId)
+    console.log('[Cashfree] App ID (first 10 chars):', this.appId ? this.appId.substring(0, 10) + '...' : 'NOT SET')
+    console.log('[Cashfree] Secret Key present:', !!this.secretKey)
+    console.log('[Cashfree] Secret Key (first 10 chars):', this.secretKey ? this.secretKey.substring(0, 10) + '...' : 'NOT SET')
+    console.log('[Cashfree] ====================================')
+
     if (!this.appId || !this.secretKey) {
-      console.warn('Cashfree credentials not found in environment variables')
+      console.error('[Cashfree] ❌ CRITICAL: Cashfree credentials not found in environment variables!')
+      console.error('[Cashfree] Make sure CASHFREE_APP_ID and CASHFREE_SECRET_KEY are set')
     }
   }
 
