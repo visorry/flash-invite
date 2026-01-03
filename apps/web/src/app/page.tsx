@@ -1,9 +1,9 @@
-import { Navbar, Hero, Features, Testimonials, FAQ, LandingPricing, LandingFooter, type Plan } from '@/components/landing';
+import { type Plan } from '@/components/landing';
 import { LandingPageClient } from '@/components/landing/landing-page-client';
 
 async function getPlans(): Promise<Plan[]> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.flash-invite.com';
     const res = await fetch(`${apiUrl}/api/v1/plans`, {
       next: { revalidate: 60 }, // Cache for 60 seconds
     });
