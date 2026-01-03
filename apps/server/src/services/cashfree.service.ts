@@ -71,21 +71,43 @@ class CashfreeService {
       },
     }
 
-    const response = await axios.post(
-      `${this.baseUrl}/orders`,
-      payload,
-      { headers: this.getHeaders() }
-    )
+    try {
+      console.log('[Cashfree] Creating order with payload:', JSON.stringify(payload, null, 2))
+      console.log('[Cashfree] Using environment:', this.baseUrl)
+      console.log('[Cashfree] App ID:', this.appId.substring(0, 10) + '...')
 
-    return response.data
+      const response = await axios.post(
+        `${this.baseUrl}/orders`,
+        payload,
+        { headers: this.getHeaders() }
+      )
+
+      console.log('[Cashfree] Order created successfully:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('[Cashfree] Order creation failed')
+      console.error('[Cashfree] Error status:', error.response?.status)
+      console.error('[Cashfree] Error data:', JSON.stringify(error.response?.data, null, 2))
+      console.error('[Cashfree] Error message:', error.message)
+
+      // Re-throw with more context
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message
+      throw new BadRequestError(`Cashfree order creation failed: ${errorMessage}`)
+    }
   }
 
   async getOrder(orderId: string): Promise<CashfreeOrderResponse> {
-    const response = await axios.get(
-      `${this.baseUrl}/orders/${orderId}`,
-      { headers: this.getHeaders() }
-    )
-    return response.data
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/orders/${orderId}`,
+        { headers: this.getHeaders() }
+      )
+      return response.data
+    } catch (error: any) {
+      console.error('[Cashfree] Get order failed for:', orderId)
+      console.error('[Cashfree] Error:', error.response?.data || error.message)
+      throw new BadRequestError(`Cashfree get order failed: ${error.response?.data?.message || error.message}`)
+    }
   }
 
   verifySignature(
