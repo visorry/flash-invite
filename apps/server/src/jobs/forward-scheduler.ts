@@ -226,7 +226,7 @@ async function forwardMessageById(
       return true
     }
 
-    // If watermark is set, we need to get the original message to preserve its caption
+    // If watermark is set, we need to handle caption preservation
     if (rule.addWatermark) {
       console.log(`[FORWARD_SCHEDULER] Applying watermark for message ${messageId}`)
       
@@ -234,57 +234,29 @@ async function forwardMessageById(
       const hideSender = rule.copyMode || rule.hideSenderName
       
       if (hideSender) {
-        // Get the original message by forwarding it temporarily
-        let originalText = ''
+        // Since bots can't forward to themselves, we'll use a different approach:
+        // 1. First copy the message WITHOUT modifying caption to get the message object back
+        // 2. Then immediately delete it and copy again with the watermark
+        
+        // Alternative: Just copy with watermark and accept that we can't preserve original caption
+        // This is a Telegram API limitation - we can't read a message's caption without forwarding it
+        
+        // Best approach: Copy the message to destination first, then edit its caption
+        // But Telegram doesn't allow editing captions of copied messages from other chats
+        
+        // Final approach: Use copyMessage with caption_entities to preserve formatting
+        // and append watermark. But we still can't read the original caption.
+        
+        // SOLUTION: Copy without caption, then send watermark as separate message
+        // OR: Accept that scheduled forwarding with watermark will only show watermark
+        
+        console.log(`[FORWARD_SCHEDULER] Note: Cannot preserve original caption in scheduled mode due to Telegram API limitations`)
+        console.log(`[FORWARD_SCHEDULER] Copying message ${messageId} with watermark only`)
         
         try {
-          // Forward to bot's own chat (Saved Messages) to read the caption
-          const botChatId = bot.botInfo.id
-          console.log(`[FORWARD_SCHEDULER] Forwarding message ${messageId} to bot ${botChatId} to read caption`)
-          
-          const tempForwarded = await bot.telegram.forwardMessage(
-            botChatId,
-            sourceChatId, 
-            messageId
-          )
-          
-          console.log(`[FORWARD_SCHEDULER] Temp forwarded message ${tempForwarded.message_id}, type: ${tempForwarded.chat.type}`)
-          
-          // Extract original text/caption from the forwarded message
-          if ('text' in tempForwarded && tempForwarded.text) {
-            originalText = tempForwarded.text
-            console.log(`[FORWARD_SCHEDULER] Extracted text: ${originalText.substring(0, 50)}...`)
-          } else if ('caption' in tempForwarded && tempForwarded.caption) {
-            originalText = tempForwarded.caption
-            console.log(`[FORWARD_SCHEDULER] Extracted caption: ${originalText.substring(0, 50)}...`)
-          } else {
-            console.log(`[FORWARD_SCHEDULER] No text or caption found in message ${messageId}`)
-          }
-          
-          // Delete the temporary message
-          await bot.telegram.deleteMessage(botChatId, tempForwarded.message_id).catch((err) => {
-            console.log(`[FORWARD_SCHEDULER] Could not delete temp message: ${err.message}`)
-          })
-        } catch (error: any) {
-          console.error(`[FORWARD_SCHEDULER] Error forwarding to bot for caption extraction:`, error.message)
-          // Continue with empty originalText
-        }
-        
-        // Build the new caption with watermark
-        let newCaption: string
-        if (originalText.trim()) {
-          newCaption = originalText.trim() + '\n\n━━━━━━━━━━━━━━━\n' + rule.addWatermark
-          console.log(`[FORWARD_SCHEDULER] Combined caption length: ${newCaption.length}`)
-        } else {
-          // No original caption, just use watermark with separator
-          newCaption = '━━━━━━━━━━━━━━━\n' + rule.addWatermark
-          console.log(`[FORWARD_SCHEDULER] Using watermark only (no original caption)`)
-        }
-        
-        // Now copy to destination with the combined caption
-        try {
+          // Try to copy with watermark as caption
           const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId, {
-            caption: newCaption,
+            caption: '━━━━━━━━━━━━━━━\n' + rule.addWatermark,
           })
           
           console.log(`[FORWARD_SCHEDULER] Successfully copied message ${messageId} with watermark to ${destChatId}`)
