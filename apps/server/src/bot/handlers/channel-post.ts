@@ -38,24 +38,25 @@ export async function handleChannelPost(ctx: Context) {
 
   const message = ctx.channelPost
   const chatId = message.chat.id.toString()
+  const messageId = message.message_id
 
   // Get active forward rules for this source
   const rules = await forwardRuleService.getActiveRulesForSource(dbBotId, chatId)
 
   if (rules.length === 0) return
 
-  console.log(`[CHANNEL_POST] Processing message in ${chatId} with ${rules.length} active rules`)
+  console.log(`[CHANNEL_POST:${messageId}] Processing message in ${chatId} with ${rules.length} active rules`)
 
   for (const rule of rules) {
-    console.log(`[CHANNEL_POST] Rule ${rule.id}: scheduleMode=${rule.scheduleMode}, name="${rule.name}"`)
+    console.log(`[CHANNEL_POST:${messageId}] Rule ${rule.id}: scheduleMode=${rule.scheduleMode}, name="${rule.name}"`)
     
     // Skip scheduled rules - they should only be processed by the scheduler
     if (rule.scheduleMode === ForwardScheduleMode.SCHEDULED) {
-      console.log(`[CHANNEL_POST] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
+      console.log(`[CHANNEL_POST:${messageId}] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
       continue
     }
 
-    console.log(`[CHANNEL_POST] Processing rule ${rule.id} in REALTIME mode`)
+    console.log(`[CHANNEL_POST:${messageId}] Processing rule ${rule.id} in REALTIME mode`)
 
     // Apply rate limiting before forwarding
     await waitForRateLimit(dbBotId)
@@ -75,13 +76,13 @@ export async function handleChannelPost(ctx: Context) {
     const destChatId = rule.destinationEntity.telegramId
 
     const forwardResult = await forwardMessageWithRetry(ctx, message, destChatId, rule).catch((error) => {
-      console.error(`[CHANNEL_POST] Failed to forward to ${destChatId} after retries:`, error)
+      console.error(`[CHANNEL_POST:${messageId}] Failed to forward to ${destChatId} after retries:`, error)
       return false
     })
 
     if (forwardResult) {
       await forwardRuleService.incrementForwardCount(rule.id)
-      console.log(`[CHANNEL_POST] Forwarded message to ${destChatId}`)
+      console.log(`[CHANNEL_POST:${messageId}] Forwarded message to ${destChatId}`)
     }
   }
 }
@@ -293,52 +294,56 @@ export async function handleGroupMessage(ctx: Context) {
 
   const message = ctx.message
   const chatId = message.chat.id.toString()
+  const messageId = message.message_id
 
-  console.log(`[GROUP_MESSAGE] Received message in chat ${chatId} (type: ${message.chat.type})`)
+  console.log(`[GROUP_MESSAGE:${messageId}] Received message in chat ${chatId} (type: ${message.chat.type})`)
 
   // Get active forward rules for this source
   const rules = await forwardRuleService.getActiveRulesForSource(dbBotId, chatId)
 
-  console.log(`[GROUP_MESSAGE] Found ${rules.length} active rules for chat ${chatId}`)
+  console.log(`[GROUP_MESSAGE:${messageId}] Found ${rules.length} active rules for chat ${chatId}`)
 
-  if (rules.length === 0) return
+  if (rules.length === 0) {
+    console.log(`[GROUP_MESSAGE:${messageId}] No rules found, exiting handler`)
+    return
+  }
 
   for (const rule of rules) {
-    console.log(`[GROUP_MESSAGE] Rule ${rule.id}: scheduleMode=${rule.scheduleMode}, name="${rule.name}"`)
+    console.log(`[GROUP_MESSAGE:${messageId}] Rule ${rule.id}: scheduleMode=${rule.scheduleMode}, name="${rule.name}"`)
 
     // Skip scheduled rules - they should only be processed by the scheduler
     if (rule.scheduleMode === ForwardScheduleMode.SCHEDULED) {
-      console.log(`[GROUP_MESSAGE] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
+      console.log(`[GROUP_MESSAGE:${messageId}] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
       continue
     }
 
-    console.log(`[GROUP_MESSAGE] Processing rule ${rule.id} in REALTIME mode`)
+    console.log(`[GROUP_MESSAGE:${messageId}] Processing rule ${rule.id} in REALTIME mode`)
 
     // Apply rate limiting before forwarding
     await waitForRateLimit(dbBotId)
 
     if (!shouldForwardMessage(message, rule)) {
-      console.log(`[GROUP_MESSAGE] Message filtered out by type filter`)
+      console.log(`[GROUP_MESSAGE:${messageId}] Message filtered out by type filter`)
       continue
     }
 
     const messageText = getMessageText(message)
     if (!passesKeywordFilters(messageText, rule)) {
-      console.log(`[GROUP_MESSAGE] Message filtered out by keyword filter`)
+      console.log(`[GROUP_MESSAGE:${messageId}] Message filtered out by keyword filter`)
       continue
     }
 
     const destChatId = rule.destinationEntity.telegramId
-    console.log(`[GROUP_MESSAGE] Forwarding to ${destChatId}`)
+    console.log(`[GROUP_MESSAGE:${messageId}] Forwarding to ${destChatId}`)
 
     const forwardResult = await forwardMessageWithRetry(ctx, message, destChatId, rule).catch((error) => {
-      console.error(`[GROUP_MESSAGE] Failed to forward to ${destChatId} after retries:`, error)
+      console.error(`[GROUP_MESSAGE:${messageId}] Failed to forward to ${destChatId} after retries:`, error)
       return false
     })
 
     if (forwardResult) {
       await forwardRuleService.incrementForwardCount(rule.id)
-      console.log(`[GROUP_MESSAGE] Successfully forwarded to ${destChatId}`)
+      console.log(`[GROUP_MESSAGE:${messageId}] Successfully forwarded to ${destChatId}`)
     }
   }
 }
