@@ -249,6 +249,7 @@ model Bot {
   autoApprovalRules AutoApprovalRule[]
   autoDropRules     AutoDropRule[]
   welcomeConfigs    WelcomeConfig[]
+  promoterConfigs   PromoterConfig[]
 
   @@index([userId])
   @@index([status])
@@ -304,6 +305,8 @@ model TelegramEntity {
   autoDropRulesAsSource AutoDropRule[]     @relation("AutoDropSource")
   autoApprovalRules    AutoApprovalRule[]
   welcomeConfigs       WelcomeConfig[]
+  promoterVaultConfigs PromoterConfig[]    @relation("PromoterVault")
+  promoterMarketingConfigs PromoterConfig[] @relation("PromoterMarketing")
 
   @@unique([telegramId, userId]) // Same group can exist for different users
   @@index([userId])
@@ -892,4 +895,137 @@ model DailyTokenClaim {
   @@index([subscriptionId])
   @@index([claimDate])
   @@map("daily_token_claim")
+}
+
+// ============ PROMOTER 2.0 MODELS ============
+
+// Promoter Configuration - Content promotion and delivery system
+model PromoterConfig {
+  id                    String         @id @default(uuid())
+  userId                String         @map("user_id")
+  botId                 String         @map("bot_id")
+  bot                   Bot            @relation(fields: [botId], references: [id], onDelete: Cascade)
+  vaultEntityId         String         @map("vault_entity_id")
+  vaultEntity           TelegramEntity @relation("PromoterVault", fields: [vaultEntityId], references: [id], onDelete: Cascade)
+  marketingEntityId     String         @map("marketing_entity_id")
+  marketingEntity       TelegramEntity @relation("PromoterMarketing", fields: [marketingEntityId], references: [id], onDelete: Cascade)
+  
+  name                  String         // User-friendly name
+  isActive              Boolean        @default(true) @map("is_active")
+  
+  // CTA Configuration
+  ctaTemplate           String         @default("🔥 Click here to get the content: {link}") @map("cta_template")
+  autoPostToMarketing   Boolean        @default(true) @map("auto_post_to_marketing")
+  includeCaptionInCta   Boolean        @default(true) @map("include_caption_in_cta") // Include original caption in marketing post
+  
+  // Token Configuration
+  tokenExpirationEnabled Boolean       @default(false) @map("token_expiration_enabled")
+  tokenExpirationDays   Int?           @map("token_expiration_days")
+  
+  // Auto-delete configuration for marketing posts
+  deleteMarketingAfterEnabled Boolean @default(false) @map("delete_marketing_after_enabled")
+  deleteMarketingInterval     Int?    @map("delete_marketing_interval")
+  deleteMarketingIntervalUnit Int?    @map("delete_marketing_interval_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
+  
+  // Auto-delete configuration for delivered content
+  deleteDeliveredAfterEnabled Boolean @default(false) @map("delete_delivered_after_enabled")
+  deleteDeliveredInterval     Int?    @map("delete_delivered_interval")
+  deleteDeliveredIntervalUnit Int?    @map("delete_delivered_interval_unit") // 0=seconds, 1=minutes, 2=hours, 3=days, 4=months, 5=never
+  
+  // Delivery options (how content is sent to users)
+  hideSenderName        Boolean        @default(false) @map("hide_sender_name") // Hide "Forwarded from" label
+  copyMode              Boolean        @default(false) @map("copy_mode") // Use copy instead of forward
+  removeLinks           Boolean        @default(false) @map("remove_links") // Strip URLs from caption
+  addWatermark          String?        @map("add_watermark") // Text to append to caption
+  
+  // Error Messages
+  invalidTokenMessage   String         @default("❌ This link is invalid or has been removed.") @map("invalid_token_message")
+  expiredTokenMessage   String         @default("⏰ This link has expired.") @map("expired_token_message")
+  
+  // Stats
+  totalCaptures         Int            @default(0) @map("total_captures")
+  totalMarketingPosts   Int            @default(0) @map("total_marketing_posts")
+  totalDeliveries       Int            @default(0) @map("total_deliveries")
+  
+  metadata              Json?
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt             DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  
+  posts                 PromoterPost[]
+  
+  @@unique([botId, vaultEntityId])
+  @@index([userId])
+  @@index([botId])
+  @@index([vaultEntityId])
+  @@index([marketingEntityId])
+  @@index([isActive])
+  @@map("promoter_config")
+}
+
+// Promoter Post - Captured media posts with tokens
+model PromoterPost {
+  id                    String           @id @default(uuid())
+  configId              String           @map("config_id")
+  config                PromoterConfig   @relation(fields: [configId], references: [id], onDelete: Cascade)
+  
+  token                 String           @unique // Unique promotion token
+  fileId                String           @map("file_id") // Telegram file_id
+  mediaType             Int              @map("media_type") // 0=photo, 1=video, 2=document
+  caption               String?          @db.Text
+  
+  // Source message info
+  sourceMessageId       Int              @map("source_message_id")
+  sourceChatId          String           @map("source_chat_id")
+  
+  // Marketing post info
+  marketingMessageId    Int?             @map("marketing_message_id")
+  marketingChatId       String?          @map("marketing_chat_id")
+  marketingPostedAt     DateTime?        @map("marketing_posted_at") @db.Timestamptz(3)
+  
+  // Token status
+  isExpired             Boolean          @default(false) @map("is_expired")
+  expiresAt             DateTime?        @map("expires_at") @db.Timestamptz(3)
+  
+  // Stats
+  deliveryCount         Int              @default(0) @map("delivery_count")
+  lastDeliveredAt       DateTime?        @map("last_delivered_at") @db.Timestamptz(3)
+  
+  metadata              Json?
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  
+  deliveries            PromoterDelivery[]
+  
+  @@index([configId])
+  @@index([token])
+  @@index([isExpired])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("promoter_post")
+}
+
+// Promoter Delivery - Track content deliveries for analytics
+model PromoterDelivery {
+  id                    String         @id @default(uuid())
+  postId                String         @map("post_id")
+  post                  PromoterPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  telegramUserId        String         @map("telegram_user_id")
+  username              String?
+  firstName             String?        @map("first_name")
+  lastName              String?        @map("last_name")
+  
+  // Message tracking for auto-delete
+  deliveredMessageIds   Int[]          @map("delivered_message_ids") // Array of message IDs sent to user
+  chatId                String?        @map("chat_id") // User's chat ID for deletion
+  
+  deliveredAt           DateTime       @default(now()) @map("delivered_at") @db.Timestamptz(3)
+  
+  metadata              Json?
+  
+  @@index([postId])
+  @@index([telegramUserId])
+  @@index([deliveredAt])
+  @@map("promoter_delivery")
 }

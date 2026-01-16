@@ -1,6 +1,7 @@
 import { kickExpiredMembers, cleanupOldInvites, sendExpiryWarnings } from './kick-expired-members'
 import { processScheduledForwards } from './forward-scheduler'
 import { checkExpiredSubscriptions } from './subscription-expiry.job'
+import { processTokenExpiration, processAdminPermissionCheck, processMarketingPostDeletion, processDeliveredContentDeletion } from './promoter-expiration'
 import autoApprovalService from '../services/auto-approval.service'
 
 /**
@@ -67,6 +68,44 @@ export function initializeScheduler() {
     }
   }, 60 * 1000) // Every 1 minute
 
+  // Process promoter token expiration every hour
+  const promoterExpirationInterval = setInterval(async () => {
+    console.log('[SCHEDULER] Running promoter token expiration job...')
+    try {
+      await processTokenExpiration()
+    } catch (error) {
+      console.error('[SCHEDULER] Error in promoter expiration job:', error)
+    }
+  }, 60 * 60 * 1000) // Every 1 hour
+
+  // Check promoter admin permissions every 6 hours
+  const promoterAdminCheckInterval = setInterval(async () => {
+    console.log('[SCHEDULER] Running promoter admin permission check...')
+    try {
+      await processAdminPermissionCheck()
+    } catch (error) {
+      console.error('[SCHEDULER] Error in promoter admin check job:', error)
+    }
+  }, 6 * 60 * 60 * 1000) // Every 6 hours
+
+  // Delete old marketing posts every 5 minutes
+  const marketingPostDeletionInterval = setInterval(async () => {
+    try {
+      await processMarketingPostDeletion()
+    } catch (error) {
+      console.error('[SCHEDULER] Error in marketing post deletion job:', error)
+    }
+  }, 5 * 60 * 1000) // Every 5 minutes
+
+  // Delete old delivered content every 5 minutes
+  const deliveredContentDeletionInterval = setInterval(async () => {
+    try {
+      await processDeliveredContentDeletion()
+    } catch (error) {
+      console.error('[SCHEDULER] Error in delivered content deletion job:', error)
+    }
+  }, 5 * 60 * 1000) // Every 5 minutes
+
   // Run kick job immediately on startup
   console.log('[SCHEDULER] Running initial kick job in 5 seconds...')
   setTimeout(() => {
@@ -84,6 +123,22 @@ export function initializeScheduler() {
     })
   }, 10000)
 
+  // Run promoter token expiration on startup (after 15 seconds)
+  setTimeout(() => {
+    console.log('[SCHEDULER] Running initial promoter token expiration...')
+    processTokenExpiration().catch((error) => {
+      console.error('[SCHEDULER] Error in initial promoter expiration:', error)
+    })
+  }, 15000)
+
+  // Run promoter admin check on startup (after 20 seconds)
+  setTimeout(() => {
+    console.log('[SCHEDULER] Running initial promoter admin permission check...')
+    processAdminPermissionCheck().catch((error) => {
+      console.error('[SCHEDULER] Error in initial promoter admin check:', error)
+    })
+  }, 20000)
+
     // Store intervals for cleanup on shutdown
     ; (global as any).schedulerIntervals = {
       kick: kickInterval,
@@ -92,6 +147,10 @@ export function initializeScheduler() {
       forward: forwardInterval,
       subscriptionExpiry: subscriptionExpiryInterval,
       autoApproval: autoApprovalInterval,
+      promoterExpiration: promoterExpirationInterval,
+      promoterAdminCheck: promoterAdminCheckInterval,
+      marketingPostDeletion: marketingPostDeletionInterval,
+      deliveredContentDeletion: deliveredContentDeletionInterval,
     }
 
   console.log('✅ Job scheduler initialized')
@@ -101,5 +160,9 @@ export function initializeScheduler() {
   console.log('  - Process scheduled forwards: Every 1 minute')
   console.log('  - Check expired subscriptions: Every 1 hour')
   console.log('  - Process auto-approvals: Every 1 minute')
+  console.log('  - Expire promoter tokens: Every 1 hour')
+  console.log('  - Check promoter admin permissions: Every 6 hours')
+  console.log('  - Delete old marketing posts: Every 5 minutes')
+  console.log('  - Delete old delivered content: Every 5 minutes')
   console.log('  - GroupMember records: Kept permanently for analytics')
 }

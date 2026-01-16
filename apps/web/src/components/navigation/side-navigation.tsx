@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard, BookOpen, Download, Radio, ChevronDown } from "lucide-react"
+import { Bot, Link as LinkIcon, Coins, User, Zap, Shield, LogOut, Users, Cpu, Forward, UserCheck, LayoutDashboard, BookOpen, Download, Radio, ChevronDown, Megaphone } from "lucide-react"
 import { useSession } from "@/hooks/use-session"
 import { Button } from "@/components/ui/button"
 
@@ -38,6 +38,7 @@ export function SideNavigation() {
         { to: "/dashboard/auto-drop", label: "Auto Drop", icon: Download },
         { to: "/dashboard/auto-approval", label: "Auto Approval", icon: UserCheck },
         { to: "/dashboard/broadcast", label: "Broadcast", icon: Radio },
+        { to: "/dashboard/promoter", label: "Promoter", icon: Megaphone },
       ],
     },
     {

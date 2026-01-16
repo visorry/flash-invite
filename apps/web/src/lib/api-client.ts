@@ -527,6 +527,62 @@ export const api = {
   config: {
     getPublic: () => apiClient.get<{ botUsername: string | null }>('/api/v1/config/public'),
   },
+  promoter: {
+    list: (params?: { botId?: string }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.botId) queryParams.append('botId', params.botId)
+      const queryString = queryParams.toString()
+      return apiClient.get(`/api/v1/promoter/config${queryString ? `?${queryString}` : ''}`)
+    },
+    getById: (id: string) => apiClient.get(`/api/v1/promoter/config/${id}`),
+    create: (data: {
+      botId: string
+      vaultEntityId: string
+      marketingEntityId: string
+      name: string
+      ctaTemplate?: string
+      includeCaptionInCta?: boolean
+      tokenExpiryDays?: number
+      deleteMarketingAfterEnabled?: boolean
+      deleteMarketingInterval?: number
+      deleteMarketingIntervalUnit?: number
+      deleteDeliveredAfterEnabled?: boolean
+      deleteDeliveredInterval?: number
+      deleteDeliveredIntervalUnit?: number
+      hideSenderName?: boolean
+      copyMode?: boolean
+      removeLinks?: boolean
+      addWatermark?: string
+      invalidTokenMessage?: string
+      expiredTokenMessage?: string
+      vaultAccessErrorMessage?: string
+      marketingAccessErrorMessage?: string
+    }) => apiClient.post('/api/v1/promoter/config', data),
+    update: (id: string, data: {
+      name?: string
+      isActive?: boolean
+      ctaTemplate?: string
+      includeCaptionInCta?: boolean
+      tokenExpiryDays?: number
+      deleteMarketingAfterEnabled?: boolean
+      deleteMarketingInterval?: number
+      deleteMarketingIntervalUnit?: number
+      deleteDeliveredAfterEnabled?: boolean
+      deleteDeliveredInterval?: number
+      deleteDeliveredIntervalUnit?: number
+      hideSenderName?: boolean
+      copyMode?: boolean
+      removeLinks?: boolean
+      addWatermark?: string
+      invalidTokenMessage?: string
+      expiredTokenMessage?: string
+      vaultAccessErrorMessage?: string
+      marketingAccessErrorMessage?: string
+    }) => apiClient.patch(`/api/v1/promoter/config/${id}`, data),
+    toggle: (id: string) => apiClient.post(`/api/v1/promoter/config/${id}/toggle`),
+    delete: (id: string) => apiClient.delete(`/api/v1/promoter/config/${id}`),
+    getStats: (id: string) => apiClient.get(`/api/v1/promoter/config/${id}/stats`),
+  },
   broadcast: {
     // Bot and subscriber management
     listBotsWithSubscribers: () => apiClient.get('/api/v1/broadcast/bots'),

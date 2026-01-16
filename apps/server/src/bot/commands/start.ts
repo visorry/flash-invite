@@ -1,6 +1,7 @@
 import { Telegraf } from 'telegraf'
 import db from '@super-invite/db'
 import { InviteLinkStatus } from '@super-invite/db'
+import promoterService from '../../services/promoter.service'
 
 export function registerStartCommand(bot: Telegraf) {
   bot.start(async (ctx) => {
@@ -66,6 +67,40 @@ export function registerStartCommand(bot: Telegraf) {
         return await handleTelegramLogin(ctx, loginToken, userId, username, fullName)
       }
 
+      // Check if this is a promoter deep link token
+      // Promoter tokens are URL-safe base64 strings (alphanumeric, hyphens, underscores)
+      // They don't have prefixes like login tokens
+      const isPromoterToken = /^[A-Za-z0-9_-]{16,}$/.test(token)
+      
+      if (isPromoterToken) {
+        console.log(`User ${userId} attempting to access promoter content with token: ${token}`)
+        
+        // Prepare user info
+        const userInfo = {
+          username: ctx.from?.username,
+          firstName: ctx.from?.first_name,
+          lastName: ctx.from?.last_name,
+        }
+        
+        // Attempt to deliver content
+        const result = await promoterService.deliverContent(
+          dbBotId,
+          token,
+          userId,
+          userInfo
+        )
+        
+        if (!result.success) {
+          // Send error message (already customized in deliverContent)
+          return ctx.reply(result.error || '❌ An error occurred.')
+        }
+        
+        // Content delivered successfully - no additional message needed
+        console.log(`[PROMOTER] Successfully delivered content to user ${userId}`)
+        return
+      }
+
+      // Fall back to regular invite link processing
       try {
         const result = await processStartToken(
           token,

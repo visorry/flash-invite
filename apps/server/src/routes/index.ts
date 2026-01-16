@@ -24,6 +24,7 @@ import * as botAdminRoute from './admin/bot-admin.route'
 import * as plansRoute from './plans.route'
 import * as configRoute from './config.route'
 import * as broadcastRoute from './broadcast.route'
+import * as promoterRoute from './promoter.route'
 
 
 const publicAPIs = Promise.resolve({
@@ -50,6 +51,7 @@ const v1APIs = Promise.resolve({
   subscriptions: subscriptionsRoute,
   user: userRoute,
   broadcast: broadcastRoute,
+  promoter: promoterRoute,
 })
 
 const adminAPIs = Promise.resolve({

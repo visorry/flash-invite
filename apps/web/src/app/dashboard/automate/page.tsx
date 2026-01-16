@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Forward, UserCheck, Download, Radio } from "lucide-react"
+import { Forward, UserCheck, Download, Radio, Megaphone } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function AutomatePage() {
@@ -33,6 +33,12 @@ export default function AutomatePage() {
       label: "Broadcast",
       icon: Radio,
       description: "Send messages to all bot subscribers"
+    },
+    {
+      to: "/dashboard/promoter",
+      label: "Promoter",
+      icon: Megaphone,
+      description: "Content promotion via deep links"
     },
   ]
 

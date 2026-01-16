@@ -2,6 +2,7 @@ import { Context } from 'telegraf'
 import type { Message } from 'telegraf/types'
 import { ForwardScheduleMode } from '@super-invite/db'
 import forwardRuleService from '../../services/forward-rule.service'
+import promoterService from '../../services/promoter.service'
 
 // Global rate limiter per bot - tracks last forward time
 const botForwardTimestamps = new Map<string, number>()
@@ -25,6 +26,46 @@ async function waitForRateLimit(botId: string): Promise<void> {
 }
 
 /**
+ * Handle promoter capture for messages from vault groups
+ * Requirements: 1.2, 2.1, 9.7
+ */
+async function handlePromoterCapture(ctx: Context, message: Message): Promise<void> {
+  try {
+    const dbBotId = (ctx as any).dbBotId as string
+    if (!dbBotId) return
+    
+    const chatId = message.chat.id.toString()
+    
+    // Check if this chat is a vault for any active promoter config
+    const config = await promoterService.getActiveConfigForVault(dbBotId, chatId)
+    if (!config) return
+    
+    console.log(`[PROMOTER] Message in vault group ${chatId}, capturing post`)
+    
+    // Capture the post
+    const post = await promoterService.capturePost(dbBotId, message)
+    if (!post) {
+      console.log(`[PROMOTER] Message not captured (unsupported media type)`)
+      return
+    }
+    
+    console.log(`[PROMOTER] Captured post with token ${post.token}`)
+    
+    // Create marketing post if auto-posting is enabled
+    if (config.autoPostToMarketing) {
+      console.log(`[PROMOTER] Auto-posting enabled, creating marketing post`)
+      await promoterService.createMarketingPost(post, config)
+    } else {
+      console.log(`[PROMOTER] Auto-posting disabled, skipping marketing post`)
+    }
+  } catch (error: any) {
+    // Handle errors gracefully without breaking existing forward rules (Requirement 9.7)
+    console.error('[PROMOTER] Error in promoter capture:', error.message)
+    // Don't throw - let the handler continue with forward rules
+  }
+}
+
+/**
  * Handle channel posts - forward messages based on active rules
  */
 export async function handleChannelPost(ctx: Context) {
@@ -39,6 +80,9 @@ export async function handleChannelPost(ctx: Context) {
   const message = ctx.channelPost
   const chatId = message.chat.id.toString()
   const messageId = message.message_id
+
+  // Check for promoter configurations and capture post if applicable
+  await handlePromoterCapture(ctx, message)
 
   // Get active forward rules for this source
   const rules = await forwardRuleService.getActiveRulesForSource(dbBotId, chatId)
@@ -297,6 +341,9 @@ export async function handleGroupMessage(ctx: Context) {
   const messageId = message.message_id
 
   console.log(`[GROUP_MESSAGE:${messageId}] Received message in chat ${chatId} (type: ${message.chat.type})`)
+
+  // Check for promoter configurations and capture post if applicable
+  await handlePromoterCapture(ctx, message)
 
   // Get active forward rules for this source
   const rules = await forwardRuleService.getActiveRulesForSource(dbBotId, chatId)
