@@ -1,6 +1,7 @@
 import { Context } from 'telegraf'
 import { Message } from 'telegraf/types'
 import db from '@super-invite/db'
+import { ForwardScheduleMode } from '@super-invite/db'
 import forwardRuleService from '../../services/forward-rule.service'
 
 /**
@@ -26,6 +27,12 @@ export async function handleChannelPost(ctx: Context) {
   console.log(`[CHANNEL_POST] Processing message in ${chatId} with ${rules.length} active rules`)
 
   for (const rule of rules) {
+    // Skip scheduled rules - they should only be processed by the scheduler
+    if (rule.scheduleMode === ForwardScheduleMode.SCHEDULED) {
+      console.log(`[CHANNEL_POST] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
+      continue
+    }
+
     // Check message type filters
     if (!shouldForwardMessage(message, rule)) {
       continue
@@ -217,6 +224,12 @@ export async function handleGroupMessage(ctx: Context) {
 
   for (const rule of rules) {
     console.log(`[GROUP_MESSAGE] Checking rule ${rule.id} for message`)
+
+    // Skip scheduled rules - they should only be processed by the scheduler
+    if (rule.scheduleMode === ForwardScheduleMode.SCHEDULED) {
+      console.log(`[GROUP_MESSAGE] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
+      continue
+    }
 
     if (!shouldForwardMessage(message, rule)) {
       console.log(`[GROUP_MESSAGE] Message filtered out by type filter`)
