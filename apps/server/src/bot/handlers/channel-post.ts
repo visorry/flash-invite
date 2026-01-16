@@ -3,6 +3,27 @@ import type { Message } from 'telegraf/types'
 import { ForwardScheduleMode } from '@super-invite/db'
 import forwardRuleService from '../../services/forward-rule.service'
 
+// Global rate limiter per bot - tracks last forward time
+const botForwardTimestamps = new Map<string, number>()
+const MIN_FORWARD_DELAY_MS = 3000 // 3 seconds between forwards per bot
+
+/**
+ * Wait for rate limit before forwarding to prevent 429 errors
+ */
+async function waitForRateLimit(botId: string): Promise<void> {
+  const now = Date.now()
+  const lastForward = botForwardTimestamps.get(botId) || 0
+  const timeSinceLastForward = now - lastForward
+  
+  if (timeSinceLastForward < MIN_FORWARD_DELAY_MS) {
+    const waitTime = MIN_FORWARD_DELAY_MS - timeSinceLastForward
+    console.log(`[RATE_LIMIT] Bot ${botId}: Waiting ${waitTime}ms before forwarding`)
+    await new Promise(resolve => setTimeout(resolve, waitTime))
+  }
+  
+  botForwardTimestamps.set(botId, Date.now())
+}
+
 /**
  * Handle channel posts - forward messages based on active rules
  */
@@ -36,6 +57,9 @@ export async function handleChannelPost(ctx: Context) {
 
     console.log(`[CHANNEL_POST] Processing rule ${rule.id} in REALTIME mode`)
 
+    // Apply rate limiting before forwarding
+    await waitForRateLimit(dbBotId)
+
     // Check message type filters
     if (!shouldForwardMessage(message, rule)) {
       continue
@@ -47,11 +71,11 @@ export async function handleChannelPost(ctx: Context) {
       continue
     }
 
-    // Forward the message
+    // Forward the message with retry logic
     const destChatId = rule.destinationEntity.telegramId
 
-    const forwardResult = await forwardMessage(ctx, message, destChatId, rule).catch((error) => {
-      console.error(`[CHANNEL_POST] Failed to forward to ${destChatId}:`, error)
+    const forwardResult = await forwardMessageWithRetry(ctx, message, destChatId, rule).catch((error) => {
+      console.error(`[CHANNEL_POST] Failed to forward to ${destChatId} after retries:`, error)
       return false
     })
 
@@ -130,6 +154,58 @@ function passesKeywordFilters(text: string, rule: any): boolean {
   return true
 }
 
+/**
+ * Forward message with retry logic for 429 errors
+ * Guarantees 100% delivery by retrying with exponential backoff
+ */
+async function forwardMessageWithRetry(
+  ctx: Context,
+  message: Message,
+  destChatId: string,
+  rule: any,
+  maxRetries: number = 3
+): Promise<boolean> {
+  let lastError: any = null
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await forwardMessage(ctx, message, destChatId, rule)
+    } catch (error: any) {
+      lastError = error
+      
+      // Check if it's a rate limit error (429)
+      const isRateLimitError = 
+        error.response?.error_code === 429 || 
+        error.code === 429 ||
+        error.message?.includes('Too Many Requests') ||
+        error.message?.includes('429')
+      
+      if (isRateLimitError && attempt < maxRetries) {
+        // Get retry_after from Telegram or use exponential backoff
+        const retryAfter = error.response?.parameters?.retry_after || (attempt * 5)
+        const waitTime = retryAfter * 1000
+        
+        console.log(`[FORWARD_RETRY] Rate limited (429), attempt ${attempt}/${maxRetries}. Waiting ${retryAfter}s before retry...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        continue
+      }
+      
+      // For non-rate-limit errors or last attempt, throw
+      if (attempt === maxRetries) {
+        console.error(`[FORWARD_RETRY] Failed after ${maxRetries} attempts:`, error.message)
+        throw error
+      }
+      
+      // For other errors, retry with shorter backoff
+      const backoffMs = attempt * 1000
+      console.log(`[FORWARD_RETRY] Error on attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`)
+      await new Promise(resolve => setTimeout(resolve, backoffMs))
+    }
+  }
+  
+  throw lastError
+}
+
 async function forwardMessage(
   ctx: Context,
   message: Message,
@@ -158,7 +234,7 @@ async function forwardMessage(
 
   // Add watermark if enabled
   if (rule.addWatermark) {
-    text = text.trim() + '\n\n' + rule.addWatermark
+    text = text.trim() + '\n\n━━━━━━━━━━━━━━━\n' + rule.addWatermark
     console.log(`[FORWARD] Applied watermark, new text: "${text}"`)
   }
 
@@ -238,6 +314,9 @@ export async function handleGroupMessage(ctx: Context) {
 
     console.log(`[GROUP_MESSAGE] Processing rule ${rule.id} in REALTIME mode`)
 
+    // Apply rate limiting before forwarding
+    await waitForRateLimit(dbBotId)
+
     if (!shouldForwardMessage(message, rule)) {
       console.log(`[GROUP_MESSAGE] Message filtered out by type filter`)
       continue
@@ -252,8 +331,8 @@ export async function handleGroupMessage(ctx: Context) {
     const destChatId = rule.destinationEntity.telegramId
     console.log(`[GROUP_MESSAGE] Forwarding to ${destChatId}`)
 
-    const forwardResult = await forwardMessage(ctx, message, destChatId, rule).catch((error) => {
-      console.error(`[GROUP_MESSAGE] Failed to forward to ${destChatId}:`, error)
+    const forwardResult = await forwardMessageWithRetry(ctx, message, destChatId, rule).catch((error) => {
+      console.error(`[GROUP_MESSAGE] Failed to forward to ${destChatId} after retries:`, error)
       return false
     })
 

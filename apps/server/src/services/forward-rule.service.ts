@@ -511,6 +511,7 @@ const getActiveRulesForSource = async (botId: string, sourceTelegramId: string) 
       botId,
       isActive: true,
       deletedAt: null,
+      scheduleMode: ForwardScheduleMode.REALTIME, // Only fetch REALTIME rules
       sourceEntity: {
         telegramId: sourceTelegramId,
       },

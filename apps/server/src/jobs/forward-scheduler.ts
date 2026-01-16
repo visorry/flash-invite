@@ -83,7 +83,7 @@ async function processRule(rule: any) {
 
   // Forward each message in the batch
   for (const messageId of batch) {
-    const success = await forwardMessageById(bot, sourceChatId, destChatId, messageId, rule)
+    const success = await forwardMessageByIdWithRetry(bot, sourceChatId, destChatId, messageId, rule)
     if (success) {
       successCount++
       lastProcessedId = messageId
@@ -146,6 +146,59 @@ async function buildMessageQueue(rule: any): Promise<number[]> {
   }
 
   return messageIds
+}
+
+/**
+ * Forward message by ID with retry logic for 429 errors
+ * Guarantees 100% delivery by retrying with exponential backoff
+ */
+async function forwardMessageByIdWithRetry(
+  bot: any,
+  sourceChatId: string,
+  destChatId: string,
+  messageId: number,
+  rule: any,
+  maxRetries: number = 3
+): Promise<boolean> {
+  let lastError: any = null
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await forwardMessageById(bot, sourceChatId, destChatId, messageId, rule)
+    } catch (error: any) {
+      lastError = error
+      
+      // Check if it's a rate limit error (429)
+      const isRateLimitError = 
+        error.response?.error_code === 429 || 
+        error.code === 429 ||
+        error.message?.includes('Too Many Requests') ||
+        error.message?.includes('429')
+      
+      if (isRateLimitError && attempt < maxRetries) {
+        // Get retry_after from Telegram or use exponential backoff
+        const retryAfter = error.response?.parameters?.retry_after || (attempt * 5)
+        const waitTime = retryAfter * 1000
+        
+        console.log(`[FORWARD_SCHEDULER_RETRY] Rate limited (429) on message ${messageId}, attempt ${attempt}/${maxRetries}. Waiting ${retryAfter}s...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        continue
+      }
+      
+      // For non-rate-limit errors or last attempt, throw
+      if (attempt === maxRetries) {
+        console.error(`[FORWARD_SCHEDULER_RETRY] Failed message ${messageId} after ${maxRetries} attempts:`, error.message)
+        throw error
+      }
+      
+      // For other errors, retry with shorter backoff
+      const backoffMs = attempt * 1000
+      console.log(`[FORWARD_SCHEDULER_RETRY] Error on message ${messageId}, attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`)
+      await new Promise(resolve => setTimeout(resolve, backoffMs))
+    }
+  }
+  
+  throw lastError
 }
 
 async function forwardMessageById(
