@@ -1,6 +1,5 @@
 import { Context } from 'telegraf'
-import { Message } from 'telegraf/types'
-import db from '@super-invite/db'
+import type { Message } from 'telegraf/types'
 import { ForwardScheduleMode } from '@super-invite/db'
 import forwardRuleService from '../../services/forward-rule.service'
 
@@ -27,11 +26,15 @@ export async function handleChannelPost(ctx: Context) {
   console.log(`[CHANNEL_POST] Processing message in ${chatId} with ${rules.length} active rules`)
 
   for (const rule of rules) {
+    console.log(`[CHANNEL_POST] Rule ${rule.id}: scheduleMode=${rule.scheduleMode}, name="${rule.name}"`)
+    
     // Skip scheduled rules - they should only be processed by the scheduler
     if (rule.scheduleMode === ForwardScheduleMode.SCHEDULED) {
       console.log(`[CHANNEL_POST] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
       continue
     }
+
+    console.log(`[CHANNEL_POST] Processing rule ${rule.id} in REALTIME mode`)
 
     // Check message type filters
     if (!shouldForwardMessage(message, rule)) {
@@ -168,10 +171,12 @@ async function forwardMessage(
   // Send based on message type with modifications
   if ('photo' in message && message.photo) {
     const photo = message.photo[message.photo.length - 1]
-    await ctx.telegram.sendPhoto(destChatId, photo.file_id, {
-      caption: text || undefined,
-    })
-    return true
+    if (photo) {
+      await ctx.telegram.sendPhoto(destChatId, photo.file_id, {
+        caption: text || undefined,
+      })
+      return true
+    }
   }
 
   if ('video' in message && message.video) {
@@ -223,13 +228,15 @@ export async function handleGroupMessage(ctx: Context) {
   if (rules.length === 0) return
 
   for (const rule of rules) {
-    console.log(`[GROUP_MESSAGE] Checking rule ${rule.id} for message`)
+    console.log(`[GROUP_MESSAGE] Rule ${rule.id}: scheduleMode=${rule.scheduleMode}, name="${rule.name}"`)
 
     // Skip scheduled rules - they should only be processed by the scheduler
     if (rule.scheduleMode === ForwardScheduleMode.SCHEDULED) {
       console.log(`[GROUP_MESSAGE] Skipping rule ${rule.id} - it's in SCHEDULED mode`)
       continue
     }
+
+    console.log(`[GROUP_MESSAGE] Processing rule ${rule.id} in REALTIME mode`)
 
     if (!shouldForwardMessage(message, rule)) {
       console.log(`[GROUP_MESSAGE] Message filtered out by type filter`)
