@@ -543,6 +543,8 @@ export const api = {
       ctaTemplate?: string
       includeCaptionInCta?: boolean
       tokenExpiryDays?: number
+      multipleBotsEnabled?: boolean
+      additionalBotIds?: string[]
       deleteMarketingAfterEnabled?: boolean
       deleteMarketingInterval?: number
       deleteMarketingIntervalUnit?: number
@@ -564,6 +566,8 @@ export const api = {
       ctaTemplate?: string
       includeCaptionInCta?: boolean
       tokenExpiryDays?: number
+      multipleBotsEnabled?: boolean
+      additionalBotIds?: string[]
       deleteMarketingAfterEnabled?: boolean
       deleteMarketingInterval?: number
       deleteMarketingIntervalUnit?: number

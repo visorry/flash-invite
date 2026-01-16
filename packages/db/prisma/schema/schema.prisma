@@ -913,6 +913,11 @@ model PromoterConfig {
   name                  String         // User-friendly name
   isActive              Boolean        @default(true) @map("is_active")
   
+  // Multiple bots rotation
+  multipleBotsEnabled   Boolean        @default(false) @map("multiple_bots_enabled")
+  additionalBotIds      String[]       @default([]) @map("additional_bot_ids") // Array of bot IDs to rotate through
+  currentBotIndex       Int            @default(0) @map("current_bot_index") // Track which bot to use next
+  
   // CTA Configuration
   ctaTemplate           String         @default("🔥 Click here to get the content: {link}") @map("cta_template")
   autoPostToMarketing   Boolean        @default(true) @map("auto_post_to_marketing")

@@ -26,6 +26,11 @@ export default function EditPromoterPage() {
   const [includeCaptionInCta, setIncludeCaptionInCta] = useState(true)
   const [tokenExpiryDays, setTokenExpiryDays] = useState(30)
 
+  // Multiple bots rotation
+  const [multipleBotsEnabled, setMultipleBotsEnabled] = useState(false)
+  const [additionalBotIds, setAdditionalBotIds] = useState<string[]>([])
+  const [commonBots, setCommonBots] = useState<any[]>([])
+
   // Auto-delete marketing posts
   const [deleteMarketingAfterEnabled, setDeleteMarketingAfterEnabled] = useState(false)
   const [deleteMarketingInterval, setDeleteMarketingInterval] = useState(1)
@@ -55,6 +60,82 @@ export default function EditPromoterPage() {
     enabled: !!id,
   })
 
+  // Fetch all bots for common bots calculation
+  const { data: bots } = useQuery({
+    queryKey: ['bots'],
+    queryFn: () => api.bots.list(),
+  })
+
+  // Fetch entities for the bot
+  const { data: entities } = useQuery({
+    queryKey: ['bot-chats', config?.bot?.id],
+    queryFn: () => api.bots.getChats((config as any)?.bot?.id),
+    enabled: !!(config as any)?.bot?.id,
+  })
+
+  // Fetch all bot-entity relationships for finding common bots
+  const { data: allBotEntities } = useQuery({
+    queryKey: ['all-bot-entities', (config as any)?.vaultEntityId, (config as any)?.marketingEntityId],
+    queryFn: async () => {
+      if (!bots || !config) return []
+      
+      const c = config as any
+      const botsList = (bots as any) || []
+      const allEntities: any[] = []
+      
+      // Fetch entities for each bot
+      for (const bot of botsList) {
+        try {
+          const entities = await api.bots.getChats(bot.id)
+          allEntities.push(...(entities as any[]).map((e: any) => ({ ...e, botId: bot.id })))
+        } catch (error) {
+          console.error(`Failed to fetch entities for bot ${bot.id}:`, error)
+        }
+      }
+      
+      return allEntities
+    },
+    enabled: !!bots && !!config,
+  })
+
+  // Find common bots when config loads
+  useEffect(() => {
+    if (!config || !allBotEntities || !bots) {
+      setCommonBots([])
+      return
+    }
+
+    const c = config as any
+    
+    // Get all bots that have access to vault group
+    const vaultBotIds = new Set(
+      allBotEntities
+        .filter((e: any) => e.telegramEntity.id === c.vaultEntityId)
+        .map((e: any) => e.botId)
+    )
+    
+    // Get all bots that have access to marketing group
+    const marketingBotIds = new Set(
+      allBotEntities
+        .filter((e: any) => e.telegramEntity.id === c.marketingEntityId)
+        .map((e: any) => e.botId)
+    )
+    
+    // Find common bot IDs (excluding the primary bot)
+    const commonBotIds = Array.from(vaultBotIds).filter(
+      (id) => marketingBotIds.has(id) && id !== c.botId
+    )
+    
+    // Get bot details for common bots
+    if (commonBotIds.length > 0) {
+      const botsList = (bots as any) || []
+      const commonBotsList = botsList.filter((bot: any) => commonBotIds.includes(bot.id))
+      setCommonBots(commonBotsList)
+    } else {
+      setCommonBots([])
+    }
+  }, [config, allBotEntities, bots])
+
   // Populate form when config loads
   useEffect(() => {
     if (config) {
@@ -63,6 +144,8 @@ export default function EditPromoterPage() {
       setCtaTemplate(c.ctaTemplate || '')
       setIncludeCaptionInCta(c.includeCaptionInCta ?? true)
       setTokenExpiryDays(c.tokenExpiryDays || 30)
+      setMultipleBotsEnabled(c.multipleBotsEnabled || false)
+      setAdditionalBotIds(c.additionalBotIds || [])
       setDeleteMarketingAfterEnabled(c.deleteMarketingAfterEnabled || false)
       setDeleteMarketingInterval(c.deleteMarketingInterval || 1)
       setDeleteMarketingIntervalUnit(c.deleteMarketingIntervalUnit ?? 2)
@@ -87,6 +170,8 @@ export default function EditPromoterPage() {
       ctaTemplate: ctaTemplate || undefined,
       includeCaptionInCta,
       tokenExpiryDays: tokenExpiryDays || undefined,
+      multipleBotsEnabled,
+      additionalBotIds: multipleBotsEnabled ? additionalBotIds : undefined,
       deleteMarketingAfterEnabled,
       deleteMarketingInterval: deleteMarketingAfterEnabled && deleteMarketingIntervalUnit !== 5 ? deleteMarketingInterval : undefined,
       deleteMarketingIntervalUnit: deleteMarketingAfterEnabled ? deleteMarketingIntervalUnit : undefined,
@@ -174,16 +259,87 @@ export default function EditPromoterPage() {
           <div>
             <Label className="text-xs">Vault Group</Label>
             <div className="mt-1 text-sm text-muted-foreground">
-              {c.vaultGroup?.title} (cannot be changed)
+              {c.vaultEntity?.title} (cannot be changed)
             </div>
           </div>
 
           <div>
             <Label className="text-xs">Marketing Group</Label>
             <div className="mt-1 text-sm text-muted-foreground">
-              {c.marketingGroup?.title} (cannot be changed)
+              {c.marketingEntity?.title} (cannot be changed)
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Multiple Bots Rotation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Multiple Bots Rotation</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label htmlFor="multipleBots" className="text-xs">Enable Multiple Bots</Label>
+              <p className="text-xs text-muted-foreground">
+                Rotate through multiple bots for deep links to increase engagement
+              </p>
+            </div>
+            <Switch
+              id="multipleBots"
+              checked={multipleBotsEnabled}
+              onCheckedChange={(checked) => {
+                setMultipleBotsEnabled(checked)
+                if (!checked) {
+                  setAdditionalBotIds([])
+                }
+              }}
+            />
+          </div>
+
+          {multipleBotsEnabled && (
+            <>
+              {commonBots.length > 0 ? (
+                <div>
+                  <Label className="text-xs">Select Additional Bots</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    These bots have admin access to both vault and marketing groups
+                  </p>
+                  <div className="space-y-2">
+                    {commonBots.map((bot: any) => (
+                      <div key={bot.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`bot-${bot.id}`}
+                          checked={additionalBotIds.includes(bot.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAdditionalBotIds([...additionalBotIds, bot.id])
+                            } else {
+                              setAdditionalBotIds(additionalBotIds.filter(id => id !== bot.id))
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-input"
+                        />
+                        <Label htmlFor={`bot-${bot.id}`} className="text-sm font-normal">
+                          @{bot.username}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {additionalBotIds.length > 0 && (
+                    <p className="text-xs text-green-600 dark:text-green-500 mt-2">
+                      ✓ {additionalBotIds.length + 1} bot{additionalBotIds.length > 0 ? 's' : ''} will be used in rotation
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                  ⚠️ No common bots found. Add more bots as admin to both groups to enable rotation.
+                </p>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 

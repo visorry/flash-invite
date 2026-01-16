@@ -88,8 +88,21 @@ interface CreatePromoterConfigData {
   name: string
   ctaTemplate?: string
   autoPostToMarketing?: boolean
+  includeCaptionInCta?: boolean
   tokenExpirationEnabled?: boolean
   tokenExpirationDays?: number
+  multipleBotsEnabled?: boolean
+  additionalBotIds?: string[]
+  deleteMarketingAfterEnabled?: boolean
+  deleteMarketingInterval?: number
+  deleteMarketingIntervalUnit?: number
+  deleteDeliveredAfterEnabled?: boolean
+  deleteDeliveredInterval?: number
+  deleteDeliveredIntervalUnit?: number
+  hideSenderName?: boolean
+  copyMode?: boolean
+  removeLinks?: boolean
+  addWatermark?: string
   invalidTokenMessage?: string
   expiredTokenMessage?: string
 }
@@ -99,8 +112,21 @@ interface UpdatePromoterConfigData {
   isActive?: boolean
   ctaTemplate?: string
   autoPostToMarketing?: boolean
+  includeCaptionInCta?: boolean
   tokenExpirationEnabled?: boolean
   tokenExpirationDays?: number
+  multipleBotsEnabled?: boolean
+  additionalBotIds?: string[]
+  deleteMarketingAfterEnabled?: boolean
+  deleteMarketingInterval?: number
+  deleteMarketingIntervalUnit?: number
+  deleteDeliveredAfterEnabled?: boolean
+  deleteDeliveredInterval?: number
+  deleteDeliveredIntervalUnit?: number
+  hideSenderName?: boolean
+  copyMode?: boolean
+  removeLinks?: boolean
+  addWatermark?: string
   invalidTokenMessage?: string
   expiredTokenMessage?: string
 }
@@ -204,8 +230,21 @@ export const create = async (
       name: data.name,
       ctaTemplate: data.ctaTemplate,
       autoPostToMarketing: data.autoPostToMarketing,
+      includeCaptionInCta: data.includeCaptionInCta,
       tokenExpirationEnabled: data.tokenExpirationEnabled,
       tokenExpirationDays: data.tokenExpirationDays,
+      multipleBotsEnabled: data.multipleBotsEnabled,
+      additionalBotIds: data.additionalBotIds,
+      deleteMarketingAfterEnabled: data.deleteMarketingAfterEnabled,
+      deleteMarketingInterval: data.deleteMarketingInterval,
+      deleteMarketingIntervalUnit: data.deleteMarketingIntervalUnit,
+      deleteDeliveredAfterEnabled: data.deleteDeliveredAfterEnabled,
+      deleteDeliveredInterval: data.deleteDeliveredInterval,
+      deleteDeliveredIntervalUnit: data.deleteDeliveredIntervalUnit,
+      hideSenderName: data.hideSenderName,
+      copyMode: data.copyMode,
+      removeLinks: data.removeLinks,
+      addWatermark: data.addWatermark,
       invalidTokenMessage: data.invalidTokenMessage,
       expiredTokenMessage: data.expiredTokenMessage,
     },
@@ -258,7 +297,7 @@ export const update = async (
 }
 
 /**
- * Delete promoter configuration
+ * Delete promoter configuration (hard delete)
  * Requirements: 5.1
  */
 export const deleteConfig = async (ctx: RequestContext, configId: string) => {
@@ -278,9 +317,9 @@ export const deleteConfig = async (ctx: RequestContext, configId: string) => {
     throw new NotFoundError('Configuration not found')
   }
   
-  await db.promoterConfig.update({
+  // Hard delete - this will cascade delete all related posts and deliveries
+  await db.promoterConfig.delete({
     where: { id: configId },
-    data: { deletedAt: new Date() },
   })
 }
 
@@ -660,6 +699,58 @@ async function retryWithBackoff<T>(
 }
 
 /**
+ * Get the next bot for marketing post rotation
+ * Returns the bot username to use in the deep link
+ */
+async function getNextBotForMarketing(config: any): Promise<{ botId: string; username: string }> {
+  console.log(`[PROMOTER_ROTATION] Config multipleBotsEnabled: ${config.multipleBotsEnabled}`)
+  console.log(`[PROMOTER_ROTATION] Config additionalBotIds: ${JSON.stringify(config.additionalBotIds)}`)
+  console.log(`[PROMOTER_ROTATION] Config currentBotIndex: ${config.currentBotIndex}`)
+  
+  // If multiple bots not enabled, use the primary bot
+  if (!config.multipleBotsEnabled || !config.additionalBotIds || config.additionalBotIds.length === 0) {
+    console.log(`[PROMOTER_ROTATION] Multiple bots disabled or no additional bots, using primary bot`)
+    const { getBotInstance } = await import('../bot/bot-manager')
+    const botInstance = getBotInstance(config.botId)
+    
+    if (!botInstance || !botInstance.username) {
+      throw new Error('Primary bot instance or username not found')
+    }
+    
+    return { botId: config.botId, username: botInstance.username }
+  }
+  
+  // Build array of all bot IDs (primary + additional)
+  const allBotIds = [config.botId, ...config.additionalBotIds]
+  console.log(`[PROMOTER_ROTATION] All bot IDs in rotation: ${JSON.stringify(allBotIds)}`)
+  
+  // Get current index (wrap around if needed)
+  const currentIndex = config.currentBotIndex % allBotIds.length
+  const selectedBotId = allBotIds[currentIndex]
+  
+  console.log(`[PROMOTER_ROTATION] Current index: ${currentIndex}, Selected bot ID: ${selectedBotId}`)
+  
+  // Get bot instance and username
+  const { getBotInstance } = await import('../bot/bot-manager')
+  const botInstance = getBotInstance(selectedBotId)
+  
+  if (!botInstance || !botInstance.username) {
+    throw new Error(`Bot instance or username not found for bot ${selectedBotId}`)
+  }
+  
+  // Update the index for next time
+  const nextIndex = (currentIndex + 1) % allBotIds.length
+  await db.promoterConfig.update({
+    where: { id: config.id },
+    data: { currentBotIndex: nextIndex },
+  })
+  
+  console.log(`[PROMOTER_ROTATION] Using bot @${botInstance.username} (index ${currentIndex}/${allBotIds.length}), next index will be ${nextIndex}`)
+  
+  return { botId: selectedBotId, username: botInstance.username }
+}
+
+/**
  * Create a marketing post in the marketing group
  * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 6.1, 8.2, 9.2
  */
@@ -675,11 +766,8 @@ export const createMarketingPost = async (
     throw new Error('Bot instance not found')
   }
 
-  // Get bot username for deep link
-  const botUsername = botInstance.username
-  if (!botUsername) {
-    throw new Error('Bot username not available')
-  }
+  // Get the next bot for rotation (if enabled)
+  const { username: botUsername } = await getNextBotForMarketing(config)
 
   // Generate deep link (Requirement 2.3)
   const deepLink = `https://t.me/${botUsername}?start=${post.token}`

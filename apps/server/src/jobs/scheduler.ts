@@ -88,23 +88,23 @@ export function initializeScheduler() {
     }
   }, 6 * 60 * 60 * 1000) // Every 6 hours
 
-  // Delete old marketing posts every 5 minutes
+  // Delete old marketing posts every 1 minute
   const marketingPostDeletionInterval = setInterval(async () => {
     try {
       await processMarketingPostDeletion()
     } catch (error) {
       console.error('[SCHEDULER] Error in marketing post deletion job:', error)
     }
-  }, 5 * 60 * 1000) // Every 5 minutes
+  }, 1 * 60 * 1000) // Every 1 minute
 
-  // Delete old delivered content every 5 minutes
+  // Delete old delivered content every 1 minute
   const deliveredContentDeletionInterval = setInterval(async () => {
     try {
       await processDeliveredContentDeletion()
     } catch (error) {
       console.error('[SCHEDULER] Error in delivered content deletion job:', error)
     }
-  }, 5 * 60 * 1000) // Every 5 minutes
+  }, 1 * 60 * 1000) // Every 1 minute
 
   // Run kick job immediately on startup
   console.log('[SCHEDULER] Running initial kick job in 5 seconds...')
