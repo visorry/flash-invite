@@ -234,72 +234,81 @@ async function forwardMessageById(
       const hideSender = rule.copyMode || rule.hideSenderName
       
       if (hideSender) {
-        // Get the original message to extract its caption/text
+        // Get the original message by forwarding it temporarily
+        let originalText = ''
+        
         try {
-          const originalMsg = await bot.telegram.forwardMessage(
-            bot.botInfo.id, // Forward to bot's own chat temporarily
-            sourceChatId,
+          // Forward to bot's own chat (Saved Messages) to read the caption
+          const botChatId = bot.botInfo.id
+          console.log(`[FORWARD_SCHEDULER] Forwarding message ${messageId} to bot ${botChatId} to read caption`)
+          
+          const tempForwarded = await bot.telegram.forwardMessage(
+            botChatId,
+            sourceChatId, 
             messageId
-          ).catch(() => null)
+          )
           
-          // Extract original text/caption
-          let originalText = ''
-          if (originalMsg) {
-            if ('text' in originalMsg && originalMsg.text) {
-              originalText = originalMsg.text
-            } else if ('caption' in originalMsg && originalMsg.caption) {
-              originalText = originalMsg.caption
-            }
-            
-            // Delete the temporary forwarded message
-            await bot.telegram.deleteMessage(bot.botInfo.id, originalMsg.message_id).catch(() => {})
+          console.log(`[FORWARD_SCHEDULER] Temp forwarded message ${tempForwarded.message_id}, type: ${tempForwarded.chat.type}`)
+          
+          // Extract original text/caption from the forwarded message
+          if ('text' in tempForwarded && tempForwarded.text) {
+            originalText = tempForwarded.text
+            console.log(`[FORWARD_SCHEDULER] Extracted text: ${originalText.substring(0, 50)}...`)
+          } else if ('caption' in tempForwarded && tempForwarded.caption) {
+            originalText = tempForwarded.caption
+            console.log(`[FORWARD_SCHEDULER] Extracted caption: ${originalText.substring(0, 50)}...`)
+          } else {
+            console.log(`[FORWARD_SCHEDULER] No text or caption found in message ${messageId}`)
           }
           
-          // Build the new caption with watermark
-          const newCaption = originalText.trim() 
-            ? originalText.trim() + '\n\n━━━━━━━━━━━━━━━\n' + rule.addWatermark
-            : '\n\n━━━━━━━━━━━━━━━\n' + rule.addWatermark
-          
-          console.log(`[FORWARD_SCHEDULER] Original caption length: ${originalText.length}, New caption length: ${newCaption.length}`)
-          
-          // Try to copy with the combined caption (works for media)
-          try {
-            const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId, {
-              caption: newCaption,
-            })
-            
-            // Schedule deletion if enabled
-            if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
-              scheduleMessageDeletion(bot, destChatId, copiedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
-            }
-            
-            return true
-          } catch (captionError) {
-            // If caption fails (text message), copy without caption and send watermark separately
-            const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId)
-            const watermarkMsg = await bot.telegram.sendMessage(destChatId, rule.addWatermark).catch(() => null)
-            
-            // Schedule deletion if enabled
-            if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
-              scheduleMessageDeletion(bot, destChatId, copiedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
-              // Also delete watermark if deleteWatermark is enabled
-              if (rule.deleteWatermark && watermarkMsg) {
-                scheduleMessageDeletion(bot, destChatId, watermarkMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
-              }
-            }
-            
-            return true
-          }
-        } catch (error) {
-          console.error(`[FORWARD_SCHEDULER] Error getting original message ${messageId}:`, error)
-          // Fallback: just copy with watermark only
-          const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId, {
-            caption: rule.addWatermark,
+          // Delete the temporary message
+          await bot.telegram.deleteMessage(botChatId, tempForwarded.message_id).catch((err) => {
+            console.log(`[FORWARD_SCHEDULER] Could not delete temp message: ${err.message}`)
           })
+        } catch (error: any) {
+          console.error(`[FORWARD_SCHEDULER] Error forwarding to bot for caption extraction:`, error.message)
+          // Continue with empty originalText
+        }
+        
+        // Build the new caption with watermark
+        let newCaption: string
+        if (originalText.trim()) {
+          newCaption = originalText.trim() + '\n\n━━━━━━━━━━━━━━━\n' + rule.addWatermark
+          console.log(`[FORWARD_SCHEDULER] Combined caption length: ${newCaption.length}`)
+        } else {
+          // No original caption, just use watermark with separator
+          newCaption = '━━━━━━━━━━━━━━━\n' + rule.addWatermark
+          console.log(`[FORWARD_SCHEDULER] Using watermark only (no original caption)`)
+        }
+        
+        // Now copy to destination with the combined caption
+        try {
+          const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId, {
+            caption: newCaption,
+          })
+          
+          console.log(`[FORWARD_SCHEDULER] Successfully copied message ${messageId} with watermark to ${destChatId}`)
           
           // Schedule deletion if enabled
           if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
             scheduleMessageDeletion(bot, destChatId, copiedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+          }
+          
+          return true
+        } catch (copyError: any) {
+          console.error(`[FORWARD_SCHEDULER] Error copying with caption:`, copyError.message)
+          
+          // Fallback: copy without caption and send watermark separately
+          const copiedMsg = await bot.telegram.copyMessage(destChatId, sourceChatId, messageId)
+          const watermarkMsg = await bot.telegram.sendMessage(destChatId, rule.addWatermark).catch(() => null)
+          
+          console.log(`[FORWARD_SCHEDULER] Fallback: Copied message ${messageId} and sent watermark separately`)
+          
+          if (rule.deleteAfterEnabled && rule.deleteInterval && rule.deleteIntervalUnit !== 5) {
+            scheduleMessageDeletion(bot, destChatId, copiedMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+            if (rule.deleteWatermark && watermarkMsg) {
+              scheduleMessageDeletion(bot, destChatId, watermarkMsg.message_id, rule.deleteInterval, rule.deleteIntervalUnit)
+            }
           }
           
           return true
